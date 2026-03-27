@@ -1,0 +1,33 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: kroma-mainnet
+spec:
+  chain: kroma
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: kromanetwork/op-geth:v0.1.5
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 8Gi
+    limits:
+      cpu: "8"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30
+  # Override default L1 RPC URL (default: http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545)
+  # extraEnv:
+  # - name: L1_RPC_URL
+  #   value: "http://your-ethereum-rpc:8545"

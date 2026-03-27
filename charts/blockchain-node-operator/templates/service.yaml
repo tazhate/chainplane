@@ -1,0 +1,18 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "blockchain-node-operator.metricsServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "blockchain-node-operator.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  ports:
+    - name: {{ if .Values.metrics.secure }}https{{ else }}http{{ end }}
+      port: {{ .Values.metrics.service.port }}
+      protocol: TCP
+      targetPort: {{ .Values.metrics.port }}
+  selector:
+    {{- include "blockchain-node-operator.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -1,0 +1,31 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: zora-mainnet
+spec:
+  chain: zora
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: medium
+  # Default image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2
+  # L1_RPC_URL env var defaults to http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545
+  # Override via extraEnv if using a different L1 endpoint.
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30

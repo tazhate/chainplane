@@ -1,0 +1,31 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: abstract-mainnet
+spec:
+  chain: abstract
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: abstractchain/op-geth:v1.101408.0
+  # L1_RPC_URL env var defaults to http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545
+  # Override via extraEnv if using a different L1 endpoint.
+  storage:
+    size: 200Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      cpu: "4"
+      memory: 8Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30

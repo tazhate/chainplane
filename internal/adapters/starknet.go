@@ -1,0 +1,147 @@
+package adapters
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+
+	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+)
+
+// --------------------------------------------------------------------------
+// Constants
+// --------------------------------------------------------------------------
+
+const defaultStarknetImage = "nethermindeth/juno:v0.12.5"
+
+// --------------------------------------------------------------------------
+// Type
+// --------------------------------------------------------------------------
+
+type starknetAdapter struct {
+	baseAdapter
+}
+
+// --------------------------------------------------------------------------
+// Registration
+// --------------------------------------------------------------------------
+
+func init() {
+	Register(nodesv1alpha1.ChainStarknet, &starknetAdapter{
+		baseAdapter: baseAdapter{livenessPort: 6060},
+	})
+}
+
+// --------------------------------------------------------------------------
+// Config (static)
+// --------------------------------------------------------------------------
+
+const starknetConfig = `{
+  "network": "mainnet",
+  "http": true,
+  "http-port": 6060,
+  "http-host": "0.0.0.0",
+  "db-path": "/data/juno",
+  "metrics": true,
+  "metrics-port": 9090,
+  "p2p": true,
+  "p2p-addr": "0.0.0.0:7777",
+  "colour": false
+}`
+
+// --------------------------------------------------------------------------
+// Interface methods
+// --------------------------------------------------------------------------
+
+func (a *starknetAdapter) DefaultImage(_ string) string {
+	return defaultStarknetImage
+}
+
+func (a *starknetAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {
+	return "juno.json", starknetConfig, nil
+}
+
+func (a *starknetAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
+	// starknet_syncing returns false when synced, or a sync status object when syncing
+	syncResult, err := callRPC(ctx, rpcURL, "starknet_syncing", nil)
+	if err != nil {
+		if isContextTimeout(err) {
+			return syncingPseudo(), nil
+		}
+		return SyncStatus{}, fmt.Errorf("starknet_syncing: %w", err)
+	}
+
+	// If result is "false" (boolean), node is fully synced — get block number
+	var syncing bool
+	if err := json.Unmarshal(syncResult, &syncing); err == nil && !syncing {
+		// Get current block number
+		blockResult, err := callRPC(ctx, rpcURL, "starknet_blockNumber", nil)
+		if err != nil {
+			return SyncStatus{IsSyncing: false}, nil
+		}
+		var blockNum int64
+		if err := json.Unmarshal(blockResult, &blockNum); err != nil {
+			return SyncStatus{IsSyncing: false}, nil
+		}
+		return SyncStatus{
+			IsSyncing:    false,
+			CurrentBlock: blockNum,
+			HighestBlock: blockNum,
+			Progress:     100.0,
+		}, nil
+	}
+
+	// Node is syncing — parse the sync status object
+	var syncStatus struct {
+		CurrentBlockNum  int64 `json:"current_block_num"`
+		HighestBlockNum  int64 `json:"highest_block_num"`
+		CurrentBlockHash string `json:"current_block_hash"`
+		HighestBlockHash string `json:"highest_block_hash"`
+		StartingBlockNum int64 `json:"starting_block_num"`
+	}
+	if err := json.Unmarshal(syncResult, &syncStatus); err != nil {
+		return syncingPseudo(), nil
+	}
+
+	progress := progressFromBlocks(syncStatus.CurrentBlockNum, syncStatus.HighestBlockNum)
+	return SyncStatus{
+		IsSyncing:    true,
+		CurrentBlock: syncStatus.CurrentBlockNum,
+		HighestBlock: syncStatus.HighestBlockNum,
+		Progress:     progress,
+	}, nil
+}
+
+// StartupProbe gives Starknet/Juno up to 3h (360x30s) to complete initial sync.
+func (a *starknetAdapter) StartupProbe(_ nodesv1alpha1.BlockchainNodeSpec) *corev1.Probe {
+	return tcpProbe(6060, 30, 30, 10, 360)
+}
+
+func (a *starknetAdapter) ContainerArgs(spec nodesv1alpha1.BlockchainNodeSpec) []string {
+	network := "mainnet"
+	if spec.Network == nodesv1alpha1.NetworkTestnet {
+		network = "sepolia"
+	}
+	return []string{
+		"--network", network,
+		"--http",
+		"--http-port", "6060",
+		"--http-host", "0.0.0.0",
+		"--db-path", "/data/juno",
+		"--metrics",
+		"--metrics-port", "9090",
+		"--p2p",
+		"--p2p-addr", "0.0.0.0:7777",
+		"--colour=false",
+	}
+}
+
+func (a *starknetAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
+	return []corev1.ContainerPort{
+		{Name: "rpc", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
+		{Name: "p2p", ContainerPort: 7777, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 9090, Protocol: corev1.ProtocolTCP},
+	}
+}

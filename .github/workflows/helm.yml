@@ -1,0 +1,22 @@
+name: Helm
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  helm:
+    name: Run on Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Run helm lint
+        run: helm lint charts/blockchain-node-operator
+
+      - name: Run helm template
+        run: helm template blockchain-node-operator charts/blockchain-node-operator

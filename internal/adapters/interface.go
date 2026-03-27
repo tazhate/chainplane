@@ -1,0 +1,148 @@
+// Package adapters implements the ChainAdapter interface for each supported blockchain.
+package adapters
+
+import (
+	"context"
+	"fmt"
+	"sync"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+)
+
+// SyncStatus holds the current sync state returned by a HealthCheck.
+type SyncStatus struct {
+	IsSyncing    bool
+	CurrentBlock int64
+	HighestBlock int64
+	Peers        int32
+	Progress     float64 // 0.0-100.0
+	// StallExempt suppresses the height-freeze stall detector for this cycle.
+	// Set by adapters that have internal progress not reflected in CurrentBlock
+	// (e.g. Reth pipeline stages, Stellar "Joining SCP").
+	StallExempt bool
+}
+
+// ChainAdapter defines the contract that each blockchain implementation must satisfy.
+type ChainAdapter interface {
+	// DefaultImage returns the default container image for this chain/client.
+	DefaultImage(client string) string
+	// ConfigTemplate renders the chain-specific config file content.
+	ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (filename string, content string, err error)
+	// HealthCheck calls the chain RPC and returns the current sync status.
+	HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error)
+	// LivenessProbe returns a Kubernetes liveness probe for this chain.
+	LivenessProbe(spec nodesv1alpha1.BlockchainNodeSpec) *corev1.Probe
+	// NodeSelector returns the label selector for the hardware tier.
+	NodeSelector(nodeGroup nodesv1alpha1.NodeGroup) map[string]string
+	// ContainerPorts returns the container ports to expose.
+	ContainerPorts(spec nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort
+}
+
+// ContainerArgsProvider is an optional interface that adapters can implement
+// to inject chain-specific command-line arguments into the main container.
+// These args are prepended before any user-supplied ExtraArgs.
+type ContainerArgsProvider interface {
+	ContainerArgs(spec nodesv1alpha1.BlockchainNodeSpec) []string
+}
+
+// ContainerCommandProvider is an optional interface that adapters can implement
+// to override the container entrypoint (command). When not implemented, the
+// image's default ENTRYPOINT is used.
+type ContainerCommandProvider interface {
+	ContainerCommand(spec nodesv1alpha1.BlockchainNodeSpec) []string
+}
+
+// ContainerEnvProvider is an optional interface that adapters can implement
+// to inject chain-specific environment variables. Variables are merged with
+// node.Spec.ExtraEnv (adapter vars first, spec vars may override).
+type ContainerEnvProvider interface {
+	ContainerEnv(spec nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar
+}
+
+// NodePortProvider is an optional interface that adapters can implement
+// to request a NodePort service instead of ClusterIP. The returned map
+// maps container port numbers to the desired NodePort values (0 = auto-assign).
+// This is required for chains that use UDP-based P2P protocols (e.g. TON ADNL)
+// where external peers must reach the node directly via the host IP.
+// The node name is passed so adapters can assign unique ports per instance.
+type NodePortProvider interface {
+	NodePorts(spec nodesv1alpha1.BlockchainNodeSpec, name string) map[int32]int32
+}
+
+// StartupProbeProvider is an optional interface for adapters with long startup
+// times. When implemented, the returned probe is used as the container's
+// startupProbe -- it runs before the liveness probe and gives the node time to
+// complete expensive init steps (e.g. TRON LiteFullNode loadTransForLiteNode).
+// Once the startup probe succeeds, normal liveness probing begins.
+type StartupProbeProvider interface {
+	StartupProbe(spec nodesv1alpha1.BlockchainNodeSpec) *corev1.Probe
+}
+
+// InitContainerProvider is an optional interface that adapters can implement
+// to add chain-specific init containers (e.g. SUI formal snapshot download).
+// These run AFTER the snapshot-restore init container.
+type InitContainerProvider interface {
+	InitContainers(spec nodesv1alpha1.BlockchainNodeSpec) []corev1.Container
+}
+
+// registry holds all registered adapters behind a RWMutex for thread safety.
+var (
+	registryMu sync.RWMutex
+	registry   = make(map[nodesv1alpha1.Chain]ChainAdapter)
+)
+
+// Register adds a ChainAdapter implementation for the given chain.
+// Safe for concurrent use; typically called from init().
+func Register(chain nodesv1alpha1.Chain, adapter ChainAdapter) {
+	registryMu.Lock()
+	registry[chain] = adapter
+	registryMu.Unlock()
+}
+
+// Get returns the ChainAdapter for the given chain, or (nil, false) if not found.
+func Get(chain nodesv1alpha1.Chain) (ChainAdapter, bool) {
+	registryMu.RLock()
+	a, ok := registry[chain]
+	registryMu.RUnlock()
+	return a, ok
+}
+
+// MustGet returns the ChainAdapter for the given chain.
+// It panics if no adapter is registered -- intended for init-time wiring only.
+func MustGet(chain nodesv1alpha1.Chain) ChainAdapter {
+	a, ok := Get(chain)
+	if !ok {
+		panic(fmt.Sprintf("adapters: no adapter registered for chain %q", chain))
+	}
+	return a
+}
+
+// DefaultNodeSelector returns a standard node selector based on node group label.
+func DefaultNodeSelector(nodeGroup nodesv1alpha1.NodeGroup) map[string]string {
+	switch nodeGroup {
+	case nodesv1alpha1.NodeGroupStorage:
+		return map[string]string{"workload-type": "storage"}
+	case nodesv1alpha1.NodeGroupBlockchain:
+		return map[string]string{"node-role.kubernetes.io/blockchain": "true"}
+	default:
+		return map[string]string{"node-type": string(nodeGroup)}
+	}
+}
+
+// DefaultLivenessProbe returns a generic TCP liveness probe on the given port.
+func DefaultLivenessProbe(port int32) *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			TCPSocket: &corev1.TCPSocketAction{
+				Port: intstr.FromInt32(port),
+			},
+		},
+		InitialDelaySeconds: 60,
+		PeriodSeconds:       30,
+		TimeoutSeconds:      10,
+		FailureThreshold:    3,
+	}
+}

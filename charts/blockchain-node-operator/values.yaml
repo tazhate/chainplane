@@ -1,0 +1,151 @@
+# -- Number of operator replicas
+replicaCount: 2
+
+image:
+  # -- Operator image repository
+  repository: controller
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Overrides the image tag (default is the chart appVersion)
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# -- Override the release name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+# -- Annotations to add to the operator pod
+podAnnotations: {}
+
+# -- Labels to add to the operator pod
+podLabels: {}
+
+podSecurityContext:
+  # -- Run pod as non-root
+  runAsNonRoot: true
+  # -- Seccomp profile type
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  # -- Disallow privilege escalation
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - "ALL"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+# -- Node selector for pod assignment
+nodeSelector: {}
+
+# -- Tolerations for pod assignment
+tolerations: []
+
+# -- Affinity rules for pod assignment
+affinity: {}
+
+# -- Termination grace period in seconds
+terminationGracePeriodSeconds: 10
+
+# -- Install CRDs with the chart
+installCRDs: true
+
+leaderElection:
+  # -- Enable leader election for HA deployments
+  enabled: true
+
+metrics:
+  # -- Enable the metrics endpoint
+  enabled: true
+  # -- Metrics bind address (port)
+  port: 8443
+  # -- Serve metrics over HTTPS
+  secure: true
+  service:
+    # -- Metrics service type
+    type: ClusterIP
+    # -- Metrics service port
+    port: 8443
+  serviceMonitor:
+    # -- Create a ServiceMonitor resource for Prometheus Operator
+    enabled: false
+    # -- Additional labels for the ServiceMonitor
+    labels: {}
+    # -- Scrape interval. If not set, the Prometheus default is used.
+    interval: ""
+    # -- Scrape timeout. If not set, the Prometheus default is used.
+    scrapeTimeout: ""
+    # -- Scheme to use for scraping (https or http)
+    scheme: https
+    # -- TLS configuration for the ServiceMonitor
+    tlsConfig:
+      insecureSkipVerify: true
+    # -- Bearer token file path for authentication
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+healthProbe:
+  # -- Health probe bind address (port)
+  port: 8081
+
+webhook:
+  # -- Enable the validating webhook
+  enabled: true
+  # -- Webhook failure policy (Fail or Ignore)
+  failurePolicy: Fail
+  service:
+    # -- Webhook service type
+    type: ClusterIP
+    # -- Webhook service port
+    port: 443
+    # -- Webhook target port on the pod
+    targetPort: 9443
+  # -- Webhook certificate configuration
+  # When using cert-manager, configure the certificate resource separately.
+  certDir: ""
+  certName: tls.crt
+  certKey: tls.key
+
+prometheus:
+  # -- Base URL of the Prometheus server used for node health checks
+  url: "http://prometheus:9090"
+
+networkPolicy:
+  # -- Create NetworkPolicy to restrict access to the metrics endpoint
+  enabled: false
+  # -- Namespace selector labels for metrics access
+  metricsNamespaceSelector:
+    metrics: enabled
+
+# -- Enable HTTP/2 for metrics and webhook servers (disabled by default for security)
+enableHTTP2: false
+
+# -- Extra environment variables for the operator container
+extraEnv: []
+
+# -- Extra args for the operator container
+extraArgs: []
+
+# -- Extra volumes for the operator pod
+extraVolumes: []
+
+# -- Extra volume mounts for the operator container
+extraVolumeMounts: []

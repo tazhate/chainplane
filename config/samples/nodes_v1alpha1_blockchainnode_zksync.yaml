@@ -1,0 +1,34 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: zksync-mainnet
+spec:
+  chain: zksync
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: matterlabs/external-node:v2.0.22
+  storage:
+    size: 1Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 3060
+    wsPort: 3061
+  health:
+    blockLagThreshold: 30
+    degradedTimeoutMinutes: 15
+  # L1 Ethereum RPC URL (override via extraEnv if needed)
+  extraEnv:
+    - name: EN_ETH_CLIENT_URL
+      value: "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"

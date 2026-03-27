@@ -1,0 +1,27 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: solana-mainnet
+spec:
+  chain: solana
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: solanalabs/solana:v1.18.26
+  storage:
+    size: 2Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "12"
+      memory: 128Gi
+    limits:
+      cpu: "16"
+      memory: 256Gi
+  rpc:
+    enabled: true
+    port: 8899
+    wsPort: 8900

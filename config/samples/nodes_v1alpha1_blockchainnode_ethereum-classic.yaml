@@ -1,0 +1,29 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: ethereum-classic-mainnet
+spec:
+  chain: ethereum-classic
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: archive
+  # Default image: hyperledger/besu:24.12.0
+  storage:
+    size: 1000Gi
+    storageClass: fast-nvme
+  resources:
+    requests:
+      cpu: "4"
+      memory: 8Gi
+    limits:
+      cpu: "8"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30

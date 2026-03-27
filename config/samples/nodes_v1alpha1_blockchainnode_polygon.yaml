@@ -1,0 +1,29 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: polygon-mainnet
+spec:
+  chain: polygon
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: 0xpolygon/bor:2.6.3
+  storage:
+    size: 4Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 50

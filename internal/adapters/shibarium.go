@@ -1,0 +1,81 @@
+package adapters
+
+import (
+	"context"
+
+	corev1 "k8s.io/api/core/v1"
+
+	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+)
+
+// --------------------------------------------------------------------------
+// Constants
+// --------------------------------------------------------------------------
+
+// Shibarium is a Polygon Bor-based sidechain (chainId 109), not OP Stack.
+const defaultShibariumImage = "shibaone/bor:v1.3.7-bone"
+
+// --------------------------------------------------------------------------
+// Type
+// --------------------------------------------------------------------------
+
+type shibariumAdapter struct {
+	baseAdapter
+}
+
+// --------------------------------------------------------------------------
+// Registration
+// --------------------------------------------------------------------------
+
+func init() {
+	Register(nodesv1alpha1.ChainShibarium, &shibariumAdapter{
+		baseAdapter: baseAdapter{livenessPort: 8545},
+	})
+}
+
+// --------------------------------------------------------------------------
+// Interface methods
+// --------------------------------------------------------------------------
+
+func (a *shibariumAdapter) DefaultImage(_ string) string {
+	return defaultShibariumImage
+}
+
+func (a *shibariumAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {
+	return "config.toml", shibariumConfig, nil
+}
+
+// HealthCheck uses evmHealthCheck since Bor exposes eth_syncing on 8545.
+func (a *shibariumAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
+	return evmHealthCheck(ctx, rpcURL)
+}
+
+func (a *shibariumAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
+	return evmPorts(30303)
+}
+
+// --------------------------------------------------------------------------
+// Config
+// --------------------------------------------------------------------------
+
+const shibariumConfig = `# Shibarium mainnet (Polygon Bor-based, chainId 109)
+[Eth]
+NetworkId = 109
+SyncMode = "snap"
+
+[Node]
+DataDir = "/data"
+HTTPHost = "0.0.0.0"
+HTTPPort = 8545
+HTTPModules = ["eth", "net", "web3", "txpool"]
+HTTPVirtualHosts = ["*"]
+HTTPCors = ["*"]
+WSHost = "0.0.0.0"
+WSPort = 8546
+WSModules = ["eth", "net", "web3"]
+WSOrigins = ["*"]
+
+[Node.P2P]
+MaxPeers = 50
+ListenAddr = ":30303"
+`

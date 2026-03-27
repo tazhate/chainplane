@@ -1,0 +1,26 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  name: polkadot-mainnet-01
+  namespace: blockchain-nodes
+spec:
+  chain: polkadot
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  rpc:
+    enabled: true
+    port: 9944
+  storage:
+    size: "500Gi"
+    storageClass: fast-nvme
+  resources:
+    requests:
+      cpu: "4"
+      memory: "16Gi"
+    limits:
+      cpu: "8"
+      memory: "32Gi"
+  health:
+    blockLagThreshold: 30
+    degradedTimeoutMinutes: 15

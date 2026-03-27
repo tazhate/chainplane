@@ -1,0 +1,28 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: bitcoin-mainnet
+spec:
+  chain: bitcoin
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: medium
+  # Default image: lncm/bitcoind:v28.0
+  storage:
+    size: 600Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      cpu: "4"
+      memory: 8Gi
+  rpc:
+    enabled: true
+    port: 8332
+  health:
+    blockLagThreshold: 2

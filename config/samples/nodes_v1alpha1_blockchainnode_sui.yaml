@@ -1,0 +1,26 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: sui-mainnet
+spec:
+  chain: sui
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: mysten/sui-node:mainnet
+  storage:
+    size: 2Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 32Gi
+    limits:
+      cpu: "8"
+      memory: 64Gi
+  rpc:
+    enabled: true
+    port: 9000

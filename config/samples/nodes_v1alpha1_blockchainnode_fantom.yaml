@@ -1,0 +1,26 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: fantom-mainnet
+spec:
+  chain: fantom
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: fantomfoundation/go-opera:v1.1.3-txtracing
+  storage:
+    size: 2Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8545

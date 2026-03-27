@@ -1,0 +1,154 @@
+package adapters
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+
+	corev1 "k8s.io/api/core/v1"
+
+	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+)
+
+// --------------------------------------------------------------------------
+// Constants
+// --------------------------------------------------------------------------
+
+const defaultEthereumBeaconImage = "sigp/lighthouse:v8.0.0"
+
+// --------------------------------------------------------------------------
+// Type
+// --------------------------------------------------------------------------
+
+type ethereumBeaconAdapter struct {
+	baseAdapter
+}
+
+// --------------------------------------------------------------------------
+// Registration
+// --------------------------------------------------------------------------
+
+func init() {
+	Register(nodesv1alpha1.ChainEthereumBeacon, &ethereumBeaconAdapter{
+		baseAdapter: baseAdapter{livenessPort: 5052},
+	})
+}
+
+// --------------------------------------------------------------------------
+// Interface methods
+// --------------------------------------------------------------------------
+
+func (a *ethereumBeaconAdapter) DefaultImage(_ string) string {
+	return defaultEthereumBeaconImage
+}
+
+func (a *ethereumBeaconAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {
+	return "lighthouse.toml", ethereumBeaconConfig, nil
+}
+
+func (a *ethereumBeaconAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
+	return beaconHealthCheck(ctx, rpcURL)
+}
+
+func (a *ethereumBeaconAdapter) LivenessProbe(_ nodesv1alpha1.BlockchainNodeSpec) *corev1.Probe {
+	return tcpProbe(5052, 300, 30, 10, 5)
+}
+
+func (a *ethereumBeaconAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
+	return beaconPorts()
+}
+
+// --------------------------------------------------------------------------
+// Beacon health check (shared with gnosis-beacon)
+// --------------------------------------------------------------------------
+
+// beaconSyncingResponse maps the Beacon REST API /eth/v1/node/syncing response.
+type beaconSyncingResponse struct {
+	Data struct {
+		IsSyncing    bool   `json:"is_syncing"`
+		IsOptimistic bool   `json:"is_optimistic"`
+		HeadSlot     string `json:"head_slot"`
+		SyncDistance string `json:"sync_distance"`
+	} `json:"data"`
+}
+
+// beaconHealthCheck calls the Beacon REST API /eth/v1/node/syncing endpoint.
+// It is shared by both ethereum-beacon and gnosis-beacon adapters.
+func beaconHealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
+	url := rpcURL + "/eth/v1/node/syncing"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return SyncStatus{}, fmt.Errorf("beacon health check: create request: %w", err)
+	}
+
+	resp, err := rpcClient.Do(req)
+	if err != nil {
+		if ctx.Err() != nil {
+			return SyncStatus{IsSyncing: true, StallExempt: true}, nil
+		}
+		return SyncStatus{}, fmt.Errorf("beacon health check: %w: %w", ErrRPCUnavailable, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
+	if err != nil {
+		return SyncStatus{}, fmt.Errorf("beacon health check: read response: %w", err)
+	}
+
+	var syncResp beaconSyncingResponse
+	if err := json.Unmarshal(body, &syncResp); err != nil {
+		return SyncStatus{}, fmt.Errorf("beacon health check: parse response: %w", err)
+	}
+
+	headSlot, err := strconv.ParseInt(syncResp.Data.HeadSlot, 10, 64)
+	if err != nil {
+		headSlot = 0
+	}
+
+	syncDistance, err := strconv.ParseInt(syncResp.Data.SyncDistance, 10, 64)
+	if err != nil {
+		syncDistance = 0
+	}
+
+	highestBlock := headSlot + syncDistance
+	currentBlock := headSlot
+	progress := progressFromBlocks(currentBlock, highestBlock)
+
+	return SyncStatus{
+		IsSyncing:    syncResp.Data.IsSyncing,
+		CurrentBlock: currentBlock,
+		HighestBlock: highestBlock,
+		Progress:     progress,
+	}, nil
+}
+
+// beaconPorts returns the standard Lighthouse beacon node container ports.
+func beaconPorts() []corev1.ContainerPort {
+	return []corev1.ContainerPort{
+		{Name: "api", ContainerPort: 5052, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 5054, Protocol: corev1.ProtocolTCP},
+		{Name: "p2p-tcp", ContainerPort: 9000, Protocol: corev1.ProtocolTCP},
+		{Name: "p2p-udp", ContainerPort: 9000, Protocol: corev1.ProtocolUDP},
+	}
+}
+
+// --------------------------------------------------------------------------
+// Config (Lighthouse TOML for Ethereum mainnet)
+// --------------------------------------------------------------------------
+
+const ethereumBeaconConfig = `# Lighthouse beacon node config for Ethereum
+network = "mainnet"
+datadir = "/data"
+http = true
+http-address = "0.0.0.0"
+http-port = 5052
+metrics = true
+metrics-address = "0.0.0.0"
+metrics-port = 5054
+port = 9000
+discovery-port = 9000
+`

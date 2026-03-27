@@ -1,0 +1,26 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: cronos-mainnet
+spec:
+  chain: cronos
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: crypto-org-chain/cronos:v1.4.4
+  storage:
+    size: 1Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8545

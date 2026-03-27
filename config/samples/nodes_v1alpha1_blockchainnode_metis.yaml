@@ -1,0 +1,35 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: metis-mainnet
+spec:
+  chain: metis
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: metisprotocol/l2geth:v1.4.2
+  # Metis is an L2 chain (l2geth-based) requiring an L1 Ethereum RPC endpoint.
+  # L1_RPC_URL is injected automatically (default: ethereum-mainnet-01 service).
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 8Gi
+    limits:
+      cpu: "8"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30
+  # Override default L1 RPC URL if needed:
+  # extraEnv:
+  # - name: L1_RPC_URL
+  #   value: "http://your-ethereum-rpc:8545"

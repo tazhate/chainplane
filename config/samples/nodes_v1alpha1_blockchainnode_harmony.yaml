@@ -1,0 +1,28 @@
+apiVersion: nodes.k8s-bch.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  labels:
+    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: harmony-mainnet
+spec:
+  chain: harmony
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: harmonyone/harmony:v8.5.4
+  storage:
+    size: 2000Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 8Gi
+    limits:
+      cpu: "8"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 9500
+  health:
+    blockLagThreshold: 30
