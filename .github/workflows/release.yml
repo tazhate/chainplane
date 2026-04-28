@@ -50,10 +50,11 @@ jobs:
             ghcr.io/tazhate/chainplane:${{ github.ref_name }}
             ghcr.io/tazhate/chainplane:latest
 
-      - name: Package Helm chart
+      - name: Package and push Helm chart to GHCR
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           helm package charts/chainplane --version ${VERSION}
+          helm push chainplane-${VERSION}.tgz oci://ghcr.io/tazhate/charts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -61,21 +61,32 @@ spec:
 - kubectl 1.25+
 - Access to a Kubernetes cluster
 
-### Install via Helm
+### Install via Helm (OCI)
 
 ```sh
-helm install chainplane charts/chainplane \
-  --namespace blockchain-nodes \
-  --create-namespace \
-  --set image.repository=ghcr.io/tazhate/chainplane \
-  --set image.tag=latest
+helm install chainplane oci://ghcr.io/tazhate/charts/chainplane \
+  --version 0.1.0 \
+  --namespace chainplane-system \
+  --create-namespace
 ```
 
-### Install CRDs manually
+Or from a specific tag:
 
 ```sh
+helm install chainplane oci://ghcr.io/tazhate/charts/chainplane \
+  --version 0.1.0 \
+  --namespace chainplane-system \
+  --create-namespace \
+  --set image.tag=v0.1.0
+```
+
+### Install from source
+
+```sh
+git clone https://github.com/tazhate/chainplane.git
+cd chainplane
 make install
-make deploy IMG=<your-registry>/chainplane:latest
+make deploy IMG=ghcr.io/tazhate/chainplane:latest
 ```
 
 ### Create Your First Node
