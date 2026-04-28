@@ -72,8 +72,21 @@ func (r *BlockchainNodeReconciler) ensureStatefulSet(
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, sts, func() error {
+		// Preserve pod-template annotations set by reconcileUpgrade (e.g. restarted-at).
+		// desired.Template.Annotations only carries config-hash; don't clobber the rest.
+		existingTemplateAnns := sts.Spec.Template.Annotations
+
 		sts.Labels = coreLabels(node)
 		sts.Spec = desired
+
+		if sts.Spec.Template.Annotations == nil {
+			sts.Spec.Template.Annotations = map[string]string{}
+		}
+		for k, v := range existingTemplateAnns {
+			if _, ok := sts.Spec.Template.Annotations[k]; !ok {
+				sts.Spec.Template.Annotations[k] = v
+			}
+		}
 		return controllerutil.SetControllerReference(node, sts, r.Scheme)
 	})
 	if err != nil {
