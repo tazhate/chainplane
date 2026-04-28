@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/nodes.chainplane.io_blockchainnodes.yaml
+- bases/nodes.chainplane.io_chainversioncatalogs.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
