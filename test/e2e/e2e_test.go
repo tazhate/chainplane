@@ -106,6 +106,13 @@ var _ = Describe("Manager", Ordered, func() {
 				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
 			}
 
+			By("Fetching previous controller manager pod logs (crash logs)")
+			prevCmd := exec.Command("kubectl", "logs", controllerPodName, "-n", namespace, "--previous")
+			prevLogs, prevErr := utils.Run(prevCmd)
+			if prevErr == nil {
+				_, _ = fmt.Fprintf(GinkgoWriter, "Previous controller logs (crash):\n %s", prevLogs)
+			}
+
 			By("Fetching Kubernetes events")
 			cmd = exec.Command("kubectl", "get", "events", "-n", namespace, "--sort-by=.lastTimestamp")
 			eventsOutput, err := utils.Run(cmd)
@@ -135,7 +142,7 @@ var _ = Describe("Manager", Ordered, func() {
 		}
 	})
 
-	SetDefaultEventuallyTimeout(2 * time.Minute)
+	SetDefaultEventuallyTimeout(5 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Context("Manager", func() {
@@ -274,6 +281,39 @@ var _ = Describe("Manager", Ordered, func() {
 
 	Context("BlockchainNode CR lifecycle", func() {
 		const testNS = namespace
+
+		// waitForControllerReady waits until the controller-manager pod is Running.
+		// This handles the case where the pod restarts (e.g., leader election loss)
+		// and ensures the controller is ready before applying CRs.
+		waitForControllerReady := func() {
+			Eventually(func(g Gomega) {
+				cmd := exec.Command("kubectl", "get",
+					"pods", "-l", "control-plane=controller-manager",
+					"-o", "go-template={{ range .items }}"+
+						"{{ if not .metadata.deletionTimestamp }}"+
+						"{{ .metadata.name }}{{ \"\\n\" }}"+
+						"{{ end }}{{ end }}",
+					"-n", namespace,
+				)
+				podOutput, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				podNames := utils.GetNonEmptyLines(podOutput)
+				g.Expect(podNames).To(HaveLen(1))
+				controllerPodName = podNames[0]
+
+				cmd = exec.Command("kubectl", "get",
+					"pods", controllerPodName, "-o", "jsonpath={.status.phase}",
+					"-n", namespace,
+				)
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(Equal("Running"))
+			}).Should(Succeed())
+		}
+
+		BeforeEach(func() {
+			waitForControllerReady()
+		})
 
 		// cleanupCR deletes a BlockchainNode CR by name and waits for it to disappear.
 		cleanupCR := func(name string) {

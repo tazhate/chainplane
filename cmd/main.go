@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -336,13 +337,19 @@ func main() {
 	}
 
 	// --- Controller manager --------------------------------------------
+	leaseDuration := 40 * time.Second
+	renewDeadline := 25 * time.Second
+	retryPeriod := 5 * time.Second
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsServerOptions,
-		WebhookServer:          webhookServer,
-		HealthProbeBindAddress: cfg.ProbeAddr,
-		LeaderElection:         cfg.LeaderElect,
-		LeaderElectionID:       defaultLeaderElectID,
+		Scheme:                  scheme,
+		Metrics:                 metricsServerOptions,
+		WebhookServer:           webhookServer,
+		HealthProbeBindAddress:  cfg.ProbeAddr,
+		LeaderElection:          cfg.LeaderElect,
+		LeaderElectionID:        defaultLeaderElectID,
+		LeaseDuration:           &leaseDuration,
+		RenewDeadline:           &renewDeadline,
+		RetryPeriod:             &retryPeriod,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
