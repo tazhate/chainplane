@@ -402,7 +402,7 @@ spec:
 
 			By("verifying that a ConfigMap is created")
 			Eventually(func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "configmap", crName,
+				cmd := exec.Command("kubectl", "get", "configmap", crName+"-config",
 					"-n", testNS, "-o", "name")
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred(), "ConfigMap not found")
@@ -556,7 +556,7 @@ spec:
 
 			By("verifying ConfigMap is removed")
 			Eventually(func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "configmap", crName,
+				cmd := exec.Command("kubectl", "get", "configmap", crName+"-config",
 					"-n", testNS)
 				_, err := utils.Run(cmd)
 				g.Expect(err).To(HaveOccurred(), "ConfigMap should be deleted")
