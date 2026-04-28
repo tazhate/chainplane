@@ -303,13 +303,16 @@ func TestAllAdaptersLivenessProbe(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestAllAdaptersNodeSelector(t *testing.T) {
-	groups := []nodesv1alpha1.NodeGroup{
+	// Specialised groups must return non-empty selectors; generic groups may return nil.
+	specialised := []nodesv1alpha1.NodeGroup{
+		nodesv1alpha1.NodeGroupStorage,
+		nodesv1alpha1.NodeGroupBlockchain,
+	}
+	generic := []nodesv1alpha1.NodeGroup{
 		nodesv1alpha1.NodeGroupLight,
 		nodesv1alpha1.NodeGroupMedium,
 		nodesv1alpha1.NodeGroupHeavy,
 		nodesv1alpha1.NodeGroupArchive,
-		nodesv1alpha1.NodeGroupStorage,
-		nodesv1alpha1.NodeGroupBlockchain,
 	}
 
 	for _, chain := range allChains {
@@ -319,14 +322,15 @@ func TestAllAdaptersNodeSelector(t *testing.T) {
 			if !ok {
 				t.Fatalf("adapter not registered for chain: %s", chain)
 			}
-			for _, g := range groups {
+			for _, g := range specialised {
 				sel := adapter.NodeSelector(g)
-				if sel == nil {
-					t.Errorf("chain %s, group %s: nil node selector", chain, g)
-				}
 				if len(sel) == 0 {
-					t.Errorf("chain %s, group %s: empty node selector", chain, g)
+					t.Errorf("chain %s, group %s: expected non-empty selector for specialised group", chain, g)
 				}
+			}
+			for _, g := range generic {
+				// nil is acceptable — pods schedule on any node
+				_ = adapter.NodeSelector(g)
 			}
 		})
 	}
@@ -761,16 +765,16 @@ func TestDefaultNodeSelectorKnownGroups(t *testing.T) {
 }
 
 func TestDefaultNodeSelectorFallback(t *testing.T) {
-	sel := adapters.DefaultNodeSelector(nodesv1alpha1.NodeGroupHeavy)
-	if sel == nil {
-		t.Fatal("nil selector")
-	}
-	val, exists := sel["node-type"]
-	if !exists {
-		t.Error("fallback should use 'node-type' key")
-	}
-	if val != string(nodesv1alpha1.NodeGroupHeavy) {
-		t.Errorf("expected value %q, got %q", nodesv1alpha1.NodeGroupHeavy, val)
+	// Generic groups (light/medium/heavy) return nil so pods schedule on any node.
+	for _, g := range []nodesv1alpha1.NodeGroup{
+		nodesv1alpha1.NodeGroupLight,
+		nodesv1alpha1.NodeGroupMedium,
+		nodesv1alpha1.NodeGroupHeavy,
+	} {
+		sel := adapters.DefaultNodeSelector(g)
+		if sel != nil {
+			t.Errorf("group %q: expected nil selector, got %v", g, sel)
+		}
 	}
 }
 

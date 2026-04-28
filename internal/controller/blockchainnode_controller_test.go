@@ -595,7 +595,8 @@ var _ = Describe("BlockchainNode Controller", func() {
 
 			sts := &appsv1.StatefulSet{}
 			Expect(k8sClient.Get(ctx, nn, sts)).To(Succeed())
-			Expect(sts.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue("node-type", "heavy"))
+			// Generic node groups return nil selector so pods schedule on any node.
+			Expect(sts.Spec.Template.Spec.NodeSelector).To(BeEmpty())
 		})
 	})
 

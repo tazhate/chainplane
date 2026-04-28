@@ -165,7 +165,8 @@ func MustGet(chain nodesv1alpha1.Chain) ChainAdapter {
 	return a
 }
 
-// DefaultNodeSelector returns a standard node selector based on node group label.
+// DefaultNodeSelector returns a node selector for specialised node groups only.
+// Generic groups (light/medium/heavy) return nil so pods schedule on any node.
 func DefaultNodeSelector(nodeGroup nodesv1alpha1.NodeGroup) map[string]string {
 	switch nodeGroup {
 	case nodesv1alpha1.NodeGroupStorage:
@@ -173,7 +174,7 @@ func DefaultNodeSelector(nodeGroup nodesv1alpha1.NodeGroup) map[string]string {
 	case nodesv1alpha1.NodeGroupBlockchain:
 		return map[string]string{"node-role.kubernetes.io/blockchain": "true"}
 	default:
-		return map[string]string{"node-type": string(nodeGroup)}
+		return nil
 	}
 }
 
