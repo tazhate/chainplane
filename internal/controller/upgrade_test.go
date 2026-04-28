@@ -190,7 +190,7 @@ var _ = Describe("Upgrade Controller", func() {
 		It("should detect image change and set Upgrading condition", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-upgrade-img-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -213,13 +213,13 @@ var _ = Describe("Upgrade Controller", func() {
 			sts.Annotations[annotationLastClient] = "nethermind"
 			Expect(k8sClient.Patch(ctx, sts, patch)).To(Succeed())
 
-			// Reconcile should detect the change (1.35.0 -> 1.36.0).
+			// Reconcile should detect the change (1.35.0 -> 1.36.1).
 			_, err := reconcileOnce(ctx, nn)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Verify the StatefulSet now has the new image annotation.
 			Expect(k8sClient.Get(ctx, nn, sts)).To(Succeed())
-			Expect(sts.Annotations[annotationLastImage]).To(Equal("nethermind/nethermind:1.36.0"))
+			Expect(sts.Annotations[annotationLastImage]).To(Equal("nethermind/nethermind:1.36.1"))
 
 			// Verify the previous image was saved for rollback.
 			Expect(sts.Annotations[annotationPreviousImage]).To(Equal("nethermind/nethermind:1.35.0"))
@@ -239,7 +239,7 @@ var _ = Describe("Upgrade Controller", func() {
 		It("should not trigger restart when image is unchanged", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-upgrade-noop-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -257,7 +257,7 @@ var _ = Describe("Upgrade Controller", func() {
 			if sts.Annotations == nil {
 				sts.Annotations = map[string]string{}
 			}
-			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.0"
+			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.1"
 			sts.Annotations[annotationLastClient] = "nethermind"
 			Expect(k8sClient.Patch(ctx, sts, patch)).To(Succeed())
 
@@ -276,7 +276,7 @@ var _ = Describe("Upgrade Controller", func() {
 		It("should detect client change as an upgrade trigger", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-upgrade-client-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -294,7 +294,7 @@ var _ = Describe("Upgrade Controller", func() {
 			if sts.Annotations == nil {
 				sts.Annotations = map[string]string{}
 			}
-			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.0"
+			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.1"
 			sts.Annotations[annotationLastClient] = "geth" // different client
 			Expect(k8sClient.Patch(ctx, sts, patch)).To(Succeed())
 
@@ -312,7 +312,7 @@ var _ = Describe("Upgrade Controller", func() {
 		It("should detect crash loop and perform rollback", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-rollback-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -331,7 +331,7 @@ var _ = Describe("Upgrade Controller", func() {
 			if sts.Annotations == nil {
 				sts.Annotations = map[string]string{}
 			}
-			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.0"
+			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.1"
 			sts.Annotations[annotationLastClient] = "nethermind"
 			sts.Annotations[annotationPreviousImage] = "nethermind/nethermind:1.35.0"
 			Expect(k8sClient.Patch(ctx, sts, stsPatch)).To(Succeed())
@@ -357,7 +357,7 @@ var _ = Describe("Upgrade Controller", func() {
 					Containers: []corev1.Container{
 						{
 							Name:  "node",
-							Image: "nethermind/nethermind:1.36.0",
+							Image: "nethermind/nethermind:1.36.1",
 						},
 					},
 				},
@@ -373,7 +373,7 @@ var _ = Describe("Upgrade Controller", func() {
 					{
 						Name:         "node",
 						RestartCount: 5,
-						Image:        "nethermind/nethermind:1.36.0",
+						Image:        "nethermind/nethermind:1.36.1",
 						State: corev1.ContainerState{
 							Waiting: &corev1.ContainerStateWaiting{
 								Reason: "CrashLoopBackOff",
@@ -416,7 +416,7 @@ var _ = Describe("Upgrade Controller", func() {
 		It("should not rollback when crash loop is from old image", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-no-rollback-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -434,7 +434,7 @@ var _ = Describe("Upgrade Controller", func() {
 			if sts.Annotations == nil {
 				sts.Annotations = map[string]string{}
 			}
-			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.0"
+			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.1"
 			sts.Annotations[annotationLastClient] = "nethermind"
 			sts.Annotations[annotationPreviousImage] = "nethermind/nethermind:1.35.0"
 			Expect(k8sClient.Patch(ctx, sts, stsPatch)).To(Succeed())
@@ -475,7 +475,7 @@ var _ = Describe("Upgrade Controller", func() {
 					{
 						Name:         "node",
 						RestartCount: 5,
-						Image:        "nethermind/nethermind:1.35.0", // OLD image, not 1.36.0
+						Image:        "nethermind/nethermind:1.36.0", // OLD image, not 1.36.1
 						State: corev1.ContainerState{
 							Waiting: &corev1.ContainerStateWaiting{
 								Reason: "CrashLoopBackOff",
@@ -493,13 +493,13 @@ var _ = Describe("Upgrade Controller", func() {
 
 			// Verify NO rollback: last-image should still be the new version.
 			Expect(k8sClient.Get(ctx, nn, sts)).To(Succeed())
-			Expect(sts.Annotations[annotationLastImage]).To(Equal("nethermind/nethermind:1.36.0"))
+			Expect(sts.Annotations[annotationLastImage]).To(Equal("nethermind/nethermind:1.36.1"))
 		})
 
 		It("should handle rollback with no previous image gracefully", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-rollback-noprev-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -517,7 +517,7 @@ var _ = Describe("Upgrade Controller", func() {
 			if sts.Annotations == nil {
 				sts.Annotations = map[string]string{}
 			}
-			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.0"
+			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.1"
 			sts.Annotations[annotationLastClient] = "nethermind"
 			// No annotationPreviousImage.
 			Expect(k8sClient.Patch(ctx, sts, stsPatch)).To(Succeed())
@@ -541,7 +541,7 @@ var _ = Describe("Upgrade Controller", func() {
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: "node", Image: "nethermind/nethermind:1.36.0"},
+						{Name: "node", Image: "nethermind/nethermind:1.36.1"},
 					},
 				},
 			}
@@ -555,7 +555,7 @@ var _ = Describe("Upgrade Controller", func() {
 					{
 						Name:         "node",
 						RestartCount: 5,
-						Image:        "nethermind/nethermind:1.36.0",
+						Image:        "nethermind/nethermind:1.36.1",
 						State: corev1.ContainerState{
 							Waiting: &corev1.ContainerStateWaiting{
 								Reason: "CrashLoopBackOff",
@@ -585,7 +585,7 @@ var _ = Describe("Upgrade Controller", func() {
 		It("should clear Upgrading condition when all replicas are ready", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-upgrade-ok-%d", time.Now().UnixNano())
-			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.0")
+			nn := setupAndReconcile(ctx, name, "nethermind/nethermind", "1.36.1")
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
 				if err := k8sClient.Get(ctx, nn, n); err == nil {
@@ -603,7 +603,7 @@ var _ = Describe("Upgrade Controller", func() {
 			if sts.Annotations == nil {
 				sts.Annotations = map[string]string{}
 			}
-			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.0"
+			sts.Annotations[annotationLastImage] = "nethermind/nethermind:1.36.1"
 			sts.Annotations[annotationLastClient] = "nethermind"
 			Expect(k8sClient.Patch(ctx, sts, stsPatch)).To(Succeed())
 
@@ -649,7 +649,7 @@ var _ = Describe("Upgrade Controller", func() {
 			name := fmt.Sprintf("test-setcond-%d", time.Now().UnixNano())
 			nn := types.NamespacedName{Name: name, Namespace: testNS}
 
-			node := newUpgradeTestNode(name, "nethermind/nethermind", "1.36.0")
+			node := newUpgradeTestNode(name, "nethermind/nethermind", "1.36.1")
 			Expect(k8sClient.Create(ctx, node)).To(Succeed())
 			DeferCleanup(func() {
 				n := &nodesv1alpha1.BlockchainNode{}
