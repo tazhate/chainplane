@@ -5,7 +5,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - nodes.k8s-bch.io
+  - nodes.chainplane.io
   resources:
   - blockchainnodes
   verbs:
@@ -17,13 +17,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nodes.k8s-bch.io
+  - nodes.chainplane.io
   resources:
   - blockchainnodes/finalizers
   verbs:
   - update
 - apiGroups:
-  - nodes.k8s-bch.io
+  - nodes.chainplane.io
   resources:
   - blockchainnodes/status
   verbs:
@@ -94,3 +94,15 @@ rules:
   verbs:
   - create
   - patch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - podmonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

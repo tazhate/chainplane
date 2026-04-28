@@ -1,4 +1,4 @@
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: starknet-mainnet-01

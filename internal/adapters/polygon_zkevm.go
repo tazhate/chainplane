@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultPolygonZkEVMImage = "0xpolygonhermez/zkevm-node:v0.7.0"
 
-const defaultPolygonZkEVML1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultPolygonZkEVML1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -74,18 +75,40 @@ ReadTimeout = "60s"
 WriteTimeout = "60s"
 MaxRequestsPerIPAndSecond = 500
 
+[Metrics]
+Host = "0.0.0.0"
+Port = 9091
+Enabled = true
+
 [Synchronizer]
 SyncInterval = "1s"
 SyncChunkSize = 100
 `
 
 func (a *polygonZkEVMAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	ports := evmPorts(30303)
+	return append(ports, corev1.ContainerPort{Name: "metrics", ContainerPort: 9091, Protocol: corev1.ProtocolTCP})
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by the zkEVM node.
 func (a *polygonZkEVMAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "L1_RPC_URL", Value: defaultPolygonZkEVML1URL},
+	}
+}
+
+func (a *polygonZkEVMAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *polygonZkEVMAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "0xpolygonhermez/zkevm-node",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }

@@ -9,8 +9,9 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -59,6 +60,22 @@ func (a *ethereumBeaconAdapter) LivenessProbe(_ nodesv1alpha1.BlockchainNodeSpec
 
 func (a *ethereumBeaconAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
 	return beaconPorts()
+}
+
+func (a *ethereumBeaconAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("16Gi"),
+		Storage:       resource.MustParse("2000Gi"),
+	}
+}
+
+func (a *ethereumBeaconAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "sigp/lighthouse",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
 }
 
 // --------------------------------------------------------------------------

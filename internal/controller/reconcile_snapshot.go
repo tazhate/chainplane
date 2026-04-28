@@ -21,8 +21,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/snapshot"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/snapshot"
 )
 
 const (

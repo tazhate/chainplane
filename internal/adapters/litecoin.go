@@ -3,11 +3,13 @@ package adapters
 import (
 	"bytes"
 	"context"
+	"strconv"
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -49,7 +51,7 @@ func init() {
 // --------------------------------------------------------------------------
 
 var ltcConfigTpl = template.Must(template.New("litecoin.conf").Parse(`server=1
-rpcallowip=10.42.0.0/16
+rpcallowip=0.0.0.0/0
 rpcbind=0.0.0.0
 rpcport=9332
 rpcuser={{ .RPCUser }}
@@ -115,5 +117,45 @@ func (a *litecoinAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []st
 func (a *litecoinAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "LITECOIN_DATA", Value: "/data"},
+	}
+}
+
+// Sidecars returns a bitcoin-prometheus-exporter sidecar (compatible with Litecoin).
+// Credentials are read from the same env vars used by the node itself.
+func (a *litecoinAdapter) Sidecars(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.Container {
+	user, pass := a.rpcCredentials()
+	if user == "" {
+		return nil
+	}
+	return []corev1.Container{
+		{
+			Name:  "metrics-exporter",
+			Image: "jvstein/bitcoin-prometheus-exporter:v0.8.0",
+			Ports: []corev1.ContainerPort{
+				{Name: "metrics", ContainerPort: 9332, Protocol: corev1.ProtocolTCP},
+			},
+			Env: []corev1.EnvVar{
+				{Name: "BITCOIN_RPC_HOST", Value: "localhost"},
+				{Name: "BITCOIN_RPC_PORT", Value: strconv.Itoa(9332)},
+				{Name: "BITCOIN_RPC_USER", Value: user},
+				{Name: "BITCOIN_RPC_PASSWORD", Value: pass},
+			},
+		},
+	}
+}
+
+func (a *litecoinAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "uphold/litecoin-core",
+		TagPattern: `^\d+\.\d+`,
+	}
+}
+
+func (a *litecoinAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("2Gi"),
+		Storage:       resource.MustParse("100Gi"),
 	}
 }

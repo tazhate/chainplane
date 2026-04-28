@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= ghcr.io/tazhate/chainplane:latest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -72,7 +72,7 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 		echo "Kind is not installed. Please install Kind manually."; \
 		exit 1; \
 	}
-	@kind get clusters | grep -q 'kind' || { \
+	@kind get clusters | grep -q '.' || { \
 		echo "No Kind cluster is running. Please start a Kind cluster before running the e2e tests."; \
 		exit 1; \
 	}
@@ -94,21 +94,25 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 
 .PHONY: helm-lint
 helm-lint: ## Lint the Helm chart
-	helm lint charts/blockchain-node-operator
+	helm lint charts/chainplane
 
 .PHONY: helm-package
 helm-package: ## Package the Helm chart
-	helm package charts/blockchain-node-operator -d dist/
+	helm package charts/chainplane -d dist/
 
 .PHONY: helm-template
 helm-template: ## Render Helm templates locally
-	helm template blockchain-node-operator charts/blockchain-node-operator
+	helm template chainplane charts/chainplane
 
 ##@ Build
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
+
+.PHONY: build-dashboard
+build-dashboard: ## Build Fleet Status dashboard binary.
+	go build -o bin/dashboard ./cmd/dashboard/
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
@@ -136,10 +140,10 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- $(CONTAINER_TOOL) buildx create --name blockchain-node-operator-builder
-	$(CONTAINER_TOOL) buildx use blockchain-node-operator-builder
+	- $(CONTAINER_TOOL) buildx create --name chainplane-builder
+	$(CONTAINER_TOOL) buildx use chainplane-builder
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
-	- $(CONTAINER_TOOL) buildx rm blockchain-node-operator-builder
+	- $(CONTAINER_TOOL) buildx rm chainplane-builder
 	rm Dockerfile.cross
 
 .PHONY: build-installer

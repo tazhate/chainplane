@@ -1,7 +1,7 @@
 package health
 
 import (
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // BlockchainType represents a supported blockchain network used for
@@ -17,8 +17,8 @@ const (
 
 // chainMetricConfig holds chain-specific metric names and default thresholds.
 type chainMetricConfig struct {
-	syncLagQuery    string // PromQL metric name for sync lag (expects %s for pod)
-	defaultSyncLag  float64
+	syncLagQuery      string // PromQL metric name for sync lag (expects %s for pod)
+	defaultSyncLag    float64
 	defaultLatencyP99 float64
 }
 

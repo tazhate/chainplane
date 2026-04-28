@@ -1,8 +1,8 @@
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   labels:
-    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/name: chainplane
     app.kubernetes.io/managed-by: kustomize
   name: zora-mainnet
 spec:
@@ -11,7 +11,7 @@ spec:
   nodeType: rpc
   nodeGroup: medium
   # Default image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2
-  # L1_RPC_URL env var defaults to http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545
+  # L1_RPC_URL env var defaults to http://ethereum:8545
   # Override via extraEnv if using a different L1 endpoint.
   storage:
     size: 500Gi

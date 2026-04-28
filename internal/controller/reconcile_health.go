@@ -30,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
-	"github.com/tazhate/blockchain-node-operator/internal/metrics"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
+	"github.com/tazhate/chainplane/internal/metrics"
 )
 
 // ---------------------------------------------------------------------------
@@ -42,20 +42,20 @@ import (
 const (
 	// annotationDegradedSince records the RFC 3339 timestamp when the node
 	// first entered the Degraded phase. Used for auto-restart timeout.
-	annotationDegradedSince = "nodes.k8s-bch.io/degraded-since"
+	annotationDegradedSince = "nodes.chainplane.io/degraded-since"
 
 	// annotationSyncStallSince / annotationLastSyncBlock track height
 	// freeze detection across reconcile cycles.
-	annotationSyncStallSince = "nodes.k8s-bch.io/sync-stall-since"
-	annotationLastSyncBlock  = "nodes.k8s-bch.io/last-sync-block"
+	annotationSyncStallSince = "nodes.chainplane.io/sync-stall-since"
+	annotationLastSyncBlock  = "nodes.chainplane.io/last-sync-block"
 
 	// Progress-snapshot annotations for ETA calculation.
-	annotationProgressSnapshotPct = "nodes.k8s-bch.io/progress-snapshot-pct"
-	annotationProgressSnapshotAt  = "nodes.k8s-bch.io/progress-snapshot-at"
+	annotationProgressSnapshotPct = "nodes.chainplane.io/progress-snapshot-pct"
+	annotationProgressSnapshotAt  = "nodes.chainplane.io/progress-snapshot-at"
 
 	// Block-rate snapshot annotations (fallback ETA method).
-	annotationBlockSnapshotHeight = "nodes.k8s-bch.io/block-snapshot-height"
-	annotationBlockSnapshotAt     = "nodes.k8s-bch.io/block-snapshot-at"
+	annotationBlockSnapshotHeight = "nodes.chainplane.io/block-snapshot-height"
+	annotationBlockSnapshotAt     = "nodes.chainplane.io/block-snapshot-at"
 
 	// progressSnapshotInterval determines how frequently ETA snapshots are
 	// refreshed.
@@ -124,7 +124,7 @@ func (r *BlockchainNodeReconciler) refreshStatus(
 	// Handle degraded auto-restart or recovery tracking.
 	logger.Info("pre-auto-restart", "node", node.Name, "phase", node.Status.Phase)
 	if node.Status.Phase == nodesv1alpha1.NodePhaseDegraded {
-		if restartErr := r.restartIfDegradedTooLong(ctx, node, logger); restartErr != nil {
+		if restartErr := r.restartIfDegradedTooLong(ctx, node); restartErr != nil {
 			logger.Error(restartErr, "auto-restart failed")
 		}
 	} else {
@@ -234,7 +234,7 @@ func (r *BlockchainNodeReconciler) applyFullySyncedStatus(
 		setCondition(node, nodesv1alpha1.ConditionReady, metav1.ConditionFalse, "HeightStall", msg, now)
 		node.Status.SyncProgress = "stalled"
 		node.Status.ObservedGeneration = node.Generation
-		if err := r.restartIfDegradedTooLong(ctx, node, logger); err != nil {
+		if err := r.restartIfDegradedTooLong(ctx, node); err != nil {
 			logger.Error(err, "auto-restart failed for stalled healthy node")
 		}
 		return
@@ -278,7 +278,7 @@ func (r *BlockchainNodeReconciler) markStalled(
 	setCondition(node, nodesv1alpha1.ConditionSyncing, metav1.ConditionTrue, "Syncing", fmt.Sprintf("%.1f%% complete (stalled)", progress), now)
 	node.Status.SyncProgress = fmt.Sprintf("%.1f%% (stalled)", progress)
 	node.Status.ObservedGeneration = node.Generation
-	if err := r.restartIfDegradedTooLong(ctx, node, logger); err != nil {
+	if err := r.restartIfDegradedTooLong(ctx, node); err != nil {
 		logger.Error(err, "auto-restart failed for stalled node")
 	}
 }
@@ -294,7 +294,9 @@ func (r *BlockchainNodeReconciler) detectHeightStall(
 	ctx context.Context,
 	node *nodesv1alpha1.BlockchainNode,
 	currentBlock int64,
-	logger interface{ Error(error, string, ...interface{}) },
+	logger interface {
+		Error(error, string, ...interface{})
+	},
 ) (bool, string) {
 	blockStr := fmt.Sprintf("%d", currentBlock)
 	lastBlock := node.Annotations[annotationLastSyncBlock]
@@ -368,7 +370,6 @@ func (r *BlockchainNodeReconciler) checkBlockLag(
 func (r *BlockchainNodeReconciler) restartIfDegradedTooLong(
 	ctx context.Context,
 	node *nodesv1alpha1.BlockchainNode,
-	logger interface{ Error(error, string, ...interface{}) },
 ) error {
 	timeout := defaultDegradedTimeoutMinutes
 	if node.Spec.Health.DegradedTimeoutMinutes != nil {
@@ -425,7 +426,9 @@ func (r *BlockchainNodeReconciler) restartIfDegradedTooLong(
 func (r *BlockchainNodeReconciler) clearDegradedTracking(
 	ctx context.Context,
 	node *nodesv1alpha1.BlockchainNode,
-	logger interface{ Error(error, string, ...interface{}) },
+	logger interface {
+		Error(error, string, ...interface{})
+	},
 ) {
 	sinceStr, hasSince := node.Annotations[annotationDegradedSince]
 	if !hasSince {
@@ -627,31 +630,4 @@ func ensureAnnotations(node *nodesv1alpha1.BlockchainNode) {
 	if node.Annotations == nil {
 		node.Annotations = map[string]string{}
 	}
-}
-
-// Aliases kept for backward compatibility with the old function names used
-// within updateStatus. These are not exported; the new names are preferred.
-
-func (r *BlockchainNodeReconciler) updateStatus(ctx context.Context, node *nodesv1alpha1.BlockchainNode, adapter adapters.ChainAdapter) error {
-	return r.refreshStatus(ctx, node, adapter)
-}
-
-func (r *BlockchainNodeReconciler) isLagging(ctx context.Context, node *nodesv1alpha1.BlockchainNode, currentBlock int64) (bool, int64) {
-	return r.checkBlockLag(ctx, node, currentBlock)
-}
-
-func (r *BlockchainNodeReconciler) checkHeightStall(ctx context.Context, node *nodesv1alpha1.BlockchainNode, currentBlock int64, logger interface {
-	Error(error, string, ...interface{})
-}) (bool, string) {
-	return r.detectHeightStall(ctx, node, currentBlock, logger)
-}
-
-func (r *BlockchainNodeReconciler) handleDegradedAutoRestart(ctx context.Context, node *nodesv1alpha1.BlockchainNode, logger interface {
-	Error(error, string, ...interface{})
-}) error {
-	return r.restartIfDegradedTooLong(ctx, node, logger)
-}
-
-func (r *BlockchainNodeReconciler) calcSyncETA(ctx context.Context, node *nodesv1alpha1.BlockchainNode, progress float64, currentBlock int64, now time.Time) string {
-	return r.estimateSyncETA(ctx, node, progress, currentBlock, now)
 }

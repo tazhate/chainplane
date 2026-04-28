@@ -16,7 +16,7 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Run helm lint
-        run: helm lint charts/blockchain-node-operator
+        run: helm lint charts/chainplane
 
       - name: Run helm template
-        run: helm template blockchain-node-operator charts/blockchain-node-operator
+        run: helm template chainplane charts/chainplane

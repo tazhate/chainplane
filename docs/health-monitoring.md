@@ -107,7 +107,7 @@ type SyncStatus struct {
 
 ### Stall Detection
 
-The controller tracks block height via annotations (`nodes.k8s-bch.io/last-sync-block`, `nodes.k8s-bch.io/sync-stall-since`). If block height stops advancing during sync, the adapter's `StallExempt` flag determines whether this is expected:
+The controller tracks block height via annotations (`nodes.chainplane.io/last-sync-block`, `nodes.chainplane.io/sync-stall-since`). If block height stops advancing during sync, the adapter's `StallExempt` flag determines whether this is expected:
 
 **StallExempt chains/conditions:**
 - Ethereum: all syncing states (Reth/Erigon pipeline stages freeze block height for hours)
@@ -231,13 +231,13 @@ Pending --> Draining --> Creating --> Verifying --> Completing
 ### Phase Details
 
 **1. Draining**
-- Old pod is marked `nodes.k8s-bch.io/ready=false` (removes it from Service endpoints)
+- Old pod is marked `nodes.chainplane.io/ready=false` (removes it from Service endpoints)
 - `TrafficManager.Drain()` is called to wait for active connections to close
 - Default drain timeout: 30 seconds
 
 **2. Creating**
 - Replacement pod is created by cloning the original pod's spec
-- Replacement pod gets labels: `nodes.k8s-bch.io/instance=replacement`, `nodes.k8s-bch.io/replacement-for=<old-pod>`, `nodes.k8s-bch.io/ready=false`
+- Replacement pod gets labels: `nodes.chainplane.io/instance=replacement`, `nodes.chainplane.io/replacement-for=<old-pod>`, `nodes.chainplane.io/ready=false`
 - Pod is created with `NodeName=""` so the scheduler picks a node
 
 **3. Verifying**
@@ -266,10 +266,10 @@ Pending --> Draining --> Creating --> Verifying --> Completing
 
 | Annotation | Description |
 |------------|-------------|
-| `nodes.k8s-bch.io/replacement-phase` | Current phase: `Draining`, `Creating`, `Verifying`, `Completing`, `RollingBack` |
-| `nodes.k8s-bch.io/replacement-pod` | Name of the replacement pod |
-| `nodes.k8s-bch.io/replacement-old-pod` | Name of the original pod being replaced |
-| `nodes.k8s-bch.io/replacement-started-at` | RFC3339 timestamp of when replacement started |
+| `nodes.chainplane.io/replacement-phase` | Current phase: `Draining`, `Creating`, `Verifying`, `Completing`, `RollingBack` |
+| `nodes.chainplane.io/replacement-pod` | Name of the replacement pod |
+| `nodes.chainplane.io/replacement-old-pod` | Name of the original pod being replaced |
+| `nodes.chainplane.io/replacement-started-at` | RFC3339 timestamp of when replacement started |
 
 ### Replacement Configuration
 
@@ -283,11 +283,11 @@ Pending --> Draining --> Creating --> Verifying --> Completing
 
 ## Traffic Management
 
-Traffic management uses a label-based approach. Services must include `nodes.k8s-bch.io/ready=true` in their selector. Toggling this label on pods controls whether the Kubernetes endpoint controller includes them in the Service's endpoint list.
+Traffic management uses a label-based approach. Services must include `nodes.chainplane.io/ready=true` in their selector. Toggling this label on pods controls whether the Kubernetes endpoint controller includes them in the Service's endpoint list.
 
 ### Drain Operation
 
-1. Set `nodes.k8s-bch.io/ready=false` on the pod
+1. Set `nodes.chainplane.io/ready=false` on the pod
 2. Endpoint controller removes the pod from Service endpoints
 3. Wait for drain timeout to allow active connections to complete
 4. Log pod details for observability

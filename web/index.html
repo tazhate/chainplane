@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fleet Status — Blockchain Node Operator</title>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --border:    #30363d;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --accent:    #00ff88;
+    --danger:    #ff4757;
+    --warning:   #ffa502;
+    --info:      #1e90ff;
+    --pending:   #8b949e;
+    --radius:    8px;
+    --font:      'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ── Layout ─────────────────────────────────────────── */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+  header .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; }
+    50% { opacity:0.4; }
+  }
+  .spacer { flex: 1; }
+  .ns-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .clock {
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 70px;
+    text-align: right;
+  }
+  .btn-refresh {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+
+  main { flex: 1; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+  /* ── Summary bar ────────────────────────────────────── */
+  .summary-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+  }
+  .chip .chip-value { font-size: 18px; font-weight: 700; }
+  .chip.total    .chip-value { color: var(--text); }
+  .chip.healthy  .chip-value { color: var(--accent); }
+  .chip.syncing  .chip-value { color: var(--info); }
+  .chip.degraded .chip-value { color: var(--warning); }
+  .chip.failed   .chip-value { color: var(--danger); }
+  .chip.pending  .chip-value { color: var(--pending); }
+
+  /* ── Status badge ───────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .badge::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; }
+  .badge.Healthy  { background: #00ff8820; color: var(--accent);  }
+  .badge.Healthy::before  { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+  .badge.Syncing  { background: #1e90ff20; color: var(--info);    }
+  .badge.Syncing::before  { background: var(--info); }
+  .badge.Degraded { background: #ffa50220; color: var(--warning); }
+  .badge.Degraded::before { background: var(--warning); }
+  .badge.Failed   { background: #ff475720; color: var(--danger);  }
+  .badge.Failed::before   { background: var(--danger); }
+  .badge.Pending  { background: #8b949e20; color: var(--pending); }
+  .badge.Pending::before  { background: var(--pending); }
+
+  /* ── Chain cards ────────────────────────────────────── */
+  .section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .chain-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .chain-card:hover { border-color: var(--accent); }
+  .chain-card.active { border-color: var(--accent); }
+  .chain-card .chain-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    text-transform: capitalize;
+  }
+  .chain-card .chain-stat {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .chain-card .chain-stat span { color: var(--text); font-weight: 600; }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.4s;
+  }
+  .progress-bar-fill.degraded { background: var(--warning); }
+  .progress-bar-fill.failed   { background: var(--danger); }
+
+  /* ── Nodes table ────────────────────────────────────── */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    width: 200px;
+  }
+  .filter-input::placeholder { color: var(--muted); }
+  .filter-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .last-updated {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    background: var(--bg);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--text); }
+  thead th .sort-arrow { margin-left: 4px; opacity: 0.4; }
+  thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody tr.expanded { background: rgba(0,255,136,0.04); }
+  td {
+    padding: 10px 14px;
+    vertical-align: middle;
+  }
+  td.node-name { font-weight: 600; font-family: monospace; font-size: 13px; }
+  td.chain-cell { text-transform: capitalize; font-weight: 500; }
+  td.height-cell { font-variant-numeric: tabular-nums; font-family: monospace; }
+  td.sync-cell { min-width: 100px; }
+  td.sync-cell .bar { margin-top: 4px; }
+  td.eta-cell { color: var(--muted); font-size: 12px; }
+  td.peers-cell { font-variant-numeric: tabular-nums; }
+
+  /* ── Expanded row detail ────────────────────────────── */
+  .detail-row td {
+    padding: 0;
+    background: rgba(0,255,136,0.02);
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-content {
+    padding: 14px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .detail-item label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 2px;
+  }
+  .detail-item value {
+    font-size: 13px;
+    font-family: monospace;
+  }
+
+  /* ── Empty / loading states ─────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scrollbar ───────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    main { padding: 12px; }
+    .cards-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1><span class="logo-dot"></span>Fleet Status</h1>
+    <select class="ns-select" id="nsSelect" onchange="applyFilters()">
+      <option value="">All namespaces</option>
+    </select>
+    <div class="spacer"></div>
+    <div class="clock" id="clock"></div>
+    <button class="btn-refresh" onclick="loadData(true)">↺ Refresh</button>
+  </header>
+
+  <main>
+    <!-- Summary -->
+    <div class="summary-bar" id="summaryBar">
+      <div class="chip total">   <span class="chip-value" id="sumTotal">–</span>   Total</div>
+      <div class="chip healthy"> <span class="chip-value" id="sumHealthy">–</span> Healthy</div>
+      <div class="chip syncing"> <span class="chip-value" id="sumSyncing">–</span> Syncing</div>
+      <div class="chip degraded"><span class="chip-value" id="sumDegraded">–</span> Degraded</div>
+      <div class="chip failed">  <span class="chip-value" id="sumFailed">–</span>  Failed</div>
+      <div class="chip pending"> <span class="chip-value" id="sumPending">–</span> Pending</div>
+    </div>
+
+    <!-- Chain cards -->
+    <div class="section-title">Chains</div>
+    <div class="cards-grid" id="chainCards"></div>
+
+    <!-- Nodes table -->
+    <div class="section-title">Nodes</div>
+    <div class="toolbar">
+      <input class="filter-input" id="filterText" placeholder="Filter by name…" oninput="applyFilters()"/>
+      <select class="filter-select" id="filterPhase" onchange="applyFilters()">
+        <option value="">All phases</option>
+        <option>Healthy</option>
+        <option>Syncing</option>
+        <option>Degraded</option>
+        <option>Failed</option>
+        <option>Pending</option>
+      </select>
+      <select class="filter-select" id="filterChain" onchange="applyFilters()">
+        <option value="">All chains</option>
+      </select>
+      <span class="last-updated" id="lastUpdated"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="nodesTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')">Node <span class="sort-arrow" id="arr-name">▲</span></th>
+            <th onclick="sortBy('chain')">Chain <span class="sort-arrow" id="arr-chain"></span></th>
+            <th onclick="sortBy('phase')" class="hide-mobile">Phase <span class="sort-arrow" id="arr-phase"></span></th>
+            <th onclick="sortBy('blockHeight')">Height <span class="sort-arrow" id="arr-blockHeight"></span></th>
+            <th onclick="sortBy('syncProgress')" class="hide-mobile">Sync% <span class="sort-arrow" id="arr-syncProgress"></span></th>
+            <th class="hide-mobile">ETA</th>
+            <th onclick="sortBy('peersCount')" class="hide-mobile">Peers <span class="sort-arrow" id="arr-peersCount"></span></th>
+            <th onclick="sortBy('replicas')" class="hide-mobile">Replicas <span class="sort-arrow" id="arr-replicas"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8"><div class="empty-state"><span class="spinner"></span>Loading…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+
+let allNodes = [];
+let filteredNodes = [];
+let sortCol = 'name';
+let sortAsc = true;
+let expandedRow = null;
+let lastFetch = null;
+let activeChainFilter = '';
+
+// ── Clock ──────────────────────────────────────────────
+function tickClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ── Last-updated ticker ────────────────────────────────
+setInterval(() => {
+  if (!lastFetch) return;
+  const secs = Math.round((Date.now() - lastFetch) / 1000);
+  document.getElementById('lastUpdated').textContent =
+    secs < 5 ? 'Just updated' : `Updated ${secs}s ago`;
+}, 1000);
+
+// ── Auto-refresh ───────────────────────────────────────
+setInterval(() => loadData(false), 15000);
+
+// ── Data loading ───────────────────────────────────────
+async function loadData(showSpinner) {
+  if (showSpinner) {
+    document.getElementById('tableBody').innerHTML =
+      '<tr><td colspan="8"><div class="empty-state"><span class="spinner"></span>Loading…</div></td></tr>';
+  }
+  try {
+    const r = await fetch('/api/nodes');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    lastFetch = Date.now();
+    allNodes = data.nodes || [];
+    updateSummary(data.summary || {});
+    updateNamespaces();
+    updateChainFilter();
+    applyFilters();
+  } catch (e) {
+    console.error('load error', e);
+    document.getElementById('lastUpdated').textContent = 'Error loading data';
+  }
+}
+
+// ── Summary ────────────────────────────────────────────
+function updateSummary(s) {
+  document.getElementById('sumTotal').textContent   = s.total    ?? 0;
+  document.getElementById('sumHealthy').textContent = s.healthy  ?? 0;
+  document.getElementById('sumSyncing').textContent = s.syncing  ?? 0;
+  document.getElementById('sumDegraded').textContent= s.degraded ?? 0;
+  document.getElementById('sumFailed').textContent  = s.failed   ?? 0;
+  document.getElementById('sumPending').textContent = s.pending  ?? 0;
+}
+
+// ── Namespace selector ─────────────────────────────────
+function updateNamespaces() {
+  const sel = document.getElementById('nsSelect');
+  const cur = sel.value;
+  const ns = [...new Set(allNodes.map(n => n.namespace))].sort();
+  while (sel.options.length > 1) sel.remove(1);
+  ns.forEach(n => {
+    const o = document.createElement('option');
+    o.value = o.textContent = n;
+    sel.appendChild(o);
+  });
+  sel.value = cur;
+}
+
+// ── Chain filter ───────────────────────────────────────
+function updateChainFilter() {
+  const sel = document.getElementById('filterChain');
+  const cur = sel.value;
+  const chains = [...new Set(allNodes.map(n => n.chain))].sort();
+  while (sel.options.length > 1) sel.remove(1);
+  chains.forEach(c => {
+    const o = document.createElement('option');
+    o.value = o.textContent = c;
+    sel.appendChild(o);
+  });
+  sel.value = cur;
+}
+
+// ── Chain cards ────────────────────────────────────────
+function renderChainCards(nodes) {
+  const container = document.getElementById('chainCards');
+  const byChain = {};
+  nodes.forEach(n => {
+    if (!byChain[n.chain]) byChain[n.chain] = { total:0, healthy:0 };
+    byChain[n.chain].total++;
+    if (n.phase === 'Healthy') byChain[n.chain].healthy++;
+  });
+
+  container.innerHTML = '';
+  Object.entries(byChain).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([chain, stat]) => {
+    const ratio = stat.total ? stat.healthy / stat.total : 0;
+    const pct = Math.round(ratio * 100);
+    const active = activeChainFilter === chain ? 'active' : '';
+    const fillClass = ratio < 0.5 ? 'failed' : ratio < 1 ? 'degraded' : '';
+    const card = document.createElement('div');
+    card.className = `chain-card ${active}`;
+    card.innerHTML = `
+      <div class="chain-name">${chain}</div>
+      <div class="chain-stat"><span>${stat.healthy}</span>/${stat.total} healthy</div>
+      <div class="progress-bar">
+        <div class="progress-bar-fill ${fillClass}" style="width:${pct}%"></div>
+      </div>`;
+    card.onclick = () => {
+      activeChainFilter = activeChainFilter === chain ? '' : chain;
+      document.getElementById('filterChain').value = activeChainFilter;
+      applyFilters();
+    };
+    container.appendChild(card);
+  });
+}
+
+// ── Filters & sort ─────────────────────────────────────
+function applyFilters() {
+  const ns     = document.getElementById('nsSelect').value;
+  const text   = document.getElementById('filterText').value.toLowerCase();
+  const phase  = document.getElementById('filterPhase').value;
+  const chain  = document.getElementById('filterChain').value;
+
+  activeChainFilter = chain;
+
+  filteredNodes = allNodes.filter(n => {
+    if (ns    && n.namespace !== ns)              return false;
+    if (text  && !n.name.toLowerCase().includes(text)) return false;
+    if (phase && n.phase !== phase)               return false;
+    if (chain && n.chain !== chain)               return false;
+    return true;
+  });
+
+  renderChainCards(filteredNodes);
+  doSort();
+}
+
+function sortBy(col) {
+  if (sortCol === col) { sortAsc = !sortAsc; }
+  else { sortCol = col; sortAsc = true; }
+  doSort();
+}
+
+function doSort() {
+  filteredNodes.sort((a, b) => {
+    let av = a[sortCol] ?? '', bv = b[sortCol] ?? '';
+    if (typeof av === 'number' && typeof bv === 'number') {
+      return sortAsc ? av - bv : bv - av;
+    }
+    av = String(av); bv = String(bv);
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  updateSortArrows();
+  renderTable();
+}
+
+function updateSortArrows() {
+  ['name','chain','phase','blockHeight','syncProgress','peersCount','replicas'].forEach(c => {
+    const el = document.getElementById(`arr-${c}`);
+    if (!el) return;
+    el.textContent = sortCol === c ? (sortAsc ? '▲' : '▼') : '';
+    const th = el.parentElement;
+    th.classList.toggle('sorted', sortCol === c);
+  });
+}
+
+// ── Table rendering ────────────────────────────────────
+function syncPct(s) {
+  if (!s) return 100;
+  return parseFloat(s.replace('%','')) || 0;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  if (!filteredNodes.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="icon">🔍</div>No nodes match the current filters.</div></td></tr>';
+    return;
+  }
+
+  const rows = [];
+  filteredNodes.forEach((n, i) => {
+    const pct = syncPct(n.syncProgress);
+    const fillClass = n.phase==='Failed' ? 'failed' : n.phase==='Degraded' ? 'degraded' : '';
+    const phase = n.phase || 'Pending';
+
+    rows.push(`
+      <tr onclick="toggleDetail(${i})" data-idx="${i}">
+        <td class="node-name">${esc(n.name)}<span style="color:var(--muted);font-size:11px;margin-left:4px;">${esc(n.namespace)}</span></td>
+        <td class="chain-cell">${esc(n.chain)}</td>
+        <td class="hide-mobile"><span class="badge ${esc(phase)}">${esc(phase)}</span></td>
+        <td class="height-cell">${n.blockHeight ? n.blockHeight.toLocaleString() : '–'}</td>
+        <td class="sync-cell hide-mobile">
+          ${n.syncProgress || (n.phase==='Healthy'?'100%':'–')}
+          <div class="bar progress-bar">
+            <div class="progress-bar-fill ${fillClass}" style="width:${pct}%"></div>
+          </div>
+        </td>
+        <td class="eta-cell hide-mobile">${esc(n.syncETA) || '–'}</td>
+        <td class="peers-cell hide-mobile">${n.peersCount}</td>
+        <td class="hide-mobile">${n.replicas}</td>
+      </tr>
+      <tr class="detail-row" id="detail-${i}" style="display:none">
+        <td colspan="8">
+          <div class="detail-content">
+            <div class="detail-item"><label>Namespace</label><value>${esc(n.namespace)}</value></div>
+            <div class="detail-item"><label>Network</label><value>${esc(n.network)}</value></div>
+            <div class="detail-item"><label>Node type</label><value>${esc(n.nodeType)}</value></div>
+            <div class="detail-item"><label>Client</label><value>${esc(n.client)||'default'}</value></div>
+            <div class="detail-item"><label>Ready</label><value>${n.ready?'✅ Yes':'❌ No'}</value></div>
+            <div class="detail-item"><label>Age</label><value>${esc(n.age)}</value></div>
+          </div>
+        </td>
+      </tr>
+    `);
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+function toggleDetail(idx) {
+  const row = document.getElementById(`detail-${idx}`);
+  if (!row) return;
+  const wasVisible = row.style.display !== 'none';
+  // Close all
+  document.querySelectorAll('.detail-row').forEach(r => r.style.display='none');
+  document.querySelectorAll('tbody tr[data-idx]').forEach(r => r.classList.remove('expanded'));
+  if (!wasVisible) {
+    row.style.display='';
+    const tr = document.querySelector(`tbody tr[data-idx="${idx}"]`);
+    if (tr) tr.classList.add('expanded');
+  }
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// Initial load
+loadData(true);
+</script>
+</body>
+</html>

@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultBaseChainImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2"
 
-const defaultBaseChainL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultBaseChainL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -66,6 +67,14 @@ func (a *baseChainAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []co
 	}
 }
 
+func (a *baseChainAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("16Gi"),
+		Storage:       resource.MustParse("2Ti"),
+	}
+}
+
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------
@@ -95,3 +104,11 @@ WSModules = ["eth", "net", "web3"]
 MaxPeers = 50
 ListenAddr = ":30303"
 `
+
+func (a *baseChainAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "us-docker.pkg.dev",
+		Repository: "oplabs-tools-artifacts/images/op-geth",
+		TagPattern: `^v\d+\.\d+`,
+	}
+}

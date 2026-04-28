@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
 
 	// Register all adapters via init()
-	_ "github.com/tazhate/blockchain-node-operator/internal/adapters"
+	_ "github.com/tazhate/chainplane/internal/adapters"
 )
 
 // allChains lists every chain the operator supports — 100 total.
@@ -541,7 +541,7 @@ func TestBitcoinContainerPortsVaryByNetwork(t *testing.T) {
 		Network: nodesv1alpha1.NetworkTestnet,
 	})
 
-	findPort := func(ports []interface{}, name string) int32 {
+	findPort := func(_ []interface{}, _ string) int32 {
 		// Not needed, using direct approach below
 		return 0
 	}
@@ -736,9 +736,9 @@ func TestCosmosImplementsStartupProbeProvider(t *testing.T) {
 
 func TestDefaultNodeSelectorKnownGroups(t *testing.T) {
 	tests := []struct {
-		group    nodesv1alpha1.NodeGroup
-		wantKey  string
-		wantVal  string
+		group   nodesv1alpha1.NodeGroup
+		wantKey string
+		wantVal string
 	}{
 		{nodesv1alpha1.NodeGroupStorage, "workload-type", "storage"},
 		{nodesv1alpha1.NodeGroupBlockchain, "node-role.kubernetes.io/blockchain", "true"},
@@ -858,7 +858,7 @@ func TestContainerArgsProvidersReturnNonEmpty(t *testing.T) {
 		if !ok {
 			continue
 		}
-		cap, ok := adapter.(adapters.ContainerArgsProvider)
+		argsP, ok := adapter.(adapters.ContainerArgsProvider)
 		if !ok {
 			continue
 		}
@@ -867,7 +867,7 @@ func TestContainerArgsProvidersReturnNonEmpty(t *testing.T) {
 				Chain:   chain,
 				Network: nodesv1alpha1.NetworkMainnet,
 			}
-			args := cap.ContainerArgs(spec)
+			args := argsP.ContainerArgs(spec)
 			if len(args) == 0 {
 				t.Errorf("chain %s implements ContainerArgsProvider but returns empty args", chain)
 			}

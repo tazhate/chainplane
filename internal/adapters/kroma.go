@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultKromaImage = "kromanetwork/geth:v0.5.0"
 
-const defaultKromaL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultKromaL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -51,13 +52,36 @@ func (a *kromaAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStat
 }
 
 func (a *kromaAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{
+		Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP,
+	})
+}
+
+// ContainerArgs enables Prometheus metrics endpoint on Kroma op-geth.
+func (a *kromaAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by the Kroma OP Stack node.
 func (a *kromaAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "L1_RPC_URL", Value: defaultKromaL1URL},
+	}
+}
+
+func (a *kromaAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("300Gi"),
+	}
+}
+
+func (a *kromaAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "kromanetwork/geth",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 

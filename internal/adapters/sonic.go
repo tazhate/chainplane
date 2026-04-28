@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -56,6 +57,27 @@ func (a *sonicAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []core
 		{Name: "ws", ContainerPort: 18546, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 5050, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 5050, Protocol: corev1.ProtocolUDP},
+		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *sonicAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+}
+
+func (a *sonicAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *sonicAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "0xsoniclabs/sonic",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 

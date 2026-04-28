@@ -349,7 +349,7 @@ const (
 
 	// FinalizerName is the finalizer added to BlockchainNode resources to
 	// ensure proper cleanup of owned sub-resources before deletion.
-	FinalizerName = "nodes.k8s-bch.io/finalizer"
+	FinalizerName = "nodes.chainplane.io/finalizer"
 )
 
 // ---------------------------------------------------------------------------
@@ -454,6 +454,33 @@ type RPCSpec struct {
 	WSPort int32 `json:"wsPort,omitempty"`
 }
 
+// MonitoringSpec configures observability resources for the blockchain node.
+type MonitoringSpec struct {
+	// PodMonitor configures automatic PodMonitor creation for Prometheus Operator.
+	// +optional
+	PodMonitor PodMonitorSpec `json:"podMonitor,omitempty"`
+}
+
+// PodMonitorSpec defines the desired state of the PodMonitor resource
+// created by the operator for Prometheus Operator integration.
+type PodMonitorSpec struct {
+	// Enabled controls whether a PodMonitor resource is created for this node.
+	// Requires monitoring.coreos.com CRDs (prometheus-operator) to be installed.
+	// Has no effect if the chain adapter does not expose a "metrics" port.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// Labels are additional labels applied to the PodMonitor.
+	// Use this to match your Prometheus Operator's podMonitorSelector.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Interval is the Prometheus scrape interval (e.g. "30s", "1m").
+	// Defaults to the global Prometheus scrape interval when empty.
+	// +optional
+	Interval string `json:"interval,omitempty"`
+}
+
 // ---------------------------------------------------------------------------
 // BlockchainNodeSpec — desired state
 // ---------------------------------------------------------------------------
@@ -544,6 +571,10 @@ type BlockchainNodeSpec struct {
 	// Use together with ExtraVolumes to expose secrets or configmaps.
 	// +optional
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+
+	// Monitoring configures observability resources for this node.
+	// +optional
+	Monitoring MonitoringSpec `json:"monitoring,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -640,7 +671,7 @@ func (s *BlockchainNodeStatus) IsReady() bool {
 
 // BlockchainNode manages the full lifecycle of a blockchain node: StatefulSet,
 // PVC, Services, ConfigMap, and health monitoring. It is the primary custom
-// resource of the blockchain-node-operator.
+// resource of the chainplane.
 type BlockchainNode struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

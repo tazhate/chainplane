@@ -181,7 +181,7 @@ func (r *BlockchainNode) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // BlockchainNodeValidator implements webhook.CustomValidator for BlockchainNode.
-// +kubebuilder:webhook:path=/validate-nodes-k8s-bch-io-v1alpha1-blockchainnode,mutating=false,failurePolicy=fail,sideEffects=None,groups=nodes.k8s-bch.io,resources=blockchainnodes,verbs=create;update,versions=v1alpha1,name=vblockchainnode.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-nodes-chainplane-io-v1alpha1-blockchainnode,mutating=false,failurePolicy=fail,sideEffects=None,groups=nodes.chainplane.io,resources=blockchainnodes,verbs=create;update,versions=v1alpha1,name=vblockchainnode.kb.io,admissionReviewVersions=v1
 type BlockchainNodeValidator struct{}
 
 var _ webhook.CustomValidator = &BlockchainNodeValidator{}

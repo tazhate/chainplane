@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultScrollImage = "scrolltech/l2geth:scroll-v5.9.0"
 
-const defaultScrollL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultScrollL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -82,11 +83,34 @@ func (a *scrollAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev
 	}
 }
 
-// ContainerArgs provides CLI flags including the L1 endpoint.
+// ContainerArgs provides CLI flags including the L1 endpoint and Prometheus metrics.
 func (a *scrollAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
-	return []string{"--config", "/config/config.toml", "--l1.endpoint", "$(L1_RPC_URL)"}
+	return []string{
+		"--config", "/config/config.toml",
+		"--l1.endpoint", "$(L1_RPC_URL)",
+		"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060",
+	}
+}
+
+func (a *scrollAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *scrollAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "scrolltech/l2geth",
+		TagPattern: `^scroll-v\d+`,
+		TagPrefix:  "scroll-",
+	}
 }
 
 func (a *scrollAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{
+		Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP,
+	})
 }

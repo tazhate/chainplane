@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
 )
 
 const (
@@ -45,7 +45,7 @@ const (
 	configVolumeMountPath = "/config"
 
 	// configHashAnnotation triggers a rolling restart when the config content changes.
-	configHashAnnotation = "nodes.k8s-bch.io/config-hash"
+	configHashAnnotation = "nodes.chainplane.io/config-hash"
 
 	// podFSGroup is the supplemental group applied to the pod security context
 	// so mounted volumes are group-writable by the node process.
@@ -160,10 +160,11 @@ func (r *BlockchainNodeReconciler) podContainers(
 	liveness, startup *corev1.Probe,
 	adapter adapters.ChainAdapter,
 ) []corev1.Container {
-	mounts := []corev1.VolumeMount{
-		{Name: dataVolumeName, MountPath: dataVolumeMountPath},
-		{Name: configVolumeName, MountPath: configVolumeMountPath, ReadOnly: true},
-	}
+	mounts := make([]corev1.VolumeMount, 0, 2+len(node.Spec.ExtraVolumeMounts))
+	mounts = append(mounts,
+		corev1.VolumeMount{Name: dataVolumeName, MountPath: dataVolumeMountPath},
+		corev1.VolumeMount{Name: configVolumeName, MountPath: configVolumeMountPath, ReadOnly: true},
+	)
 	mounts = append(mounts, node.Spec.ExtraVolumeMounts...)
 
 	main := corev1.Container{
@@ -182,6 +183,9 @@ func (r *BlockchainNodeReconciler) podContainers(
 
 	containers := make([]corev1.Container, 0, 1+len(node.Spec.Sidecars))
 	containers = append(containers, main)
+	if sp, ok := adapter.(adapters.SidecarProvider); ok {
+		containers = append(containers, sp.Sidecars(node.Spec)...)
+	}
 	containers = append(containers, node.Spec.Sidecars...)
 	return containers
 }
@@ -190,17 +194,16 @@ func (r *BlockchainNodeReconciler) podContainers(
 // volume followed by any user-defined extra volumes. The "data" volume is
 // provided by VolumeClaimTemplates and must not appear here.
 func (r *BlockchainNodeReconciler) podVolumes(node *nodesv1alpha1.BlockchainNode) []corev1.Volume {
-	vols := []corev1.Volume{
-		{
-			Name: configVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: node.Name + "-config",
-					},
+	vols := make([]corev1.Volume, 0, 1+len(node.Spec.ExtraVolumes))
+	vols = append(vols, corev1.Volume{
+		Name: configVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: node.Name + "-config",
 				},
 			},
 		},
-	}
+	})
 	return append(vols, node.Spec.ExtraVolumes...)
 }

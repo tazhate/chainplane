@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultMetisImage = "metisprotocol/l2geth:v1.4.2"
 
-const defaultMetisL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultMetisL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -75,8 +76,31 @@ WSOrigins = ["*"]
 MaxPeers = 50
 `
 
+func (a *metisAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *metisAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "metisprotocol/l2geth",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
+
 func (a *metisAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{
+		Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP,
+	})
+}
+
+// ContainerArgs enables Prometheus metrics endpoint on Metis l2geth.
+func (a *metisAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by l2geth.

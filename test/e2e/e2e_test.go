@@ -22,25 +22,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/tazhate/blockchain-node-operator/test/utils"
+	"github.com/tazhate/chainplane/test/utils"
 )
 
 // namespace where the project is deployed in
-const namespace = "blockchain-node-operator-system"
+const namespace = "chainplane-system"
 
 // serviceAccountName created for the project
-const serviceAccountName = "blockchain-node-operator-controller-manager"
+const serviceAccountName = "chainplane-controller-manager"
 
 // metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "blockchain-node-operator-controller-manager-metrics-service"
+const metricsServiceName = "chainplane-controller-manager-metrics-service"
 
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
-const metricsRoleBindingName = "blockchain-node-operator-metrics-binding"
+const metricsRoleBindingName = "chainplane-metrics-binding"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -173,11 +174,16 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should ensure the metrics endpoint is serving metrics", func() {
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
 			cmd := exec.Command("kubectl", "create", "clusterrolebinding", metricsRoleBindingName,
-				"--clusterrole=blockchain-node-operator-metrics-reader",
+				"--clusterrole=chainplane-metrics-reader",
 				fmt.Sprintf("--serviceaccount=%s:%s", namespace, serviceAccountName),
+				"--dry-run=client", "-o", "yaml",
 			)
-			_, err := utils.Run(cmd)
-			Expect(err).NotTo(HaveOccurred(), "Failed to create ClusterRoleBinding")
+			yamlOut, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to render ClusterRoleBinding")
+			applyCmd := exec.Command("kubectl", "apply", "-f", "-")
+			applyCmd.Stdin = strings.NewReader(yamlOut)
+			_, err = utils.Run(applyCmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply ClusterRoleBinding")
 
 			By("validating that the metrics service is available")
 			cmd = exec.Command("kubectl", "get", "service", metricsServiceName, "-n", namespace)
@@ -185,9 +191,11 @@ var _ = Describe("Manager", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred(), "Metrics service should exist")
 
 			By("validating that the ServiceMonitor for Prometheus is applied in the namespace")
-			cmd = exec.Command("kubectl", "get", "ServiceMonitor", "-n", namespace)
-			_, err = utils.Run(cmd)
-			Expect(err).NotTo(HaveOccurred(), "ServiceMonitor should exist")
+			if !skipPrometheusInstall {
+				cmd = exec.Command("kubectl", "get", "ServiceMonitor", "-n", namespace)
+				_, err = utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred(), "ServiceMonitor should exist")
+			}
 
 			By("getting the service account token")
 			token, err := serviceAccountToken()
@@ -312,7 +320,7 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should create StatefulSet, Service, and ConfigMap for a bitcoin CR", func() {
 			crName := "e2e-btc-resources"
 			cr := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -366,7 +374,7 @@ spec:
 		It("should set initial phase to Pending or Syncing", func() {
 			crName := "e2e-btc-phase"
 			cr := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -408,7 +416,7 @@ spec:
 		It("should scale StatefulSet to zero replicas when replicas=0", func() {
 			crName := "e2e-btc-scale-zero"
 			cr := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -457,7 +465,7 @@ spec:
 		It("should remove all child resources when CR is deleted", func() {
 			crName := "e2e-btc-delete"
 			cr := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -521,7 +529,7 @@ spec:
 			ethName := "e2e-multi-eth"
 
 			btcCR := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -543,7 +551,7 @@ spec:
 `, btcName, testNS)
 
 			ethCR := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -596,7 +604,7 @@ spec:
 			customRepo := "my-registry/custom-bitcoind"
 			customTag := "v99.0.0-test"
 			cr := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
@@ -644,13 +652,13 @@ spec:
 		It("should reject a CR with an unsupported chain value", func() {
 			crName := "e2e-invalid-chain"
 			cr := fmt.Sprintf(`
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: %s
   namespace: %s
 spec:
-  chain: dogecoin
+  chain: notachain
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
@@ -665,7 +673,7 @@ spec:
     port: 8332
 `, crName, testNS)
 
-			By("applying a CR with unsupported chain 'dogecoin'")
+			By("applying a CR with unsupported chain 'notachain'")
 			tmpFile := filepath.Join("/tmp", fmt.Sprintf("e2e-invalid-%d.yaml", time.Now().UnixNano()))
 			err := os.WriteFile(tmpFile, []byte(cr), 0o644)
 			Expect(err).NotTo(HaveOccurred())

@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultDomaImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
 
-const defaultDomaL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultDomaL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -51,7 +52,19 @@ func (a *domaAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatu
 }
 
 func (a *domaAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
+}
+
+func (a *domaAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+}
+
+func (a *domaAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("100Gi"),
+	}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by the Doma OP Stack node.
@@ -90,3 +103,11 @@ WSModules = ["eth", "net", "web3"]
 MaxPeers = 50
 ListenAddr = ":30303"
 `
+
+func (a *domaAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "us-docker.pkg.dev",
+		Repository: "oplabs-tools-artifacts/images/op-geth",
+		TagPattern: `^v\d+\.\d+`,
+	}
+}

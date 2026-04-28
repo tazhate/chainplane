@@ -14,8 +14,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -149,7 +150,25 @@ func (a *avalancheAdapter) StartupProbe(_ nodesv1alpha1.BlockchainNodeSpec) *cor
 func (a *avalancheAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 9650, Protocol: corev1.ProtocolTCP},
+		// metrics are served at /ext/metrics on the same HTTP port as RPC
+		{Name: "metrics", ContainerPort: 9650, Protocol: corev1.ProtocolTCP},
 		{Name: "staking", ContainerPort: 9651, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *avalancheAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *avalancheAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "avaplatform/avalanchego",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 

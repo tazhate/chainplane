@@ -20,8 +20,8 @@ const (
 )
 
 // LabelBasedTrafficManager implements Drainer by toggling the
-// nodes.k8s-bch.io/ready label on pods. Services must include
-// "nodes.k8s-bch.io/ready=true" in their selector for this to control
+// nodes.chainplane.io/ready label on pods. Services must include
+// "nodes.chainplane.io/ready=true" in their selector for this to control
 // endpoint membership.
 type LabelBasedTrafficManager struct {
 	kube client.Client

@@ -1,8 +1,8 @@
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   labels:
-    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/name: chainplane
     app.kubernetes.io/managed-by: kustomize
   name: linea-mainnet
 spec:
@@ -31,4 +31,4 @@ spec:
   # L1 Ethereum RPC URL (override via extraEnv if needed)
   extraEnv:
     - name: L1_RPC_URL
-      value: "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+      value: "http://ethereum:8545"

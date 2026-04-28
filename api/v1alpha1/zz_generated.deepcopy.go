@@ -274,3 +274,108 @@ func (in *StorageSpec) DeepCopy() *StorageSpec {
 	in.DeepCopyInto(out)
 	return out
 }
+
+func (in *ChainVersionCatalog) DeepCopyInto(out *ChainVersionCatalog) {
+	*out = *in
+	out.TypeMeta = in.TypeMeta
+	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	out.Spec = in.Spec
+	in.Status.DeepCopyInto(&out.Status)
+}
+
+func (in *ChainVersionCatalog) DeepCopy() *ChainVersionCatalog {
+	if in == nil {
+		return nil
+	}
+	out := new(ChainVersionCatalog)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ChainVersionCatalog) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
+}
+
+func (in *ChainVersionCatalogList) DeepCopyInto(out *ChainVersionCatalogList) {
+	*out = *in
+	out.TypeMeta = in.TypeMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]ChainVersionCatalog, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+}
+
+func (in *ChainVersionCatalogList) DeepCopy() *ChainVersionCatalogList {
+	if in == nil {
+		return nil
+	}
+	out := new(ChainVersionCatalogList)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ChainVersionCatalogList) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
+}
+
+func (in *ChainVersionCatalogStatus) DeepCopyInto(out *ChainVersionCatalogStatus) {
+	*out = *in
+	if in.PublishedAt != nil {
+		in, out := &in.PublishedAt, &out.PublishedAt
+		*out = (*in).DeepCopy()
+	}
+	if in.CheckedAt != nil {
+		in, out := &in.CheckedAt, &out.CheckedAt
+		*out = (*in).DeepCopy()
+	}
+	if in.RecentTags != nil {
+		in, out := &in.RecentTags, &out.RecentTags
+		*out = make([]TagInfo, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
+		*out = make([]metav1.Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+}
+
+func (in *ChainVersionCatalogStatus) DeepCopy() *ChainVersionCatalogStatus {
+	if in == nil {
+		return nil
+	}
+	out := new(ChainVersionCatalogStatus)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *TagInfo) DeepCopyInto(out *TagInfo) {
+	*out = *in
+	if in.PublishedAt != nil {
+		in, out := &in.PublishedAt, &out.PublishedAt
+		*out = (*in).DeepCopy()
+	}
+}
+
+func (in *TagInfo) DeepCopy() *TagInfo {
+	if in == nil {
+		return nil
+	}
+	out := new(TagInfo)
+	in.DeepCopyInto(out)
+	return out
+}

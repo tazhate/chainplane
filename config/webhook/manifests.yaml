@@ -10,12 +10,12 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-nodes-k8s-bch-io-v1alpha1-blockchainnode
+      path: /validate-nodes-chainplane-io-v1alpha1-blockchainnode
   failurePolicy: Fail
   name: vblockchainnode.kb.io
   rules:
   - apiGroups:
-    - nodes.k8s-bch.io
+    - nodes.chainplane.io
     apiVersions:
     - v1alpha1
     operations:

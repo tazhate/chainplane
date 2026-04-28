@@ -9,8 +9,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -39,7 +40,8 @@ enable = true
 address = "0.0.0.0:9090"
 
 [telemetry]
-enabled = false
+enabled = true
+prometheus-retention-time = 60
 `
 
 // --------------------------------------------------------------------------
@@ -83,6 +85,7 @@ func (a *axelarAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []cor
 		{Name: "p2p", ContainerPort: 26656, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 26656, Protocol: corev1.ProtocolUDP},
 		{Name: "grpc", ContainerPort: 9090, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 26660, Protocol: corev1.ProtocolTCP},
 	}
 }
 
@@ -154,4 +157,20 @@ func (a *axelarAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncSta
 		Progress:     progress,
 		Peers:        peers,
 	}, nil
+}
+
+func (a *axelarAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *axelarAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "axelarnet/axelar-core",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
 }

@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // fetchPublicTip dispatches to the correct chain-specific endpoint to obtain

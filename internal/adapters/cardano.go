@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -77,10 +80,15 @@ func (a *cardanoAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (str
 }
 
 func (a *cardanoAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	// rpcURL points to http://localhost:12798 (Prometheus metrics port)
+	// rpcURL is the service URL with the RPC port (e.g. :3001).
+	// Cardano exposes Prometheus metrics on port 12798, so we must replace
+	// the port rather than appending (which would produce an invalid URL like :3001:12798).
 	metricsURL := rpcURL
 	if !strings.Contains(metricsURL, "12798") {
-		metricsURL = strings.TrimRight(rpcURL, "/") + ":12798"
+		if u, err := url.Parse(rpcURL); err == nil {
+			u.Host = u.Hostname() + ":12798"
+			metricsURL = u.String()
+		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, metricsURL+"/metrics", nil)
@@ -127,10 +135,8 @@ func (a *cardanoAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncSt
 		return SyncStatus{IsSyncing: true, CurrentBlock: p, HighestBlock: p + 1, Progress: replayProgress}, nil
 	}
 
-	// Cardano mainnet slot estimate. Epoch 616 started 2026-02-28;
-	// actual tip ~181M as of 2026-03-15. Use 182M with headroom.
-	const knownTipSlot float64 = 182_000_000
-	progress := slotNum / knownTipSlot * 100.0
+	tipSlot := float64(cardanoNetworkTip())
+	progress := slotNum / tipSlot * 100.0
 	if progress > 100.0 {
 		progress = 100.0
 	}
@@ -161,7 +167,12 @@ if [ "$(cat .version 2>/dev/null)" != "$VERSION" ]; then
   rm -f mainnet-config.json mainnet-topology.json mainnet-byron-genesis.json mainnet-shelley-genesis.json mainnet-alonzo-genesis.json mainnet-conway-genesis.json mainnet-checkpoints.json
 fi
 for f in mainnet-config.json mainnet-byron-genesis.json mainnet-shelley-genesis.json mainnet-alonzo-genesis.json mainnet-conway-genesis.json mainnet-checkpoints.json; do
-  [ -f "$f" ] || curl -fsSLk -o "$f" "$BASE/$f"
+  # -s checks non-empty to catch empty/partial files from interrupted downloads.
+  if [ ! -s "$f" ]; then
+    rm -f "$f"
+    curl -fsSLk -o "$f" "$BASE/$f" || { rm -f "$f"; echo "[cardano] FAILED to download $f"; exit 1; }
+    [ -s "$f" ] || { rm -f "$f"; echo "[cardano] $f empty after download — exiting for retry"; exit 1; }
+  fi
 done
 cfg=$(cat mainnet-config.json)
 cfg="${cfg/'"EnableP2P": false'/'"EnableP2P": true'}"
@@ -190,6 +201,19 @@ func (a *cardanoAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []co
 // Helpers
 // --------------------------------------------------------------------------
 
+// cardanoNetworkTip returns the estimated current slot on Cardano mainnet.
+// Cardano has exactly 1 slot/second since the Shelley era.
+// Shelley genesis: slot 4,924,800 at 2020-07-29T21:44:51Z.
+func cardanoNetworkTip() int64 {
+	const shelleyStartSlot = int64(4_924_800)
+	shelleyStart := time.Date(2020, 7, 29, 21, 44, 51, 0, time.UTC)
+	elapsed := time.Since(shelleyStart).Seconds()
+	if elapsed < 0 {
+		return shelleyStartSlot
+	}
+	return shelleyStartSlot + int64(elapsed)
+}
+
 // cardanoPromMetric parses a single Prometheus metric line and returns its float64 value.
 func cardanoPromMetric(line string) (float64, bool) {
 	fields := strings.Fields(line)
@@ -201,4 +225,20 @@ func cardanoPromMetric(line string) (float64, bool) {
 		return 0, false
 	}
 	return v, true
+}
+
+func (a *cardanoAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("100Gi"),
+	}
+}
+
+func (a *cardanoAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "intersectmbo/cardano-node",
+		TagPattern: `^\d+\.\d+`,
+	}
 }

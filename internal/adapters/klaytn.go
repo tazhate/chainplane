@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -54,6 +55,31 @@ func (a *klaytnAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []cor
 		{Name: "ws", ContainerPort: 8552, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 32323, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 32323, Protocol: corev1.ProtocolUDP},
+		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *klaytnAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{
+		"--metrics",
+		"--metrics.addr=0.0.0.0",
+		"--metrics.port=6060",
+	}
+}
+
+func (a *klaytnAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("8"),
+		MemoryRequest: resource.MustParse("16Gi"),
+		Storage:       resource.MustParse("2000Gi"),
+	}
+}
+
+func (a *klaytnAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "klaytn/klaytn",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 

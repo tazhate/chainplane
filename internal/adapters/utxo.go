@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"os"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // utxoAdapter is the shared base for Bitcoin-family chains (Bitcoin, Litecoin, Dash).

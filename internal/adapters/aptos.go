@@ -13,8 +13,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -163,6 +164,14 @@ func (a *aptosAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []core
 		{Name: "rpc", ContainerPort: 8080, Protocol: corev1.ProtocolTCP},
 		{Name: "metrics", ContainerPort: 9101, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 6180, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *aptosAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
 	}
 }
 

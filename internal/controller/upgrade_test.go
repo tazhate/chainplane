@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	_ "github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	_ "github.com/tazhate/chainplane/internal/adapters"
 )
 
 // --- Pure unit tests (no envtest) ---
@@ -128,7 +128,7 @@ func TestResolveImageForUpgrade_EmptyRepository(t *testing.T) {
 	}
 }
 
-func TestDetectCrashLoop_NoPods(t *testing.T) {
+func TestDetectCrashLoop_NoPods(_ *testing.T) {
 	// detectCrashLoop relies on listing pods, which are absent in a pure unit
 	// test. The envtest-based Ginkgo tests below cover the realistic case.
 	// This is a structural placeholder confirming the function signature is stable.

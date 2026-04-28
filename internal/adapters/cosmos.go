@@ -9,8 +9,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -57,7 +58,8 @@ enabled-unsafe-cors = true
 enable = false
 
 [telemetry]
-enabled = false
+enabled = true
+prometheus-retention-time = 60
 `
 
 // --------------------------------------------------------------------------
@@ -158,7 +160,7 @@ if [ "$NEED_REINIT" = "1" ]; then
     echo "gaiad init complete"
   fi
 
-  wget -qO "$HOME/config/genesis.json" http://minio.minio.svc.cluster.local:9000/genesis-files/cosmos/cosmoshub-4/genesis.json
+  wget -qO "$HOME/config/genesis.json" https://snapshots.polkachu.com/genesis/cosmos/genesis.json
   echo "genesis downloaded"
 
   sed -i 's/^seeds = ""/seeds = "ade4d8bc8cbe014af6ebdf3cb7b1e9ad36f412c0@seeds.polkachu.com:14956,20e1000e88125698264454a884812746c2eb4807@seeds.lavenderfive.com:14956"/' "$HOME/config/config.toml"
@@ -288,6 +290,7 @@ func (a *cosmosAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []cor
 		{Name: "rpc", ContainerPort: 26657, Protocol: corev1.ProtocolTCP},
 		{Name: "api", ContainerPort: 1317, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 26656, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 26660, Protocol: corev1.ProtocolTCP},
 	}
 }
 
@@ -314,6 +317,22 @@ func cosmosNetworkTip(ctx context.Context, rpcURL string) int64 {
 	}
 	// HeightRoundStep is formatted as "30178804/0/1"
 	var h, r, s int64
-	fmt.Sscanf(cs.Result.RoundState.HeightRoundStep, "%d/%d/%d", &h, &r, &s)
+	_, _ = fmt.Sscanf(cs.Result.RoundState.HeightRoundStep, "%d/%d/%d", &h, &r, &s)
 	return h
+}
+
+func (a *cosmosAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *cosmosAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "cosmos/gaia",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
 }

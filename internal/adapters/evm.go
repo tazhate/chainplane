@@ -20,7 +20,7 @@ func hexToInt64(hex string) int64 {
 		return 0
 	}
 	var n int64
-	fmt.Sscanf(hex, "%x", &n)
+	_, _ = fmt.Sscanf(hex, "%x", &n)
 	return n
 }
 

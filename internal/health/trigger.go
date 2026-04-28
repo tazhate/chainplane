@@ -45,6 +45,8 @@ type TriggerResult struct {
 }
 
 // HealthStatus aggregates trigger results for one pod.
+//
+//nolint:revive
 type HealthStatus struct {
 	// PodName is the Kubernetes pod that was evaluated.
 	PodName string

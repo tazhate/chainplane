@@ -3,7 +3,7 @@ package health
 import (
 	"testing"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 func TestChainToBlockchainType(t *testing.T) {

@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // NOTE: Berachain uses a dual-client architecture (BeaconKit CL + reth EL).
@@ -15,8 +16,9 @@ import (
 // exposed by the EL (reth), not this container.
 //
 // Official images:
-//   CL (this adapter): ghcr.io/berachain/beacon-kit
-//   EL (companion):    ghcr.io/berachain/reth
+//
+//	CL (this adapter): ghcr.io/berachain/beacon-kit
+//	EL (companion):    ghcr.io/berachain/reth
 //
 // See: https://docs.berachain.com/nodes/run-a-node
 const defaultBerachainImage = "ghcr.io/berachain/beacon-kit:v0.2.0"
@@ -52,11 +54,29 @@ func (a *berachainAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []
 		{Name: "rpc", ContainerPort: 26657, Protocol: corev1.ProtocolTCP},
 		// Engine API (connects to EL)
 		{Name: "engine", ContainerPort: 8551, Protocol: corev1.ProtocolTCP},
+		// Cosmos SDK telemetry (Prometheus)
+		{Name: "metrics", ContainerPort: 26660, Protocol: corev1.ProtocolTCP},
 	}
 }
 
 func (a *berachainAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
 	return []string{"start", "--home", "/data"}
+}
+
+func (a *berachainAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *berachainAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "berachain/beacon-kit",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
 }
 
 const berachainConfig = `# BeaconKit consensus layer — Berachain mainnet
@@ -72,6 +92,11 @@ const berachainConfig = `# BeaconKit consensus layer — Berachain mainnet
     enabled = true
     address = "0.0.0.0"
     port = 3500
+
+[telemetry]
+  enabled = true
+  prometheus-retention-time = 60
+  prometheus-addr = "0.0.0.0:26660"
 
 [comet]
   [comet.p2p]

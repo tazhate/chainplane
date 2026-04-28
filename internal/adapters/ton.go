@@ -10,8 +10,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -320,6 +321,22 @@ func (a *tonAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1
 		{Name: "liteserver", ContainerPort: 30003, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 30001, Protocol: corev1.ProtocolUDP},
 		{Name: "seqno", ContainerPort: 8081, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *tonAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("100Gi"),
+	}
+}
+
+func (a *tonAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "ton-blockchain/ton",
+		TagPattern: `^v\d+`,
 	}
 }
 

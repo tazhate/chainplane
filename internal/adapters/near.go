@@ -11,8 +11,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -223,7 +224,27 @@ exec neard --home /data run --boot-nodes ` + bootNodes
 
 func (a *nearAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
+		// NEAR exposes both JSON-RPC and Prometheus metrics on port 3030
+		// (/metrics endpoint). Both entries point to the same port so that
+		// a PodMonitor targeting port "metrics" can scrape /metrics directly.
 		{Name: "rpc", ContainerPort: 3030, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 3030, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 24567, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *nearAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *nearAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "nearprotocol/nearcore",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }

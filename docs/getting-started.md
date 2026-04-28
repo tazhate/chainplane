@@ -9,6 +9,63 @@ This guide walks you through installing the operator, deploying your first block
 - (Optional) Helm 3 for Helm-based deployment
 - (Optional) MinIO instance for snapshot bootstrapping (set `MINIO_ENDPOINT` env var on the operator)
 
+### Snapshot Bootstrap (Optional)
+
+Blockchain nodes can take days or weeks to sync from genesis. The operator supports snapshot bootstrap via MinIO (or any S3-compatible storage): the init container downloads a compressed snapshot before the node starts, reducing sync time to hours.
+
+**Set up MinIO with the bundled Helm subchart:**
+
+```bash
+helm install chainplane ./charts/chainplane \
+  --namespace chainplane-system \
+  --create-namespace \
+  --set minio.enabled=true \
+  --set minio.rootUser=minioadmin \
+  --set minio.rootPassword=changeme \
+  --set snapshot.enabled=true \
+  --set snapshot.minio.endpoint=http://chainplane-minio:9000 \
+  --set snapshot.minio.accessKey=minioadmin \
+  --set snapshot.minio.secretKey=changeme
+```
+
+**Or use an existing MinIO / S3-compatible endpoint:**
+
+```bash
+helm install chainplane ./charts/chainplane \
+  --namespace chainplane-system \
+  --create-namespace \
+  --set snapshot.enabled=true \
+  --set snapshot.minio.endpoint=http://minio.minio.svc:9000 \
+  --set snapshot.minio.existingSecret=minio-credentials
+```
+
+The Secret must contain `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY` keys.
+
+**Populate snapshot buckets:**
+
+The operator looks for snapshots in buckets named `snapshots-<chain>` (e.g. `snapshots-bsc`, `snapshots-ethereum`). Upload compressed chaindata archives there. Public snapshot providers:
+
+- **Cosmos ecosystem:** [Polkachu](https://polkachu.com/tendermint_snapshots) — `snapshots-cosmos`, `snapshots-osmosis`, etc.
+- **BSC / Ethereum:** [ChainData](https://chaindata.info/), [Snapshot Finder](https://snapshot.org/)
+- **Solana:** [Triton](https://triton.one/), [Stakewiz](https://stakewiz.com/snapshot)
+
+Once a snapshot is in the bucket, enable it per-node:
+
+```yaml
+spec:
+  snapshot:
+    disabled: false   # default; omit this field to use snapshot
+    type: full        # or "lite" for supported chains (e.g. TRON)
+```
+
+To skip snapshot bootstrap for a specific node (sync from genesis):
+
+```yaml
+spec:
+  snapshot:
+    disabled: true
+```
+
 ### Storage
 
 Blockchain nodes require significant persistent storage with high IOPS. Ensure your cluster has a StorageClass that provisions SSDs. For production workloads, use a StorageClass backed by NVMe or SSD volumes (e.g., `gp3` on AWS, `pd-ssd` on GCP, `managed-premium` on Azure).
@@ -19,8 +76,8 @@ Blockchain nodes require significant persistent storage with high IOPS. Ensure y
 
 ```bash
 # From source
-git clone https://github.com/tazhate/blockchain-node-operator.git
-cd blockchain-node-operator
+git clone https://github.com/tazhate/chainplane.git
+cd chainplane
 make install
 ```
 
@@ -35,16 +92,16 @@ kubectl apply -f dist/install.yaml
 #### Option A: kubectl + kustomize
 
 ```bash
-make deploy IMG=ghcr.io/tazhate/blockchain-node-operator:latest
+make deploy IMG=ghcr.io/tazhate/chainplane:latest
 ```
 
-This deploys the controller manager with RBAC, ServiceAccount, and CRDs into the `blockchain-node-operator-system` namespace.
+This deploys the controller manager with RBAC, ServiceAccount, and CRDs into the `chainplane-system` namespace.
 
 #### Option B: Helm
 
 ```bash
-helm install blockchain-node-operator ./charts/blockchain-node-operator \
-  --namespace blockchain-node-operator-system \
+helm install chainplane ./charts/chainplane \
+  --namespace chainplane-system \
   --create-namespace
 ```
 
@@ -53,17 +110,17 @@ helm install blockchain-node-operator ./charts/blockchain-node-operator \
 Generate a single install manifest:
 
 ```bash
-make build-installer IMG=ghcr.io/tazhate/blockchain-node-operator:latest
+make build-installer IMG=ghcr.io/tazhate/chainplane:latest
 kubectl apply -f dist/install.yaml
 ```
 
 ### Verify the Operator is Running
 
 ```bash
-kubectl get pods -n blockchain-node-operator-system
+kubectl get pods -n chainplane-system
 ```
 
-You should see the `blockchain-node-operator-controller-manager` pod in `Running` state.
+You should see the `chainplane-controller-manager` pod in `Running` state.
 
 ## Deploy Your First Blockchain Node
 
@@ -72,11 +129,11 @@ You should see the `blockchain-node-operator-controller-manager` pod in `Running
 Save the following as `bitcoin-node.yaml`:
 
 ```yaml
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   labels:
-    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/name: chainplane
     app.kubernetes.io/managed-by: kustomize
   name: bitcoin-mainnet
 spec:
@@ -172,7 +229,7 @@ curl -u rpc:rpc --data-binary \
 ### Ethereum with Nethermind
 
 ```yaml
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: ethereum-mainnet
@@ -203,7 +260,7 @@ spec:
 ### Solana
 
 ```yaml
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: solana-mainnet
@@ -351,9 +408,9 @@ spec:
 ### Operator not reconciling
 
 **Check:**
-1. Operator pod is running: `kubectl get pods -n blockchain-node-operator-system`
-2. Operator logs: `kubectl logs -n blockchain-node-operator-system deploy/blockchain-node-operator-controller-manager`
-3. CRDs are installed: `kubectl get crd blockchainnodes.nodes.k8s-bch.io`
+1. Operator pod is running: `kubectl get pods -n chainplane-system`
+2. Operator logs: `kubectl logs -n chainplane-system deploy/chainplane-controller-manager`
+3. CRDs are installed: `kubectl get crd blockchainnodes.nodes.chainplane.io`
 
 ### Events
 

@@ -38,7 +38,7 @@ import (
     "context"
 
     corev1 "k8s.io/api/core/v1"
-    nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+    nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 const defaultMyChainImage = "registry/image:tag"
@@ -95,7 +95,43 @@ func (a *myutxoAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncSta
 
 For non-EVM, non-UTXO chains, implement `HealthCheck` directly by calling the chain's RPC.
 
-## Step 3: Optional Interfaces
+## Step 3: Implement DefaultResources()
+
+Every adapter **must** implement `DefaultResources()`. Return a `ResourceDefaults` struct with the recommended CPU request, memory request, and storage size based on the chain's official node documentation. The validating webhook uses these values to warn operators when a `BlockchainNode` is created with resources below the recommended minimums.
+
+```go
+import "k8s.io/apimachinery/pkg/api/resource"
+
+func (a *mychainAdapter) DefaultResources() ResourceDefaults {
+    return ResourceDefaults{
+        CPURequest:    resource.MustParse("4"),
+        MemoryRequest: resource.MustParse("16Gi"),
+        Storage:       resource.MustParse("600Gi"),
+    }
+}
+```
+
+Use values from the official chain documentation or node operator guides. When in doubt, err on the side of slightly higher recommendations — the webhook issues a warning, not a rejection, so operators can still override downward.
+
+## Step 4: Implement VersionPolicy()
+
+If the chain's images are published with versioned tags (e.g. `v1.2.3`) on a supported registry, implement `VersionPolicy()` to enable `ChainVersionCatalog` auto-tracking:
+
+```go
+func (a *mychainAdapter) VersionPolicy() ChainVersionPolicy {
+    return ChainVersionPolicy{
+        Registry:   "ghcr.io",
+        Repository: "myorg/mychain",
+        TagPattern: `^v\d+\.\d+\.\d+$`,
+    }
+}
+```
+
+Supported registries: `docker.io`, `ghcr.io`, `us-docker.pkg.dev` (Google Artifact Registry), `public.ecr.aws` (Amazon ECR Public).
+
+If the chain only publishes a `:latest` tag (no versioned tags), **skip this method** — the base adapter's no-op implementation will be used and the chain will simply not appear in the version catalog.
+
+## Step 5: Optional Interfaces
 
 Implement any of these if needed:
 
@@ -108,7 +144,7 @@ Implement any of these if needed:
 | `StartupProbeProvider` | Long startup time (e.g. TRON Java, >5min) |
 | `InitContainerProvider` | Custom init containers (e.g. SUI snapshot download) |
 
-## Step 4: Add Snapshot Bucket
+## Step 6: Add Snapshot Bucket
 
 Edit `internal/snapshot/snapshot.go`, add to `bucketForChain()`:
 
@@ -117,7 +153,7 @@ case nodesv1alpha1.ChainMyChain:
     return "snapshots-mychain"
 ```
 
-## Step 5: Add Webhook Validation
+## Step 7: Add Webhook Validation
 
 Edit `api/v1alpha1/blockchainnode_webhook.go`, add to `validationRegistry`:
 
@@ -125,12 +161,12 @@ Edit `api/v1alpha1/blockchainnode_webhook.go`, add to `validationRegistry`:
 nodesv1alpha1.ChainMyChain: {MinStorage: resource.MustParse("100Gi"), MinMemory: resource.MustParse("4Gi")},
 ```
 
-## Step 6: Create Sample CR
+## Step 8: Create Sample CR
 
 Create `config/samples/nodes_v1alpha1_blockchainnode_mychain.yaml`:
 
 ```yaml
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: mychain-mainnet-01
@@ -160,13 +196,13 @@ spec:
 
 Add it to `config/samples/kustomization.yaml`.
 
-## Step 7: Update Documentation
+## Step 9: Update Documentation
 
 1. Add chain to `docs/adapters.md` table and per-chain section
 2. Add to README.md supported chains table
-3. Update Helm CRD if enum changed: copy regenerated CRD to `charts/blockchain-node-operator/templates/crds/`
+3. Update Helm CRD if enum changed: copy regenerated CRD to `charts/chainplane/templates/crds/`
 
-## Step 8: Tests
+## Step 10: Tests
 
 Add to existing test files:
 - `internal/adapters/adapters_test.go` — chain is auto-covered by `allChains` loop tests if added to the list
@@ -180,6 +216,8 @@ Add to existing test files:
 - [ ] `DefaultImage()` returns a real, versioned image
 - [ ] `HealthCheck()` works with the chain's RPC
 - [ ] `ConfigTemplate()` returns valid config (or empty)
+- [ ] `DefaultResources()` returns recommended CPU/memory/storage from official docs
+- [ ] `VersionPolicy()` implemented (or intentionally skipped for `:latest`-only images)
 - [ ] Snapshot bucket in `snapshot.go`
 - [ ] Webhook validation entry
 - [ ] Sample CR YAML

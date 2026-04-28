@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
 )
 
 // ensureService creates or updates the Kubernetes Service that exposes the

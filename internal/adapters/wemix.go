@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -53,6 +54,27 @@ func (a *wemixAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []core
 		{Name: "http", ContainerPort: 8588, Protocol: corev1.ProtocolTCP},
 		{Name: "ws", ContainerPort: 8598, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 8589, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *wemixAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+}
+
+func (a *wemixAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *wemixAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "wemixnetwork/wemix",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 

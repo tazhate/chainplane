@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
 )
 
 // ensureConfigMap creates or updates the chain-specific configuration
@@ -89,9 +89,9 @@ func (r *BlockchainNodeReconciler) injectRPCSecretsIntoEnv(ctx context.Context, 
 	}
 
 	if v, exists := secret.Data["rpc-user"]; exists {
-		os.Setenv(prefix+"_RPC_USER", string(v))
+		_ = os.Setenv(prefix+"_RPC_USER", string(v))
 	}
 	if v, exists := secret.Data["rpc-password"]; exists {
-		os.Setenv(prefix+"_RPC_PASSWORD", string(v))
+		_ = os.Setenv(prefix+"_RPC_PASSWORD", string(v))
 	}
 }

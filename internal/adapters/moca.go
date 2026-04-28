@@ -9,8 +9,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -65,6 +66,7 @@ func (a *mocaAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev
 		{Name: "api", ContainerPort: 1317, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 26656, Protocol: corev1.ProtocolTCP},
 		{Name: "evm-rpc", ContainerPort: 8545, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 26660, Protocol: corev1.ProtocolTCP},
 	}
 }
 
@@ -138,6 +140,22 @@ func (a *mocaAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatu
 	}, nil
 }
 
+func (a *mocaAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("100Gi"),
+	}
+}
+
+func (a *mocaAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "moca-network/moca",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
+
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------
@@ -152,7 +170,8 @@ enabled-unsafe-cors = true
 enable = false
 
 [telemetry]
-enabled = false
+enabled = true
+prometheus-retention-time = 60
 
 [json-rpc]
 enable = true

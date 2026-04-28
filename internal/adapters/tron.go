@@ -8,8 +8,9 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -315,7 +316,8 @@ func (a *tronAdapter) ContainerCommand(_ nodesv1alpha1.BlockchainNodeSpec) []str
 		`CP=$(find /java-tron/lib -name '*.jar' -printf '%p:' | sed 's/:$//') && ` +
 			`exec java $JAVA_OPTS -Djava.specification.version=1.8 ` +
 			`-XX:+UseG1GC -XX:-UseCompressedOops -XX:ReservedCodeCacheSize=256m ` +
-			`-Xlog:gc*:file=./gc.log:time,uptime:filecount=5,filesize=20m ` +
+			`-verbose:gc -Xloggc:./gc.log -XX:+UseGCLogFileRotation ` +
+			`-XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=20M ` +
 			`-classpath "$CP" org.tron.program.FullNode "$@"`,
 		"--"}
 }
@@ -329,5 +331,24 @@ func (a *tronAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev
 		{Name: "http", ContainerPort: 8090, Protocol: corev1.ProtocolTCP},
 		{Name: "grpc", ContainerPort: 50051, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 18888, Protocol: corev1.ProtocolTCP},
+		// Java-Tron exposes Prometheus metrics on port 9527 by default.
+		{Name: "metrics", ContainerPort: 9527, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *tronAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("8"),
+		MemoryRequest: resource.MustParse("16Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *tronAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "tronprotocol/java-tron",
+		TagPattern: `^GreatVoyage-v\d+`,
+		TagPrefix:  "GreatVoyage-",
 	}
 }

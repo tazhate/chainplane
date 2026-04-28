@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 // TODO: verify exact image path before production use; ghcr.io/morphprotocol/node is best current estimate.
 const defaultMorphImage = "ghcr.io/morphprotocol/node:v0.3.0"
-const defaultMorphL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultMorphL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -50,8 +51,28 @@ func (a *morphAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStat
 	return evmHealthCheck(ctx, rpcURL)
 }
 
+func (a *morphAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("200Gi"),
+	}
+}
+
+func (a *morphAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "morphprotocol/node",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
+
 func (a *morphAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
+}
+
+func (a *morphAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by Morph L2 nodes.

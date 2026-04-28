@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -95,11 +96,11 @@ func (a *starknetAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncS
 
 	// Node is syncing — parse the sync status object
 	var syncStatus struct {
-		CurrentBlockNum  int64 `json:"current_block_num"`
-		HighestBlockNum  int64 `json:"highest_block_num"`
+		CurrentBlockNum  int64  `json:"current_block_num"`
+		HighestBlockNum  int64  `json:"highest_block_num"`
 		CurrentBlockHash string `json:"current_block_hash"`
 		HighestBlockHash string `json:"highest_block_hash"`
-		StartingBlockNum int64 `json:"starting_block_num"`
+		StartingBlockNum int64  `json:"starting_block_num"`
 	}
 	if err := json.Unmarshal(syncResult, &syncStatus); err != nil {
 		return syncingPseudo(), nil
@@ -143,5 +144,21 @@ func (a *starknetAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []c
 		{Name: "rpc", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 7777, Protocol: corev1.ProtocolTCP},
 		{Name: "metrics", ContainerPort: 9090, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *starknetAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *starknetAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "nethermindeth/juno",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }

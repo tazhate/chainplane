@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	_ "github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	_ "github.com/tazhate/chainplane/internal/adapters"
 )
 
 // newTestNode creates a minimal BlockchainNode CR for testing.
@@ -233,8 +233,8 @@ var _ = Describe("BlockchainNode Controller", func() {
 			sts := &appsv1.StatefulSet{}
 			Expect(k8sClient.Get(ctx, nn, sts)).To(Succeed())
 
-			Expect(sts.Spec.Template.Annotations).To(HaveKey("nodes.k8s-bch.io/config-hash"))
-			Expect(sts.Spec.Template.Annotations["nodes.k8s-bch.io/config-hash"]).NotTo(BeEmpty())
+			Expect(sts.Spec.Template.Annotations).To(HaveKey("nodes.chainplane.io/config-hash"))
+			Expect(sts.Spec.Template.Annotations["nodes.chainplane.io/config-hash"]).NotTo(BeEmpty())
 		})
 
 		It("should set container ports from adapter", func() {

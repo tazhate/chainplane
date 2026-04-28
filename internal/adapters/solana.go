@@ -8,8 +8,9 @@ import (
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -111,5 +112,37 @@ func (a *solanaAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []cor
 		{Name: "rpc", ContainerPort: 8899, Protocol: corev1.ProtocolTCP},
 		{Name: "ws", ContainerPort: 8900, Protocol: corev1.ProtocolTCP},
 		{Name: "gossip", ContainerPort: 8001, Protocol: corev1.ProtocolUDP},
+		{Name: "metrics", ContainerPort: 8080, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *solanaAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("16"),
+		MemoryRequest: resource.MustParse("64Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *solanaAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "solanalabs/agave",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
+
+// Sidecars returns a solana-exporter sidecar that connects to the local RPC
+// and exposes Prometheus metrics on port 8080.
+func (a *solanaAdapter) Sidecars(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.Container {
+	return []corev1.Container{
+		{
+			Name:  "metrics-exporter",
+			Image: "nordstroem/solana-exporter:latest",
+			Args:  []string{"-rpcURI", "http://localhost:8899", "-addr", ":8080"},
+			Ports: []corev1.ContainerPort{
+				{Name: "metrics", ContainerPort: 8080, Protocol: corev1.ProtocolTCP},
+			},
+		},
 	}
 }

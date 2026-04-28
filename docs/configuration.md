@@ -70,6 +70,23 @@ spec:
       memory: 32Gi
 ```
 
+### Default Resources
+
+Every chain adapter implements `DefaultResources()`, which returns the recommended CPU request, memory request, and storage size based on official chain documentation.
+
+When `spec.resources` is **not** set on a `BlockchainNode`, the validating webhook compares the requested resources against the adapter's defaults and emits a **Warning** (not a rejection) if they fall below the recommended minimums. The node is still created — the warning is informational, surfaced in `kubectl apply` output and in the webhook audit log.
+
+Recommended minimums for a selection of chains:
+
+| Chain | CPU Request | Memory Request | Storage |
+|-------|-------------|----------------|---------|
+| Bitcoin | 4 | 16Gi | 600Gi |
+| Ethereum | 8 | 32Gi | 2Ti |
+| BSC | 8 | 16Gi | 1Ti |
+| Solana | 16 | 256Gi | 3Ti |
+
+Full per-chain values are encoded in each adapter's `DefaultResources()` method in `internal/adapters/`. The [Resource Recommendations](#resource-recommendations-per-chain) table below lists starting points for a broader set of chains.
+
 ### RPC
 
 | Field | Type | Required | Default | Description |

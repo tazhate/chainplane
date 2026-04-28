@@ -49,7 +49,7 @@ func TestDrain_SetsReadyFalse(t *testing.T) {
 	t.Parallel()
 
 	pod := trafficPod("eth-0", "default", map[string]string{
-		"app":    "eth",
+		"app":      "eth",
 		LabelReady: "true",
 	}, "10.0.0.1")
 
@@ -92,13 +92,13 @@ func TestSwitchTraffic_UpdatesBothPods(t *testing.T) {
 	t.Parallel()
 
 	oldPod := trafficPod("eth-0", "default", map[string]string{
-		"app":    "eth",
+		"app":      "eth",
 		LabelReady: "true",
 	}, "10.0.0.1")
 
 	newPod := trafficPod("eth-0-replacement", "default", map[string]string{
-		"app":       "eth",
-		LabelReady:  "false",
+		"app":         "eth",
+		LabelReady:    "false",
 		LabelInstance: "replacement",
 	}, "10.0.0.2")
 
@@ -135,7 +135,7 @@ func TestSwitchTraffic_OldPodNotFound(t *testing.T) {
 	t.Parallel()
 
 	newPod := trafficPod("eth-0-replacement", "default", map[string]string{
-		"app":    "eth",
+		"app":      "eth",
 		LabelReady: "false",
 	}, "10.0.0.2")
 
@@ -173,7 +173,7 @@ func TestValidateTraffic_ReadyLabel(t *testing.T) {
 	t.Run("pod with ready=true and no matching services", func(t *testing.T) {
 		t.Parallel()
 		pod := trafficPod("eth-0", "default", map[string]string{
-			"app":    "eth",
+			"app":      "eth",
 			LabelReady: "true",
 		}, "10.0.0.1")
 
@@ -190,7 +190,7 @@ func TestValidateTraffic_ReadyLabel(t *testing.T) {
 	t.Run("pod with ready=false", func(t *testing.T) {
 		t.Parallel()
 		pod := trafficPod("eth-0", "default", map[string]string{
-			"app":    "eth",
+			"app":      "eth",
 			LabelReady: "false",
 		}, "10.0.0.1")
 
@@ -239,7 +239,7 @@ func TestValidateTraffic_WithEndpoints(t *testing.T) {
 	t.Parallel()
 
 	pod := trafficPod("eth-0", "default", map[string]string{
-		"app":    "eth",
+		"app":      "eth",
 		LabelReady: "true",
 	}, "10.0.0.5")
 
@@ -281,7 +281,7 @@ func TestValidateTraffic_PodNotInEndpoints(t *testing.T) {
 	t.Parallel()
 
 	pod := trafficPod("eth-0", "default", map[string]string{
-		"app":    "eth",
+		"app":      "eth",
 		LabelReady: "true",
 	}, "10.0.0.5")
 

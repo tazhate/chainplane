@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -167,6 +168,22 @@ func (a *polkadotAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []c
 // --------------------------------------------------------------------------
 // Helpers
 // --------------------------------------------------------------------------
+
+func (a *polkadotAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *polkadotAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "parity/polkadot",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
 
 // polkadotParseHexBlock parses a hex string like "0x1a2b3c" to int64.
 func polkadotParseHexBlock(hex string) int64 {

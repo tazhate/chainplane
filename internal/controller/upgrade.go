@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // ---------------------------------------------------------------------------
@@ -37,13 +37,13 @@ import (
 
 const (
 	// annotationLastImage stores the last-applied image for change detection.
-	annotationLastImage = "nodes.k8s-bch.io/last-image"
+	annotationLastImage = "nodes.chainplane.io/last-image"
 	// annotationLastClient stores the last-applied client for change detection.
-	annotationLastClient = "nodes.k8s-bch.io/last-client"
+	annotationLastClient = "nodes.chainplane.io/last-client"
 	// annotationRestartedAt is patched on the pod template to trigger a rolling restart.
-	annotationRestartedAt = "nodes.k8s-bch.io/restarted-at"
+	annotationRestartedAt = "nodes.chainplane.io/restarted-at"
 	// annotationPreviousImage preserves the pre-upgrade image for rollback.
-	annotationPreviousImage = "nodes.k8s-bch.io/previous-image"
+	annotationPreviousImage = "nodes.chainplane.io/previous-image"
 
 	// ConditionUpgrading is the condition type set while a rolling restart is
 	// in progress.
@@ -301,20 +301,4 @@ func (r *BlockchainNodeReconciler) resolveImageForUpgrade(node *nodesv1alpha1.Bl
 		return node.Spec.Image.Repository + ":" + node.Spec.Image.Tag
 	}
 	return fmt.Sprintf("%s/%s", node.Spec.Chain, node.Spec.Client)
-}
-
-// ---------------------------------------------------------------------------
-// Aliases for backward compatibility with tests
-// ---------------------------------------------------------------------------
-
-func (r *BlockchainNodeReconciler) checkRolloutHealth(ctx context.Context, node *nodesv1alpha1.BlockchainNode, sts *appsv1.StatefulSet) error {
-	return r.verifyRolloutHealth(ctx, node, sts)
-}
-
-func (r *BlockchainNodeReconciler) detectCrashLoop(ctx context.Context, node *nodesv1alpha1.BlockchainNode, desiredImage string) bool {
-	return r.hasCrashLoop(ctx, node, desiredImage)
-}
-
-func (r *BlockchainNodeReconciler) performRollback(ctx context.Context, node *nodesv1alpha1.BlockchainNode, sts *appsv1.StatefulSet) error {
-	return r.rollback(ctx, node, sts)
 }

@@ -1,7 +1,7 @@
-# This rule is not used by the project blockchain-node-operator itself.
+# This rule is not used by the project chainplane itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
-# Grants read-only access to nodes.nodes.k8s-bch.io resources.
+# Grants read-only access to nodes.nodes.chainplane.io resources.
 # This role is intended for users who need visibility into these resources
 # without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
 
@@ -9,12 +9,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/name: chainplane
     app.kubernetes.io/managed-by: kustomize
   name: blockchainnode-viewer-role
 rules:
 - apiGroups:
-  - nodes.nodes.k8s-bch.io
+  - nodes.nodes.chainplane.io
   resources:
   - blockchainnodes
   verbs:
@@ -22,7 +22,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - nodes.nodes.k8s-bch.io
+  - nodes.nodes.chainplane.io
   resources:
   - blockchainnodes/status
   verbs:

@@ -7,9 +7,10 @@ import (
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // SyncStatus holds the current sync state returned by a HealthCheck.
@@ -86,6 +87,50 @@ type StartupProbeProvider interface {
 // These run AFTER the snapshot-restore init container.
 type InitContainerProvider interface {
 	InitContainers(spec nodesv1alpha1.BlockchainNodeSpec) []corev1.Container
+}
+
+// SidecarProvider is an optional interface that adapters can implement
+// to inject long-running sidecar containers alongside the main node container.
+// Common use case: metric exporters for chains without native Prometheus support.
+// These sidecars are prepended before user-supplied spec.Sidecars.
+type SidecarProvider interface {
+	Sidecars(spec nodesv1alpha1.BlockchainNodeSpec) []corev1.Container
+}
+
+// VersionProvider is an optional interface that adapters can implement to
+// enable automatic version tracking via ChainVersionCatalog.
+type VersionProvider interface {
+	VersionPolicy() ChainVersionPolicy
+}
+
+// ResourceDefaults holds recommended resource allocations for a blockchain node.
+// Values are based on official documentation and real-world operational experience.
+type ResourceDefaults struct {
+	// CPURequest is the recommended CPU request (e.g. "4").
+	CPURequest resource.Quantity
+	// MemoryRequest is the recommended memory request (e.g. "8Gi").
+	MemoryRequest resource.Quantity
+	// Storage is the recommended PVC size (e.g. "500Gi").
+	Storage resource.Quantity
+}
+
+// DefaultResourcesProvider is an optional interface that adapters can implement
+// to declare recommended resource allocations. Used as defaults when the user
+// does not specify Resources in BlockchainNodeSpec.
+type DefaultResourcesProvider interface {
+	DefaultResources() ResourceDefaults
+}
+
+// ChainVersionPolicy describes how to find the latest version of a chain image.
+type ChainVersionPolicy struct {
+	// Registry is "docker.io" or "ghcr.io".
+	Registry string
+	// Repository is the image repository, e.g. "lncm/bitcoind".
+	Repository string
+	// TagPattern is a regexp that matching tags must satisfy, e.g. `^v\d+`.
+	TagPattern string
+	// TagPrefix is stripped from the tag before semver comparison, e.g. "GreatVoyage-" for TRON.
+	TagPrefix string
 }
 
 // registry holds all registered adapters behind a RWMutex for thread safety.

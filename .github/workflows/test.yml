@@ -17,7 +17,13 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Download setup-envtest
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          setup-envtest use --bin-dir ./bin/k8s -p path
+
       - name: Running Tests
         run: |
           go mod tidy
-          make test
+          KUBEBUILDER_ASSETS="$(setup-envtest use --bin-dir ./bin/k8s -p path)" \
+            go test $(go list ./... | grep -v /e2e) -coverprofile cover.out

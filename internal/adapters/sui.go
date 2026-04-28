@@ -3,16 +3,18 @@ package adapters
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -81,7 +83,10 @@ genesis:
 enable-experimental-rest-api: false
 
 state-archive-read-config:
-  - ingestion-url: "https://storage.googleapis.com/mysten-mainnet-checkpoints"
+  - object-store-config:
+      object-store: "GCS"
+      bucket: "mysten-mainnet-checkpoints"
+      no-sign-request: true
     concurrency: 10
     use-for-pruning-watermark: true
 `
@@ -155,15 +160,19 @@ func (a *suiAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus
 		current = int64(highestSynced)
 	}
 
-	// SUI mainnet tip grows ~6 checkpoints/second. Known tip as of 2026-03-19: ~110M.
-	const knownTip float64 = 110_000_000
-	progress := float64(current) / knownTip * 100.0
-	if progress > 100.0 {
-		progress = 100.0
+	tip := suiNetworkTip(ctx)
+	if tip == 0 {
+		tip = current
 	}
-
-	isSyncing := progress < 99.5
-	highestBlock := int64(knownTip)
+	var progress float64
+	if tip > 0 {
+		progress = float64(current) / float64(tip) * 100.0
+		if progress > 100.0 {
+			progress = 100.0
+		}
+	}
+	isSyncing := current < tip
+	highestBlock := tip
 	if !isSyncing {
 		highestBlock = current
 	}
@@ -197,30 +206,51 @@ func (a *suiAdapter) InitContainers(_ nodesv1alpha1.BlockchainNodeSpec) []corev1
 			Name:  "sui-formal-snapshot",
 			Image: "mysten/sui-tools:mainnet",
 			Command: []string{"sh", "-c", `set -e
-if [ -d /data/db ] && [ -n "$(ls -A /data/db 2>/dev/null)" ]; then
-  echo "SUI DB exists — skipping formal snapshot download."
-  exit 0
+# Verify DB health: check that key RocksDB dirs have MANIFEST/CURRENT files.
+# A missing CURRENT means the DB is corrupt (e.g. partial rm) — wipe and re-download.
+if [ -d /data/db/live ]; then
+  DB_OK=true
+  for sub in checkpoints store/perpetual; do
+    dir="/data/db/live/$sub"
+    if [ -d "$dir" ] && [ ! -f "$dir/CURRENT" ]; then
+      echo "WARN: $dir exists but CURRENT file missing — DB corrupt"
+      DB_OK=false
+    fi
+  done
+  if [ "$DB_OK" = true ] && [ -n "$(ls -A /data/db/live 2>/dev/null)" ]; then
+    echo "SUI DB exists and looks healthy — skipping formal snapshot download."
+    exit 0
+  fi
+  echo "Corrupt or incomplete DB detected — wiping /data/db for fresh snapshot..."
+  rm -rf /data/db
 fi
-echo "No existing DB — downloading SUI formal snapshot..."
 
-EPOCH=$(curl -sf 'https://fullnode.mainnet.sui.io:443' \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"suix_getLatestSuiSystemState","params":[]}' 2>/dev/null \
-  | sed -n 's/.*"epoch":"\([0-9]*\)".*/\1/p' || true)
-if [ -z "$EPOCH" ] || [ "$EPOCH" = "0" ]; then
-  echo "WARNING: Could not determine current epoch, trying epoch 750"
-  EPOCH=750
+# Resume partial download: staging/ exists means a previous run was interrupted.
+# sui-tool skips already-present SST files so re-running continues from where it left off.
+if [ -d /data/db/staging ] || [ -d /data/db/snapshot ]; then
+  echo "Partial snapshot detected ($(du -sh /data/db 2>/dev/null | cut -f1) downloaded) — resuming..."
+  if sui-tool download-formal-snapshot \
+    --path /data/db \
+    --genesis /data/genesis.blob \
+    --num-parallel-downloads 25 \
+    --no-sign-request \
+    --network mainnet \
+    --latest; then
+    echo "SUI formal snapshot resume complete."
+    exit 0
+  fi
+  echo "Resume failed — wiping and starting fresh..."
+  rm -rf /data/db
 fi
-EPOCH=$((EPOCH - 1))
-echo "Downloading formal snapshot for epoch $EPOCH..."
 
+echo "No existing DB — downloading latest SUI formal snapshot..."
 sui-tool download-formal-snapshot \
   --path /data/db \
   --genesis /data/genesis.blob \
-  --num-parallel-downloads 5 \
+  --num-parallel-downloads 25 \
   --no-sign-request \
   --network mainnet \
-  --epoch "$EPOCH" || {
+  --latest || {
     echo "WARNING: Formal snapshot download failed (exit $?), node will sync from archive"
     exit 0
   }
@@ -255,6 +285,33 @@ func (a *suiAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1
 // Helpers
 // --------------------------------------------------------------------------
 
+// suiNetworkTip queries the public Sui RPC for the latest checkpoint sequence number.
+// Returns 0 on error — callers must treat 0 as "unknown tip" and fall back gracefully.
+func suiNetworkTip(ctx context.Context) int64 {
+	const suiPublicRPC = "https://sui-rpc.publicnode.com"
+	body := `{"jsonrpc":"2.0","method":"suix_getLatestCheckpointSequenceNumber","params":[],"id":1}`
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, suiPublicRPC, strings.NewReader(body))
+	if err != nil {
+		return 0
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := rpcClient.Do(req)
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
+	if err != nil {
+		return 0
+	}
+	var result struct{ Result string }
+	if json.Unmarshal(data, &result) != nil {
+		return 0
+	}
+	n, _ := strconv.ParseInt(result.Result, 10, 64)
+	return n
+}
+
 // parsePromMetric parses a single Prometheus metric line and returns its float64 value.
 func parsePromMetric(line string) (float64, bool) {
 	fields := strings.Fields(line)
@@ -266,4 +323,21 @@ func parsePromMetric(line string) (float64, bool) {
 		return 0, false
 	}
 	return v, true
+}
+
+func (a *suiAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *suiAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "mysten/sui-node",
+		TagPattern: `^mainnet-v\d+\.\d+\.\d+$`,
+		TagPrefix:  "mainnet-",
+	}
 }

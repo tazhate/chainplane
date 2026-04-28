@@ -2,19 +2,19 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: nodes.k8s-bch.io
+domain: nodes.chainplane.io
 layout:
 - go.kubebuilder.io/v4
-projectName: blockchain-node-operator
-repo: github.com/tazhate/blockchain-node-operator
+projectName: chainplane
+repo: github.com/tazhate/chainplane
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: nodes.k8s-bch.io
+  domain: nodes.chainplane.io
   group: nodes
   kind: BlockchainNode
-  path: github.com/tazhate/blockchain-node-operator/api/v1alpha1
+  path: github.com/tazhate/chainplane/api/v1alpha1
   version: v1alpha1
 version: "3"

@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -13,7 +14,7 @@ import (
 // --------------------------------------------------------------------------
 
 const defaultBlastImage = "blastio/blast-geth:mainnet-v1.7.0"
-const defaultBlastL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultBlastL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -50,13 +51,37 @@ func (a *blastAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStat
 }
 
 func (a *blastAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{
+		Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP,
+	})
+}
+
+// ContainerArgs enables Prometheus metrics endpoint on Blast op-geth.
+func (a *blastAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by OP Stack L2 nodes.
 func (a *blastAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "L1_RPC_URL", Value: defaultBlastL1URL},
+	}
+}
+
+func (a *blastAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("500Gi"),
+	}
+}
+
+func (a *blastAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "blastio/blast-geth",
+		TagPattern: `^mainnet-v\d+`,
+		TagPrefix:  "mainnet-",
 	}
 }
 

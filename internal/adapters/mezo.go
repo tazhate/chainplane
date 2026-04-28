@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -57,12 +58,29 @@ func (a *mezoAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev
 		{Name: "p2p", ContainerPort: 26656, Protocol: corev1.ProtocolTCP},
 		{Name: "evm-rpc", ContainerPort: 8545, Protocol: corev1.ProtocolTCP},
 		{Name: "evm-ws", ContainerPort: 8546, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 26660, Protocol: corev1.ProtocolTCP},
 	}
 }
 
 // HealthCheck uses evmHealthCheck since mezod exposes EVM JSON-RPC at 8545.
 func (a *mezoAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
 	return evmHealthCheck(ctx, rpcURL)
+}
+
+func (a *mezoAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("100Gi"),
+	}
+}
+
+func (a *mezoAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "mezo/mezod",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
 }
 
 // --------------------------------------------------------------------------
@@ -79,7 +97,8 @@ enabled-unsafe-cors = true
 enable = false
 
 [telemetry]
-enabled = false
+enabled = true
+prometheus-retention-time = 60
 
 [json-rpc]
 enable = true

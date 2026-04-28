@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // Hemi is an OP Stack L2 with Bitcoin finality guarantees.
@@ -14,7 +15,7 @@ import (
 // Bitcoin-finality daemon suite (bfgd/bssd/popmd), not the EVM node.
 const defaultHemiImage = "hemilabs/op-geth:v1.101408.0"
 
-const defaultHemiL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultHemiL1URL = "http://ethereum:8545"
 
 type hemiAdapter struct {
 	baseAdapter
@@ -39,11 +40,31 @@ func (a *hemiAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatu
 }
 
 func (a *hemiAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{
+		Name:          "metrics",
+		ContainerPort: 6060,
+		Protocol:      corev1.ProtocolTCP,
+	})
 }
 
 func (a *hemiAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
-	return []string{"--config", "/config/config.toml"}
+	return []string{"--config", "/config/config.toml", "--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+}
+
+func (a *hemiAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("200Gi"),
+	}
+}
+
+func (a *hemiAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "hemilabs/op-geth",
+		TagPattern: `^v\d+\.\d+\.\d+`,
+	}
 }
 
 // ContainerEnv provides the L1 RPC endpoint required by OP Stack op-geth.

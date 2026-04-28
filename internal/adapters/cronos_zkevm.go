@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultCronosZkEVMImage = "ghcr.io/cronos-labs/external-node:mainnet-v29.6.0"
 
-const defaultCronosZkEVML1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultCronosZkEVML1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -50,11 +51,33 @@ func (a *cronosZkEVMAdapter) HealthCheck(ctx context.Context, rpcURL string) (Sy
 	return evmHealthCheck(ctx, rpcURL)
 }
 
+func (a *cronosZkEVMAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("200Gi"),
+	}
+}
+
+func (a *cronosZkEVMAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "cronos-labs/external-node",
+		TagPattern: `^mainnet-v\d+`,
+		TagPrefix:  "mainnet-",
+	}
+}
+
 func (a *cronosZkEVMAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 3060, Protocol: corev1.ProtocolTCP},
 		{Name: "ws", ContainerPort: 3061, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 3312, Protocol: corev1.ProtocolTCP},
 	}
+}
+
+func (a *cronosZkEVMAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--prometheus-port=3312"}
 }
 
 // ContainerEnv injects the L1 Ethereum RPC URL required by Cronos zkEVM ZK Stack external node.

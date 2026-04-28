@@ -4,7 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // baseAdapter provides default implementations for NodeSelector and LivenessProbe
@@ -29,7 +29,7 @@ func (b baseAdapter) LivenessProbe(_ nodesv1alpha1.BlockchainNodeSpec) *corev1.P
 // --------------------------------------------------------------------------
 
 // tcpProbe builds a TCPSocket probe with the given parameters.
-func tcpProbe(port, initialDelay, period, timeout, failureThreshold int32) *corev1.Probe {
+func tcpProbe(port, initialDelay, period, timeout, failureThreshold int32) *corev1.Probe { //nolint:unparam
 	return &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
@@ -44,7 +44,7 @@ func tcpProbe(port, initialDelay, period, timeout, failureThreshold int32) *core
 }
 
 // httpProbe builds an HTTPGet probe with the given parameters.
-func httpProbe(path string, port, initialDelay, period, timeout, failureThreshold int32) *corev1.Probe {
+func httpProbe(path string, port, initialDelay, period, timeout, failureThreshold int32) *corev1.Probe { //nolint:unparam
 	return &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{

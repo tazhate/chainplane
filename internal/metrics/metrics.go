@@ -4,38 +4,38 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
 )
 
 var (
 	blockHeight = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "blockchain_node_block_height",
+		Name: "chainplane_node_block_height",
 		Help: "Latest confirmed block height of the blockchain node",
 	}, []string{"chain", "network", "node", "node_type"})
 
 	syncProgress = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "blockchain_node_sync_progress",
+		Name: "chainplane_node_sync_progress",
 		Help: "Sync progress percentage of the blockchain node (0-100)",
 	}, []string{"chain", "network", "node"})
 
 	peersCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "blockchain_node_peers_count",
+		Name: "chainplane_node_peers_count",
 		Help: "Number of connected peers",
 	}, []string{"chain", "network", "node"})
 
 	nodePhase = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "blockchain_node_phase",
+		Name: "chainplane_node_phase",
 		Help: "Current phase of the blockchain node (1 = active phase)",
 	}, []string{"chain", "network", "node", "phase"})
 
 	nodeRestarts = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "blockchain_node_restarts_total",
+		Name: "chainplane_node_restarts_total",
 		Help: "Total number of auto-restarts triggered by the operator",
 	}, []string{"chain", "network", "node", "reason"})
 
 	degradedDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "blockchain_node_degraded_duration_seconds",
+		Name:    "chainplane_node_degraded_duration_seconds",
 		Help:    "Duration of degraded episodes before recovery or restart",
 		Buckets: []float64{60, 300, 600, 900, 1800, 3600, 7200},
 	}, []string{"chain", "network"})

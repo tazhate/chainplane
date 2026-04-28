@@ -27,8 +27,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/health"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/health"
 )
 
 // ---------------------------------------------------------------------------
@@ -55,8 +55,8 @@ const (
 // manages the desired state (StatefulSet, Service, ConfigMap) while this one
 // handles health monitoring and blue/green replacement.
 //
-// +kubebuilder:rbac:groups=nodes.k8s-bch.io,resources=blockchainnodes,verbs=get;list;watch;patch
-// +kubebuilder:rbac:groups=nodes.k8s-bch.io,resources=blockchainnodes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes,verbs=get;list;watch;patch
+// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;delete;patch
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch

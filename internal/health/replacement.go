@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // ReplacementPhase tracks the current stage of a pod replacement workflow.
@@ -35,17 +35,17 @@ const (
 
 // Annotation keys used to track replacement state on the BlockchainNode resource.
 const (
-	AnnotationReplacementPhase     = "nodes.k8s-bch.io/replacement-phase"
-	AnnotationReplacementPod       = "nodes.k8s-bch.io/replacement-pod"
-	AnnotationReplacementOldPod    = "nodes.k8s-bch.io/replacement-old-pod"
-	AnnotationReplacementStartedAt = "nodes.k8s-bch.io/replacement-started-at"
+	AnnotationReplacementPhase     = "nodes.chainplane.io/replacement-phase"
+	AnnotationReplacementPod       = "nodes.chainplane.io/replacement-pod"
+	AnnotationReplacementOldPod    = "nodes.chainplane.io/replacement-old-pod"
+	AnnotationReplacementStartedAt = "nodes.chainplane.io/replacement-started-at"
 )
 
 // Label keys applied to pods managed by the replacement workflow.
 const (
-	LabelInstance       = "nodes.k8s-bch.io/instance"
-	LabelReplacementFor = "nodes.k8s-bch.io/replacement-for"
-	LabelReady          = "nodes.k8s-bch.io/ready"
+	LabelInstance       = "nodes.chainplane.io/instance"
+	LabelReplacementFor = "nodes.chainplane.io/replacement-for"
+	LabelReady          = "nodes.chainplane.io/ready"
 )
 
 // ReplacementConfig holds tunables for the replacement workflow.
@@ -379,8 +379,8 @@ func (r *ReplacementManager) spawnReplacementPod(
 	labels[LabelInstance] = "replacement"
 	labels[LabelReplacementFor] = oldName
 	labels[LabelReady] = "false"
-	labels["app.kubernetes.io/managed-by"] = "blockchain-node-operator"
-	labels["nodes.k8s-bch.io/chain"] = string(node.Spec.Chain)
+	labels["app.kubernetes.io/managed-by"] = "chainplane"
+	labels["nodes.chainplane.io/chain"] = string(node.Spec.Chain)
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -388,8 +388,8 @@ func (r *ReplacementManager) spawnReplacementPod(
 			Namespace: node.Namespace,
 			Labels:    labels,
 			Annotations: map[string]string{
-				"nodes.k8s-bch.io/original-pod": oldName,
-				"nodes.k8s-bch.io/created":      time.Now().UTC().Format(time.RFC3339),
+				"nodes.chainplane.io/original-pod": oldName,
+				"nodes.chainplane.io/created":      time.Now().UTC().Format(time.RFC3339),
 			},
 		},
 		Spec: *orig.Spec.DeepCopy(),

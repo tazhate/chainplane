@@ -24,10 +24,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/adapters"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
 )
 
 // ---------------------------------------------------------------------------
@@ -279,7 +278,7 @@ func appendRPCCredentials(envs []corev1.EnvVar, node *nodesv1alpha1.BlockchainNo
 // appendJVMFlags injects JAVA_OPTS from the jvm-flags annotation (used by
 // java-tron and other JVM-based chains).
 func appendJVMFlags(envs []corev1.EnvVar, node *nodesv1alpha1.BlockchainNode) []corev1.EnvVar {
-	if flags, ok := node.Annotations["nodes.k8s-bch.io/jvm-flags"]; ok && flags != "" {
+	if flags, ok := node.Annotations["nodes.chainplane.io/jvm-flags"]; ok && flags != "" {
 		return append(envs, corev1.EnvVar{Name: "JAVA_OPTS", Value: flags})
 	}
 	return envs
@@ -332,7 +331,7 @@ func hexToInt64(s string) int64 {
 		return 0
 	}
 	var n int64
-	fmt.Sscanf(s, "%x", &n)
+	_, _ = fmt.Sscanf(s, "%x", &n)
 	return n
 }
 
@@ -347,27 +346,3 @@ func tipHTTPClient() *http.Client {
 }
 
 // ---------------------------------------------------------------------------
-// resolveImage (method form used by upgrade.go)
-// ---------------------------------------------------------------------------
-
-// resolveImage delegates to resolveContainerImage. It exists as a method so
-// the upgrade reconciler can call it without importing the adapter.
-func (r *BlockchainNodeReconciler) resolveImage(node *nodesv1alpha1.BlockchainNode, adapter adapters.ChainAdapter) string {
-	return resolveContainerImage(node, adapter)
-}
-
-// ---------------------------------------------------------------------------
-// setPhase (alias kept for backward compatibility with tests)
-// ---------------------------------------------------------------------------
-
-func (r *BlockchainNodeReconciler) setPhase(ctx context.Context, node *nodesv1alpha1.BlockchainNode, phase nodesv1alpha1.NodePhase) (ctrl.Result, error) {
-	return r.patchPhase(ctx, node, phase)
-}
-
-// ---------------------------------------------------------------------------
-// updateAnnotations (alias for persistAnnotations, used in health / ETA code)
-// ---------------------------------------------------------------------------
-
-func (r *BlockchainNodeReconciler) updateAnnotations(ctx context.Context, node *nodesv1alpha1.BlockchainNode) error {
-	return r.persistAnnotations(ctx, node)
-}

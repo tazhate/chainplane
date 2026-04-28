@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -80,6 +81,24 @@ func (a *moonriverAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []s
 	return []string{
 		"--base-path", "/data",
 		"--config", "/config/moonriver.json",
+		"--prometheus-external",
+		"--prometheus-port", "9615",
+	}
+}
+
+func (a *moonriverAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("1000Gi"),
+	}
+}
+
+func (a *moonriverAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "moonbeamfoundation/moonbeam",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 
@@ -89,5 +108,6 @@ func (a *moonriverAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []
 		{Name: "ws", ContainerPort: 9945, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 30333, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 30333, Protocol: corev1.ProtocolUDP},
+		{Name: "metrics", ContainerPort: 9615, Protocol: corev1.ProtocolTCP},
 	}
 }

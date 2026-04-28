@@ -1,4 +1,4 @@
-# Contributing to blockchain-node-operator
+# Contributing to chainplane
 
 Thank you for your interest in contributing. This document covers the development workflow, testing, and how to add support for new blockchain chains.
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing. This document covers the developmen
 
 ```bash
 # Clone the repository
-git clone https://github.com/tazhate/blockchain-node-operator.git
-cd blockchain-node-operator
+git clone https://github.com/tazhate/chainplane.git
+cd chainplane
 
 # Install tool dependencies (kustomize, controller-gen, envtest, golangci-lint)
 # These are downloaded to ./bin/ automatically on first use.
@@ -71,7 +71,7 @@ kubectl get blockchainnodes -w
 To deploy the controller inside the cluster:
 
 ```bash
-make deploy IMG=<your-registry>/blockchain-node-operator:latest
+make deploy IMG=<your-registry>/chainplane:latest
 ```
 
 ## Code Generation
@@ -126,7 +126,7 @@ package adapters
 import (
     "context"
     corev1 "k8s.io/api/core/v1"
-    nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+    nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 const defaultMyChainImage = "mychain/op-geth:v1.0.0"

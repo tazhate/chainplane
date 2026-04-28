@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -53,6 +54,24 @@ func (a *rootstockAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []
 		{Name: "rpc", ContainerPort: 4444, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 5050, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 5050, Protocol: corev1.ProtocolUDP},
+		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *rootstockAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "rsksmart/rskj",
+		TagPattern: `^ARROWHEAD-\d+`,
+		TagPrefix:  "ARROWHEAD-",
+	}
+}
+
+func (a *rootstockAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("200Gi"),
 	}
 }
 
@@ -93,5 +112,13 @@ rpc {
 peer {
   port = 5050
   discovery.enabled = true
+}
+
+metrics {
+  enabled = true
+  server {
+    bind_address = "0.0.0.0"
+    port = 6060
+  }
 }
 `

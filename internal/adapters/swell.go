@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -13,7 +14,7 @@ import (
 // --------------------------------------------------------------------------
 
 const defaultSwellImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
-const defaultSwellL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultSwellL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -50,13 +51,28 @@ func (a *swellAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStat
 }
 
 func (a *swellAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
+	return append(evmPorts(30303), corev1.ContainerPort{
+		Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP,
+	})
+}
+
+// ContainerArgs enables Prometheus metrics endpoint on Swell op-geth.
+func (a *swellAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by OP Stack L2 nodes.
 func (a *swellAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "L1_RPC_URL", Value: defaultSwellL1URL},
+	}
+}
+
+func (a *swellAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("200Gi"),
 	}
 }
 
@@ -83,3 +99,11 @@ WSOrigins = ["*"]
 [Node.P2P]
 MaxPeers = 50
 `
+
+func (a *swellAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "us-docker.pkg.dev",
+		Repository: "oplabs-tools-artifacts/images/op-geth",
+		TagPattern: `^v\d+\.\d+`,
+	}
+}

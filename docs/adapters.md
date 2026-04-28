@@ -46,7 +46,7 @@ This document describes every blockchain adapter supported by the operator, incl
 
 **Configuration:**
 - `txindex=1` enabled by default
-- `rpcallowip=10.42.0.0/16` (cluster CIDR)
+- `rpcallowip=0.0.0.0/0` (cluster CIDR)
 - Testnet uses `[test]` config section
 
 **Notes:**
@@ -195,7 +195,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - CometBFT state sync with auto-fetched trust height/hash from Polkachu RPC
 - Seeds: Polkachu + Lavender Five
 - Persistent peers: kjnodes snapshot provider
-- Genesis downloaded from MinIO (`minio.minio.svc.cluster.local`)
+- Genesis downloaded from public URL (configurable via COSMOS_GENESIS_URL)
 - Snapshot boot path detected via `application.db` presence
 
 **Special features:**
@@ -300,7 +300,7 @@ This document describes every blockchain adapter supported by the operator, incl
 
 **Configuration:**
 - `txindex=1`, `dbcache=1024`, `maxconnections=125`
-- `rpcallowip=10.42.0.0/16`
+- `rpcallowip=0.0.0.0/0`
 
 **Notes:**
 - Fully-synced nodes are StallExempt (block time ~2.5 min)
@@ -518,7 +518,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - `SyncMode = "snap"`
 
 **Special features:**
-- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545`
+- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
 
 **Storage:** 500+ GiB for mainnet
 
@@ -542,7 +542,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - `SyncMode = "snap"`
 
 **Special features:**
-- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545`
+- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
 
 **Storage:** 500+ GiB for mainnet
 
@@ -566,7 +566,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - `SyncMode = "snap"`
 
 **Special features:**
-- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545`
+- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
 
 **Storage:** 500+ GiB for mainnet
 
@@ -590,7 +590,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - `SyncMode = "snap"`
 
 **Special features:**
-- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545`
+- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
 
 **Storage:** 500+ GiB for mainnet
 

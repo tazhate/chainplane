@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -163,9 +164,27 @@ func (a *filecoinAdapter) ContainerArgs(spec nodesv1alpha1.BlockchainNodeSpec) [
 	return args
 }
 
+func (a *filecoinAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("8"),
+		MemoryRequest: resource.MustParse("32Gi"),
+		Storage:       resource.MustParse("2Ti"),
+	}
+}
+
+func (a *filecoinAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "filecoin/lotus",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
+
 func (a *filecoinAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 1234, Protocol: corev1.ProtocolTCP},
+		// Lotus exposes Prometheus metrics at /debug/metrics on the API port
+		{Name: "metrics", ContainerPort: 1234, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 12345, Protocol: corev1.ProtocolTCP},
 	}
 }

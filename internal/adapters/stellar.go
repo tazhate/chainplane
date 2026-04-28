@@ -10,8 +10,9 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -206,6 +207,25 @@ func (a *stellarAdapter) LivenessProbe(_ nodesv1alpha1.BlockchainNodeSpec) *core
 func (a *stellarAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "http", ContainerPort: 11626, Protocol: corev1.ProtocolTCP},
+		// Stellar Core exposes Prometheus metrics at /metrics on the same HTTP port.
+		// Named "metrics" so PodMonitor can target it directly.
+		{Name: "metrics", ContainerPort: 11626, Protocol: corev1.ProtocolTCP},
 		{Name: "peer", ContainerPort: 11625, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *stellarAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "stellar/stellar-core",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
+	}
+}
+
+func (a *stellarAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("100Gi"),
 	}
 }

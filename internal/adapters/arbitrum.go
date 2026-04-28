@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import (
 
 const defaultArbitrumImage = "offchainlabs/nitro-node:v3.9.7"
 
-const defaultArbitrumL1URL = "http://ethereum-mainnet-01.blockchain-nodes.svc.cluster.local:8545"
+const defaultArbitrumL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
 // Type
@@ -51,19 +52,37 @@ func (a *arbitrumAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncS
 }
 
 func (a *arbitrumAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.ContainerPort {
-	return evmPorts(8547)
+	return append(evmPorts(8547), corev1.ContainerPort{
+		Name: "metrics", ContainerPort: 6070, Protocol: corev1.ProtocolTCP,
+	})
 }
 
-// ContainerArgs injects the --l1.url flag pointing to the L1 Ethereum RPC.
+// ContainerArgs injects the --l1.url flag pointing to the L1 Ethereum RPC and enables metrics.
 // The L1_RPC_URL env var is set by ContainerEnv and can be overridden via extraEnv.
 func (a *arbitrumAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
-	return []string{"--l1.url=$(L1_RPC_URL)"}
+	return []string{"--l1.url=$(L1_RPC_URL)", "--metrics"}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by Arbitrum Nitro.
 func (a *arbitrumAdapter) ContainerEnv(_ nodesv1alpha1.BlockchainNodeSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "L1_RPC_URL", Value: defaultArbitrumL1URL},
+	}
+}
+
+func (a *arbitrumAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("4"),
+		MemoryRequest: resource.MustParse("16Gi"),
+		Storage:       resource.MustParse("2Ti"),
+	}
+}
+
+func (a *arbitrumAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "offchainlabs/nitro-node",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
 
@@ -92,6 +111,6 @@ const arbitrumConfig = `{
   "persistent": {
     "chain": "arb1"
   },
-  "metrics": false
+  "metrics": true
 }
 `

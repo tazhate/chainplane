@@ -1,20 +1,27 @@
-# blockchain-node-operator
+<p align="center">
+  <img src="assets/logo.png" alt="ChainPlane" width="600"/>
+</p>
 
-A production-grade Kubernetes operator for deploying and managing blockchain full nodes.
+# ChainPlane
+
+A Kubernetes operator for deploying and managing blockchain full nodes.
 Supports **102 chains** with built-in health monitoring, snapshot bootstrapping, and automatic recovery.
 
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://unlicense.org)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8.svg)](https://golang.org/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.25+-326CE5.svg)](https://kubernetes.io/)
+[![Release](https://img.shields.io/github/v/release/tazhate/chainplane)](https://github.com/tazhate/chainplane/releases)
+
+> **⚠ Alpha software.** The CRD API is `v1alpha1` — breaking changes may occur in minor releases until promoted to `v1beta1`. Not recommended for production without thorough testing in your environment. Bug reports and feedback are very welcome.
 
 ## Overview
 
-`blockchain-node-operator` manages the full lifecycle of blockchain nodes on Kubernetes.
+`chainplane` manages the full lifecycle of blockchain nodes on Kubernetes.
 Define a `BlockchainNode` custom resource and the operator handles everything:
 StatefulSet creation, persistent storage, configuration, health monitoring, and automatic recovery.
 
 ```yaml
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: bitcoin-mainnet
@@ -40,6 +47,9 @@ spec:
 - **Snapshot bootstrap** — MinIO-based snapshot restore to skip days of initial sync
 - **Multi-client Ethereum** — Nethermind, Geth, Reth, and Erigon selectable via a single CRD field
 - **Adapter pattern** — each chain is a self-contained Go file providing image, config template, health check, CLI flags, env vars, and probes
+- **DefaultResources() on all 102 adapters** — recommended CPU/memory/storage derived from official chain documentation; the validating webhook uses these to warn when resources are below recommended minimums
+- **VersionPolicy() on 96/102 adapters** — drives `ChainVersionCatalog` auto-tracking by declaring the registry, repository, and tag pattern for each chain image
+- **Multi-registry support** — docker.io, ghcr.io, Google Artifact Registry (`us-docker.pkg.dev`), and Amazon ECR Public (`public.ecr.aws`) via a unified OCI v2 client
 - **Webhook validation** — admission webhook enforces minimum storage/memory requirements and immutable chain/network fields
 - **Sidecars** — attach consensus-layer clients (e.g. Lighthouse for Ethereum) or any helper process
 
@@ -246,10 +256,10 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 ### Install via Helm
 
 ```sh
-helm install blockchain-node-operator charts/blockchain-node-operator \
+helm install chainplane charts/chainplane \
   --namespace blockchain-nodes \
   --create-namespace \
-  --set image.repository=ghcr.io/tazhate/blockchain-node-operator \
+  --set image.repository=ghcr.io/tazhate/chainplane \
   --set image.tag=latest
 ```
 
@@ -257,13 +267,13 @@ helm install blockchain-node-operator charts/blockchain-node-operator \
 
 ```sh
 make install
-make deploy IMG=<your-registry>/blockchain-node-operator:latest
+make deploy IMG=<your-registry>/chainplane:latest
 ```
 
 ### Create Your First Node
 
 ```yaml
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   name: bitcoin-mainnet
@@ -378,7 +388,7 @@ The operator supports MinIO-based snapshot bootstrapping to skip initial sync.
 
 **Setup:**
 
-1. Set `MINIO_ENDPOINT` env var on the operator deployment (e.g. `http://minio.minio.svc:9000`)
+1. Set `MINIO_ENDPOINT` env var on the operator deployment (e.g. `http://minio:9000`)
 2. Upload snapshots to MinIO buckets named `snapshots-{chain}` (e.g. `snapshots-bitcoin`)
 3. On first start, an init container downloads and extracts the snapshot before the node starts
 
@@ -442,10 +452,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add support for a new chain ad
 | Doc | Description |
 |-----|-------------|
 | [docs/getting-started.md](docs/getting-started.md) | Installation and first steps |
-| [docs/adapters.md](docs/adapters.md) | Per-chain adapter details (images, ports, health checks) |
-| [docs/adding-new-chain.md](docs/adding-new-chain.md) | Step-by-step guide to adding a new chain |
+| [docs/architecture.md](docs/architecture.md) | Component overview and reconciliation flow |
+| [docs/configuration.md](docs/configuration.md) | CRD spec fields (full configuration reference) |
+| [docs/adapters.md](docs/adapters.md) | All supported chains — images, ports, health checks |
+| [docs/adding-new-chain.md](docs/adding-new-chain.md) | Adapter development guide |
+| [docs/registry-support.md](docs/registry-support.md) | Supported image registries (docker.io, ghcr.io, GAR, ECR Public) |
+| [docs/fleet-dashboard.md](docs/fleet-dashboard.md) | Web UI for fleet-wide node status |
+| [docs/release-process.md](docs/release-process.md) | Release workflow (for maintainers) |
 | [docs/health-monitoring.md](docs/health-monitoring.md) | Health trigger system deep-dive |
-| [docs/configuration.md](docs/configuration.md) | Full CRD configuration reference |
 | [docs/chain-verification.md](docs/chain-verification.md) | Adapter verification report |
 
 ## License

@@ -20,14 +20,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
-const defaultSnapshotRestoreImage = "ghcr.io/tazhate/blockchain-node-operator/snapshot-restore:latest"
+const defaultSnapshotRestoreImage = "ghcr.io/tazhate/chainplane/snapshot-restore:latest"
 
 // Config holds the MinIO connection and bucket/key settings for snapshot injection.
 type Config struct {
-	// Endpoint is the MinIO API endpoint (e.g. "http://minio.minio.svc.cluster.local:9000")
+	// Endpoint is the MinIO API endpoint (e.g. "http://minio:9000")
 	Endpoint string
 	// Bucket overrides the default bucket for the chain (optional).
 	Bucket string

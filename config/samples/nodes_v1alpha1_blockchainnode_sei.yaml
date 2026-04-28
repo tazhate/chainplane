@@ -1,8 +1,8 @@
-apiVersion: nodes.k8s-bch.io/v1alpha1
+apiVersion: nodes.chainplane.io/v1alpha1
 kind: BlockchainNode
 metadata:
   labels:
-    app.kubernetes.io/name: blockchain-node-operator
+    app.kubernetes.io/name: chainplane
     app.kubernetes.io/managed-by: kustomize
   name: sei-mainnet
 spec:

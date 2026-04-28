@@ -39,11 +39,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
-	"github.com/tazhate/blockchain-node-operator/internal/controller"
-	"github.com/tazhate/blockchain-node-operator/internal/health"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/controller"
+	"github.com/tazhate/chainplane/internal/health"
+
 	// Register all chain adapters via init().
-	_ "github.com/tazhate/blockchain-node-operator/internal/adapters"
+	_ "github.com/tazhate/chainplane/internal/adapters"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -63,12 +64,12 @@ var (
 // ---------------------------------------------------------------------------
 
 const (
-	defaultMetricsAddr    = ":8080"
-	defaultProbeAddr      = ":8081"
-	defaultTLSCertName    = "tls.crt"
-	defaultTLSKeyName     = "tls.key"
-	defaultPrometheusURL  = "http://prometheus:9090"
-	defaultLeaderElectID  = "f8c0f89a.nodes.k8s-bch.io"
+	defaultMetricsAddr   = ":8080"
+	defaultProbeAddr     = ":8081"
+	defaultTLSCertName   = "tls.crt"
+	defaultTLSKeyName    = "tls.key"
+	defaultPrometheusURL = "http://prometheus:9090"
+	defaultLeaderElectID = "f8c0f89a.nodes.chainplane.io"
 )
 
 var (
@@ -227,6 +228,18 @@ func setupBlockchainController(mgr ctrl.Manager) error {
 	return nil
 }
 
+// setupVersionCatalogController creates and registers the ChainVersionCatalog reconciler.
+func setupVersionCatalogController(mgr ctrl.Manager) error {
+	reconciler := &controller.ChainVersionCatalogReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	if err := reconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("creating ChainVersionCatalog controller: %w", err)
+	}
+	return nil
+}
+
 // setupHealthController creates and registers the NodeHealth reconciler.
 func setupHealthController(mgr ctrl.Manager, prometheusURL string) error {
 	promClient := health.NewPrometheusClient(prometheusURL)
@@ -262,7 +275,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 
-	setupLog.Info("starting blockchain-node-operator",
+	setupLog.Info("starting chainplane",
 		"version", version,
 		"commit", gitCommit,
 		"metrics-addr", cfg.MetricsAddr,
@@ -345,11 +358,28 @@ func main() {
 		setupLog.Error(err, "controller setup failed", "controller", "NodeHealth")
 		os.Exit(1)
 	}
+	if err := setupVersionCatalogController(mgr); err != nil {
+		setupLog.Error(err, "controller setup failed", "controller", "ChainVersionCatalog")
+		os.Exit(1)
+	}
 
 	// --- Webhook -------------------------------------------------------
-	if err := (&nodesv1alpha1.BlockchainNode{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "BlockchainNode")
-		os.Exit(1)
+	// Webhook requires TLS certs (injected by cert-manager in production).
+	// When certs are not present (e.g. local dev, e2e tests without cert-manager),
+	// skip webhook setup gracefully instead of crashing.
+	webhookCertDir := cfg.WebhookCertPath
+	if webhookCertDir == "" {
+		webhookCertDir = "/tmp/k8s-webhook-server/serving-certs"
+	}
+	if _, err := os.Stat(filepath.Join(webhookCertDir, cfg.WebhookCertName)); err == nil {
+		if err := (&nodesv1alpha1.BlockchainNode{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "BlockchainNode")
+			os.Exit(1)
+		}
+		setupLog.Info("webhook registered", "cert-dir", webhookCertDir)
+	} else {
+		setupLog.Info("webhook skipped — TLS certs not found, running without admission validation",
+			"cert-dir", webhookCertDir)
 	}
 	// +kubebuilder:scaffold:builder
 

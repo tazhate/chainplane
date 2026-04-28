@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -191,5 +192,21 @@ func (a *xrpAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) []corev1
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 5005, Protocol: corev1.ProtocolTCP},
 		{Name: "peer", ContainerPort: 51235, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *xrpAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "docker.io",
+		Repository: "xrpllabsofficial/xrpld",
+		TagPattern: `^\d+\.\d+`,
+	}
+}
+
+func (a *xrpAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("8Gi"),
+		Storage:       resource.MustParse("100Gi"),
 	}
 }

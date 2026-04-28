@@ -6,8 +6,9 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -90,5 +91,14 @@ func (a *hyperliquidAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec) 
 	return []corev1.ContainerPort{
 		{Name: "api", ContainerPort: 3001, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 4001, Protocol: corev1.ProtocolTCP},
+		{Name: "metrics", ContainerPort: 9090, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *hyperliquidAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("16"),
+		MemoryRequest: resource.MustParse("32Gi"),
+		Storage:       resource.MustParse("2000Gi"),
 	}
 }

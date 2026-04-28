@@ -1,0 +1,53 @@
+# ChainVersionCatalog tracks the latest container image version for a blockchain
+# adapter by polling the upstream registry on a configurable interval.
+#
+# The operator updates .status.latestTag / .status.recentTags automatically.
+# Use `kubectl get chainversioncatalog` to see current discovered versions.
+#
+# Example: track the latest BSC image on ghcr.io/bnb-chain/bsc
+---
+apiVersion: nodes.chainplane.io/v1alpha1
+kind: ChainVersionCatalog
+metadata:
+  name: bsc
+spec:
+  chain: bsc
+  checkInterval: "6h"
+---
+# Ethereum mainnet — tracks geth (default client)
+apiVersion: nodes.chainplane.io/v1alpha1
+kind: ChainVersionCatalog
+metadata:
+  name: ethereum-geth
+spec:
+  chain: ethereum
+  client: geth
+  checkInterval: "6h"
+---
+# Ethereum with Reth client
+apiVersion: nodes.chainplane.io/v1alpha1
+kind: ChainVersionCatalog
+metadata:
+  name: ethereum-reth
+spec:
+  chain: ethereum
+  client: reth
+  checkInterval: "6h"
+---
+# Bitcoin — tracks lncm/bitcoind on Docker Hub
+apiVersion: nodes.chainplane.io/v1alpha1
+kind: ChainVersionCatalog
+metadata:
+  name: bitcoin
+spec:
+  chain: bitcoin
+  checkInterval: "12h"
+---
+# Solana — tracks solanalabs/solana on Docker Hub
+apiVersion: nodes.chainplane.io/v1alpha1
+kind: ChainVersionCatalog
+metadata:
+  name: solana
+spec:
+  chain: solana
+  checkInterval: "6h"

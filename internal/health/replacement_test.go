@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 func testScheme() *runtime.Scheme {
@@ -54,12 +54,12 @@ func testPod(name, ns string, labels map[string]string) *corev1.Pod {
 
 // stubDrainer implements Drainer for testing, recording calls.
 type stubDrainer struct {
-	drainCalled   bool
-	switchCalled  bool
-	validateOK    bool
-	validateErr   error
-	drainErr      error
-	switchErr     error
+	drainCalled  bool
+	switchCalled bool
+	validateOK   bool
+	validateErr  error
+	drainErr     error
+	switchErr    error
 }
 
 func (d *stubDrainer) Drain(_ context.Context, _, _ string) error {
@@ -435,9 +435,9 @@ func TestContainersReady(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		statuses   []corev1.ContainerStatus
-		wantReady  bool
+		name      string
+		statuses  []corev1.ContainerStatus
+		wantReady bool
 	}{
 		{
 			name:      "no container statuses",

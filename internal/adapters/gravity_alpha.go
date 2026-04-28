@@ -4,8 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	nodesv1alpha1 "github.com/tazhate/blockchain-node-operator/api/v1alpha1"
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
 )
 
 // --------------------------------------------------------------------------
@@ -54,5 +55,26 @@ func (a *gravityAlphaAdapter) ContainerPorts(_ nodesv1alpha1.BlockchainNodeSpec)
 		{Name: "ws", ContainerPort: 8548, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 30301, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 30301, Protocol: corev1.ProtocolUDP},
+		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (a *gravityAlphaAdapter) ContainerArgs(_ nodesv1alpha1.BlockchainNodeSpec) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+}
+
+func (a *gravityAlphaAdapter) DefaultResources() ResourceDefaults {
+	return ResourceDefaults{
+		CPURequest:    resource.MustParse("2"),
+		MemoryRequest: resource.MustParse("4Gi"),
+		Storage:       resource.MustParse("200Gi"),
+	}
+}
+
+func (a *gravityAlphaAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "celestiaorg/nitro",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
