@@ -121,7 +121,10 @@ func (r *BlockchainNodeReconciler) buildStatefulSetSpec(
 		initContainers = append(initContainers, icp.InitContainers(node.Spec)...)
 	}
 
-	storageClass := node.Spec.Storage.StorageClass
+	var storageClassName *string
+	if sc := node.Spec.Storage.StorageClass; sc != "" {
+		storageClassName = &sc
+	}
 	volumeMode := corev1.PersistentVolumeFilesystem
 	fsGroup := podFSGroup
 
@@ -151,7 +154,7 @@ func (r *BlockchainNodeReconciler) buildStatefulSetSpec(
 				ObjectMeta: metav1.ObjectMeta{Name: dataVolumeName},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					StorageClassName: &storageClass,
+					StorageClassName: storageClassName,
 					VolumeMode:       &volumeMode,
 					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
