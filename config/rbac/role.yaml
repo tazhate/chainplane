@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - nodes.chainplane.io
   resources:
-  - blockchainnodes
+  - chainversioncatalogs
   verbs:
   - create
   - delete
@@ -19,90 +19,14 @@ rules:
 - apiGroups:
   - nodes.chainplane.io
   resources:
-  - blockchainnodes/finalizers
+  - chainversioncatalogs/finalizers
   verbs:
   - update
 - apiGroups:
   - nodes.chainplane.io
   resources:
-  - blockchainnodes/status
+  - chainversioncatalogs/status
   verbs:
   - get
   - patch
   - update
-- apiGroups:
-  - apps
-  resources:
-  - statefulsets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  - configmaps
-  - persistentvolumeclaims
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - watch
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - pods/log
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
-  - endpoints
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - podmonitors
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch

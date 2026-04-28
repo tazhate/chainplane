@@ -28,6 +28,10 @@ type ChainVersionCatalogReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=chainversioncatalogs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=chainversioncatalogs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=chainversioncatalogs/finalizers,verbs=update
+
 func (r *ChainVersionCatalogReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
