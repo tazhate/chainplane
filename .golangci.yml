@@ -51,39 +51,15 @@ linters:
           - copyloopvar
           - prealloc
           - staticcheck
+      - path: "test/"
+        linters:
+          - revive
+      - path: "_test\\.go"
+        text: "dot-imports"
+        linters:
+          - revive
 
 formatters:
   enable:
     - gofmt
     - goimports
-
-# v1-compatible exclusion rules (mirror of linters.exclusions above).
-# golangci-lint v1.x ignores linters.exclusions — this section keeps
-# identical rules working on both v1 and v2 installations.
-issues:
-  exclude-rules:
-    - path: "api/"
-      linters:
-        - lll
-    - path: "internal/"
-      linters:
-        - dupl
-        - lll
-        - goconst
-        - gocyclo
-    - path: "_test\\.go"
-      linters:
-        - goconst
-        - errcheck
-        - dupl
-        - unparam
-        - copyloopvar
-        - prealloc
-        - staticcheck
-    - path: "test/"
-      linters:
-        - revive
-    - path: "_test\\.go"
-      text: "dot-imports"
-      linters:
-        - revive

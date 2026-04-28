@@ -53,6 +53,71 @@ spec:
 - **Webhook validation** — admission webhook enforces minimum storage/memory requirements and immutable chain/network fields
 - **Sidecars** — attach consensus-layer clients (e.g. Lighthouse for Ethereum) or any helper process
 
+## Quick Start
+
+### Prerequisites
+
+- Go 1.23+
+- kubectl 1.25+
+- Access to a Kubernetes cluster
+
+### Install via Helm
+
+```sh
+helm install chainplane charts/chainplane \
+  --namespace blockchain-nodes \
+  --create-namespace \
+  --set image.repository=ghcr.io/tazhate/chainplane \
+  --set image.tag=latest
+```
+
+### Install CRDs manually
+
+```sh
+make install
+make deploy IMG=<your-registry>/chainplane:latest
+```
+
+### Create Your First Node
+
+```yaml
+apiVersion: nodes.chainplane.io/v1alpha1
+kind: BlockchainNode
+metadata:
+  name: bitcoin-mainnet
+  namespace: blockchain-nodes
+spec:
+  chain: bitcoin
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  storage:
+    size: 600Gi
+    storageClass: fast-nvme
+  resources:
+    requests:
+      cpu: "2"
+      memory: 8Gi
+    limits:
+      cpu: "4"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 8332
+```
+
+```sh
+kubectl apply -f bitcoin-node.yaml
+kubectl get blockchainnodes -w
+```
+
+```
+NAME              CHAIN     NETWORK   TYPE   PHASE     HEIGHT    PEERS   SYNC     ETA
+bitcoin-mainnet   bitcoin   mainnet   rpc    Syncing   830241    12      73.2%    14h22m
+```
+
+Sample manifests for all 102 chains are in [`config/samples/`](config/samples/).
+
 ## Architecture
 
 ```
@@ -244,71 +309,6 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | `starknet` | `nethermindeth/juno:v0.12.5` | 6060 | uses Juno client |
 | `filecoin` | `filecoin/lotus:v1.35.0` | 1234 | |
 | `fantom` | `fantomfoundation/go-opera:v1.1.3-txtracing` | 18545 | |
-
-## Quick Start
-
-### Prerequisites
-
-- Go 1.23+
-- kubectl 1.25+
-- Access to a Kubernetes cluster
-
-### Install via Helm
-
-```sh
-helm install chainplane charts/chainplane \
-  --namespace blockchain-nodes \
-  --create-namespace \
-  --set image.repository=ghcr.io/tazhate/chainplane \
-  --set image.tag=latest
-```
-
-### Install CRDs manually
-
-```sh
-make install
-make deploy IMG=<your-registry>/chainplane:latest
-```
-
-### Create Your First Node
-
-```yaml
-apiVersion: nodes.chainplane.io/v1alpha1
-kind: BlockchainNode
-metadata:
-  name: bitcoin-mainnet
-  namespace: blockchain-nodes
-spec:
-  chain: bitcoin
-  network: mainnet
-  nodeType: rpc
-  nodeGroup: heavy
-  storage:
-    size: 600Gi
-    storageClass: fast-nvme
-  resources:
-    requests:
-      cpu: "2"
-      memory: 8Gi
-    limits:
-      cpu: "4"
-      memory: 16Gi
-  rpc:
-    enabled: true
-    port: 8332
-```
-
-```sh
-kubectl apply -f bitcoin-node.yaml
-kubectl get blockchainnodes -w
-```
-
-```
-NAME              CHAIN     NETWORK   TYPE   PHASE     HEIGHT    PEERS   SYNC     ETA
-bitcoin-mainnet   bitcoin   mainnet   rpc    Syncing   830241    12      73.2%    14h22m
-```
-
-Sample manifests for all 102 chains are in [`config/samples/`](config/samples/).
 
 ## CRD Reference
 
