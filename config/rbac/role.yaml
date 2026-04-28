@@ -5,8 +5,80 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - podmonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - nodes.chainplane.io
   resources:
+  - blockchainnodes
   - chainversioncatalogs
   verbs:
   - create
@@ -19,12 +91,14 @@ rules:
 - apiGroups:
   - nodes.chainplane.io
   resources:
+  - blockchainnodes/finalizers
   - chainversioncatalogs/finalizers
   verbs:
   - update
 - apiGroups:
   - nodes.chainplane.io
   resources:
+  - blockchainnodes/status
   - chainversioncatalogs/status
   verbs:
   - get

@@ -54,14 +54,6 @@ const (
 // alongside BlockchainNodeReconciler without conflict: the main reconciler
 // manages the desired state (StatefulSet, Service, ConfigMap) while this one
 // handles health monitoring and blue/green replacement.
-//
-// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes,verbs=get;list;watch;patch
-// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;delete;patch
-// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;delete
-// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 type NodeHealthReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme

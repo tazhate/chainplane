@@ -51,17 +51,6 @@ const (
 
 // BlockchainNodeReconciler drives the full lifecycle of a BlockchainNode CR:
 // StatefulSet, Service, ConfigMap, health monitoring, and rolling upgrades.
-//
-// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=nodes.chainplane.io,resources=blockchainnodes/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=services;configmaps;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;patch;delete
-// +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
-// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get
-// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete
 type BlockchainNodeReconciler struct {
 	client.Client
 	APIReader     client.Reader
@@ -80,10 +69,6 @@ func (r *BlockchainNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Reconcile is the top-level entry point for a single reconciliation pass.
-// It follows a deterministic sequence: fetch CR, resolve adapter, handle
-// deletion, ensure finalizer, reconcile child resources, run upgrade logic,
-// and finally refresh the observed status.
 func (r *BlockchainNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
