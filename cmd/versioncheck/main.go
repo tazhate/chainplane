@@ -119,7 +119,7 @@ func checkVersions(ctx context.Context, filterChain string, concurrency int, tim
 				return
 			}
 
-			tags, err := client.LatestTags(reqCtx, it.policy, 5)
+			tags, err := client.LatestTags(reqCtx, it.policy, 25)
 			if err != nil {
 				res.Err = err
 				mu.Lock()
@@ -128,9 +128,13 @@ func checkVersions(ctx context.Context, filterChain string, concurrency int, tim
 				return
 			}
 
-			if len(tags) > 0 {
-				res.LatestTag = tags[0].Tag
-				res.IsNewer = registry.IsNewer(res.LatestTag, res.CurrentTag, it.policy.TagPrefix)
+			// Pick the latest stable tag (skip pre-releases, nightly, latest, etc.)
+			for _, t := range tags {
+				if isStableTag(t.Tag, it.policy.TagPrefix) {
+					res.LatestTag = t.Tag
+					res.IsNewer = registry.IsNewer(res.LatestTag, res.CurrentTag, it.policy.TagPrefix)
+					break
+				}
 			}
 
 			mu.Lock()
@@ -191,6 +195,28 @@ func applyUpdates(updates []versionResult) error {
 	}
 
 	return writeVersionsGen(genPath, images)
+}
+
+// isStableTag reports whether tag is a stable release — not a pre-release, nightly, or floating tag.
+// prefix is stripped before the check (e.g. "GreatVoyage-" for TRON).
+func isStableTag(tag, prefix string) bool {
+	stripped := strings.TrimPrefix(tag, prefix)
+	lower := strings.ToLower(stripped)
+	// Reject floating / non-versioned tags
+	floating := []string{"latest", "nightly", "canary", "edge", "develop", "main", "master", "unstable"}
+	for _, f := range floating {
+		if lower == f {
+			return false
+		}
+	}
+	// Reject pre-release suffix keywords that appear after a "-"
+	preRelease := []string{"-alpha", "-beta", "-rc", "-dev", "-pre", "-snapshot", "-test", "-experimental"}
+	for _, p := range preRelease {
+		if strings.Contains(lower, p) {
+			return false
+		}
+	}
+	return true
 }
 
 // parseTag extracts the tag from an image reference (everything after the last ":").

@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +26,19 @@ jobs:
           # Optional: set to avoid Docker Hub anonymous rate limits (600 req/h)
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create PR if versions changed
+      - name: Verify build after update
+        run: go build ./...
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.11.4
+
+      - name: Run tests
+        run: go test ./internal/... ./api/...
+
+      - name: Create PR
+        id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: |
@@ -37,11 +50,19 @@ jobs:
           body: |
             ## Automated image version update
 
-            `cmd/versioncheck` found newer tags in upstream registries and updated
+            `cmd/versioncheck` found newer stable tags in upstream registries and updated
             `internal/adapters/versions_gen.go`.
 
-            **Review the diff before merging** — verify each updated image is a
-            stable release (not a pre-release or breaking change).
+            Pre-releases (alpha/beta/rc), nightly and floating tags (latest, canary)
+            are automatically skipped.
+
+            Build, lint and tests passed. Safe to auto-merge.
           branch: chore/update-node-images
           delete-branch: true
           labels: dependencies
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number
+        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
