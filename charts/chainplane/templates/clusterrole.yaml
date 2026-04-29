@@ -9,6 +9,7 @@ rules:
       - chains.chainplane.io
     resources:
       - chaininstances
+      - chainversioncatalogs
     verbs:
       - create
       - delete
@@ -21,16 +22,30 @@ rules:
       - chains.chainplane.io
     resources:
       - chaininstances/finalizers
+      - chainversioncatalogs/finalizers
     verbs:
       - update
   - apiGroups:
       - chains.chainplane.io
     resources:
       - chaininstances/status
+      - chainversioncatalogs/status
     verbs:
       - get
       - patch
       - update
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - podmonitors
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
   - apiGroups:
       - apps
     resources:
