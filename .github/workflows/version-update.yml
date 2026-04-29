@@ -41,6 +41,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.GH_PAT }}
           commit-message: |
             chore: update blockchain node default images
 
