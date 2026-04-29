@@ -10,6 +10,17 @@ release until the API is promoted to `v1beta1`.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-04-29
+
+### Fixed
+
+- Helm chart now ships the `ChainVersionCatalog` CRD too. Previously only
+  `chaininstances.chains.chainplane.io` was packaged; the operator started
+  but logged `no matches for kind "ChainVersionCatalog"` repeatedly because
+  controller-runtime expects the CRD to exist in the cluster at startup.
+  Workaround for v0.2.0–v0.2.2 installs:
+  `kubectl apply -f https://raw.githubusercontent.com/tazhate/chainplane/master/config/crd/bases/chains.chainplane.io_chainversioncatalogs.yaml`
+
 ## [0.2.2] - 2026-04-29
 
 ### Fixed
