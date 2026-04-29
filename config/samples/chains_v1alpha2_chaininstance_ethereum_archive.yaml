@@ -1,0 +1,32 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: ethereum-archive-mainnet
+spec:
+  chain: ethereum-archive
+  network: mainnet
+  nodeType: archive
+  # Erigon is well-suited for archive nodes
+  client: erigon
+  nodeGroup: archive
+  # Default image for erigon: erigontech/erigon:v2.61.3
+  storage:
+    size: 4Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "8"
+      memory: 32Gi
+    limits:
+      cpu: "16"
+      memory: 64Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30
+    degradedTimeoutMinutes: 30

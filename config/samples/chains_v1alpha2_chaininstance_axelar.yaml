@@ -1,0 +1,26 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: axelar-mainnet
+spec:
+  chain: axelar
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: medium
+  # Default image: axelarnet/axelar-core:v0.35.6
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 8Gi
+    limits:
+      cpu: "4"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 26657

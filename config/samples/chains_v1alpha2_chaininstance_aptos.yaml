@@ -1,0 +1,26 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: aptos-mainnet
+spec:
+  chain: aptos
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: aptoslabs/validator:mainnet
+  storage:
+    size: 2Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8080

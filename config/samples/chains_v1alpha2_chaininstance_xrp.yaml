@@ -1,0 +1,26 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: xrp-mainnet
+spec:
+  chain: xrp
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: medium
+  # Default image: xrpllabsofficial/xrpld:3.1.2
+  storage:
+    size: 300Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 8Gi
+    limits:
+      cpu: "4"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 5005

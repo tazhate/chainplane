@@ -1,0 +1,26 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: near-mainnet
+spec:
+  chain: near
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: nearprotocol/nearcore:2.10.7
+  storage:
+    size: 1Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 3030

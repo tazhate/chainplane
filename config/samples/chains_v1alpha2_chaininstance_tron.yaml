@@ -1,0 +1,32 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: tron-mainnet
+spec:
+  chain: tron
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: tronprotocol/java-tron:GreatVoyage-v4.8.1
+  storage:
+    size: 3Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8090
+  health:
+    blockLagThreshold: 200
+    degradedTimeoutMinutes: 30
+  # For lite snapshot mode (60 GiB instead of 2.9 TiB), uncomment:
+  # snapshot:
+  #   type: lite

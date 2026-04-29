@@ -1,0 +1,69 @@
+name: Update node image versions
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # каждый понедельник 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check for version updates
+        run: go run ./cmd/versioncheck --update
+        env:
+          # Optional: set to avoid Docker Hub anonymous rate limits (600 req/h)
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Verify build after update
+        run: go build ./...
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.11.4
+
+      - name: Run tests
+        run: go test ./internal/adapters/... ./internal/registry/... ./api/...
+
+      - name: Create PR
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GH_PAT }}
+          commit-message: |
+            chore: update blockchain node default images
+
+            Ran cmd/versioncheck against upstream registries.
+            Updated internal/adapters/versions_gen.go.
+          title: 'chore: update node images'
+          body: |
+            ## Automated image version update
+
+            `cmd/versioncheck` found newer stable tags in upstream registries and updated
+            `internal/adapters/versions_gen.go`.
+
+            Pre-releases (alpha/beta/rc), nightly and floating tags (latest, canary)
+            are automatically skipped.
+
+            Build, lint and tests passed. Safe to auto-merge.
+          branch: chore/update-node-images
+          delete-branch: true
+          labels: dependencies
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number
+        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

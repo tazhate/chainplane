@@ -1,0 +1,29 @@
+{{- if .Values.webhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "chainplane.fullname" . }}-validating
+  labels:
+    {{- include "chainplane.labels" . | nindent 4 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ include "chainplane.webhookServiceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /validate-nodes-chainplane-io-v1alpha2-chaininstance
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    name: vchaininstance.kb.io
+    rules:
+      - apiGroups:
+          - chains.chainplane.io
+        apiVersions:
+          - v1alpha2
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - chaininstances
+    sideEffects: None
+{{- end }}

@@ -1,0 +1,65 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - dupl
+    - errcheck
+    - copyloopvar
+    - ginkgolinter
+    - goconst
+    - gocyclo
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - prealloc
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (io.ReadCloser).Close
+    revive:
+      rules:
+        - name: comment-spacings
+  exclusions:
+    rules:
+      - path: "api/"
+        linters:
+          - lll
+      - path: "internal/"
+        linters:
+          - dupl
+          - lll
+          - goconst
+          - gocyclo
+      - path: "_test\\.go"
+        linters:
+          - goconst
+          - errcheck
+          - dupl
+          - unparam
+          - copyloopvar
+          - prealloc
+          - staticcheck
+      - path: "test/"
+        linters:
+          - revive
+      - path: "_test\\.go"
+        text: "dot-imports"
+        linters:
+          - revive
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

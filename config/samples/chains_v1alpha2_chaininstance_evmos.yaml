@@ -1,0 +1,27 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: evmos-mainnet
+spec:
+  chain: evmos
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: tharsishq/evmos:v20.0.0
+  # EVM RPC available on port 8545
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 26657

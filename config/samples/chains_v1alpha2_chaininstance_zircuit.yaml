@@ -1,0 +1,31 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: zircuit-mainnet
+spec:
+  chain: zircuit
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: zircuit/node:latest
+  # L1_RPC_URL env var defaults to http://ethereum:8545
+  # Override via extraEnv if using a different L1 endpoint.
+  storage:
+    size: 200Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      cpu: "4"
+      memory: 8Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30

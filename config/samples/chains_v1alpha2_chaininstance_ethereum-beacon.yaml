@@ -1,0 +1,29 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: ethereum-beacon-mainnet
+spec:
+  chain: ethereum-beacon
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: sigp/lighthouse:v6.0.1
+  storage:
+    size: 2000Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 5052
+  health:
+    blockLagThreshold: 10
+    degradedTimeoutMinutes: 15

@@ -1,0 +1,29 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: core-mainnet
+spec:
+  chain: core
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: coredao/core-chain:v1.0.14
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 8Gi
+    limits:
+      cpu: "8"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30

@@ -1,0 +1,33 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: playnance-mainnet
+spec:
+  chain: playnance
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0
+  storage:
+    size: 100Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      cpu: "4"
+      memory: 8Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30
+  # Override default L1 RPC URL (default: http://ethereum:8545)
+  # extraEnv:
+  # - name: OP_NODE_L1_ETH_RPC
+  #   value: "http://your-ethereum-rpc:8545"

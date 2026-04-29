@@ -1,0 +1,267 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: chainversioncatalogs.chains.chainplane.io
+spec:
+  group: chains.chainplane.io
+  names:
+    kind: ChainVersionCatalog
+    listKind: ChainVersionCatalogList
+    plural: chainversioncatalogs
+    singular: chainversioncatalog
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.chain
+      name: Chain
+      type: string
+    - jsonPath: .status.latestTag
+      name: Latest
+      type: string
+    - jsonPath: .status.checkedAt
+      name: CheckedAt
+      type: date
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ChainVersionCatalog is a cluster-scoped resource that tracks the latest
+          available image version for a given blockchain adapter by polling the
+          upstream container registry on a configurable interval.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ChainVersionCatalogSpec defines the desired state of ChainVersionCatalog.
+            properties:
+              chain:
+                description: Chain identifies the blockchain whose image versions
+                  are tracked.
+                enum:
+                - ethereum
+                - ethereum-archive
+                - ethereum-beacon
+                - bitcoin
+                - solana
+                - bsc
+                - tron
+                - polygon
+                - avalanche
+                - litecoin
+                - xrp
+                - stellar
+                - dash
+                - ton
+                - cosmos
+                - near
+                - sui
+                - aptos
+                - cardano
+                - arbitrum
+                - optimism
+                - base
+                - fantom
+                - gnosis
+                - gnosis-beacon
+                - mantle
+                - zksync
+                - linea
+                - scroll
+                - berachain
+                - cronos
+                - ronin
+                - celo
+                - blast
+                - mode
+                - zora
+                - taiko
+                - dogecoin
+                - osmosis
+                - sei
+                - evmos
+                - kava
+                - polkadot
+                - starknet
+                - filecoin
+                - moonbeam
+                - moonriver
+                - polygon-zkevm
+                - manta-pacific
+                - metis
+                - fraxtal
+                - lisk
+                - kroma
+                - bob
+                - boba-eth
+                - soneium
+                - swell
+                - superseed
+                - ink
+                - morph
+                - worldchain
+                - unichain
+                - lens
+                - plume
+                - hemi
+                - abstract
+                - megaeth
+                - zero-network
+                - zircuit
+                - immutable-zkevm
+                - axelar
+                - dymension
+                - aurora
+                - harmony
+                - rootstock
+                - telos
+                - klaytn
+                - shibarium
+                - core
+                - haqq
+                - hashkey
+                - ethereum-classic
+                - opbnb
+                - fuse
+                - thundercore
+                - wemix
+                - viction
+                - cronos-zkevm
+                - sonic
+                - goat
+                - katana
+                - mezo
+                - plasma
+                - playnance
+                - kusama
+                - hyperliquid
+                - monad
+                type: string
+              checkInterval:
+                description: |-
+                  CheckInterval is how often to poll the registry (e.g. "6h", "30m").
+                  Defaults to 6h when empty.
+                type: string
+              client:
+                description: |-
+                  Client selects the client implementation (e.g. "reth", "geth") for chains
+                  that support multiple clients. Leave empty for single-client chains.
+                type: string
+            required:
+            - chain
+            type: object
+          status:
+            description: ChainVersionCatalogStatus describes the observed state of
+              ChainVersionCatalog.
+            properties:
+              checkedAt:
+                description: CheckedAt is when the operator last polled the registry.
+                format: date-time
+                type: string
+              conditions:
+                description: Conditions reflect the current reconciliation state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              latestDigest:
+                description: LatestDigest is the image digest of LatestTag (may be
+                  empty for GHCR).
+                type: string
+              latestTag:
+                description: LatestTag is the most recent semver-compatible tag found
+                  in the registry.
+                type: string
+              publishedAt:
+                description: PublishedAt is when LatestTag was pushed to the registry.
+                format: date-time
+                type: string
+              recentTags:
+                description: RecentTags lists the newest tags found (up to 10), sorted
+                  newest-first.
+                items:
+                  description: TagInfo holds information about a single registry tag.
+                  properties:
+                    publishedAt:
+                      format: date-time
+                      type: string
+                    tag:
+                      type: string
+                  required:
+                  - tag
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

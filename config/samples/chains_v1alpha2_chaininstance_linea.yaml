@@ -1,0 +1,34 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: linea-mainnet
+spec:
+  chain: linea
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  # Default image: consensys/linea-besu:24.12.2
+  storage:
+    size: 1Ti
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "4"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  rpc:
+    enabled: true
+    port: 8545
+    wsPort: 8546
+  health:
+    blockLagThreshold: 30
+    degradedTimeoutMinutes: 15
+  # L1 Ethereum RPC URL (override via extraEnv if needed)
+  extraEnv:
+    - name: L1_RPC_URL
+      value: "http://ethereum:8545"

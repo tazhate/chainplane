@@ -1,0 +1,26 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: chainplane
+    app.kubernetes.io/managed-by: kustomize
+  name: celo-mainnet
+spec:
+  chain: celo
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: medium
+  # Default image: us-docker.pkg.dev/celo-org/celo-node/celo-node:1.8.7
+  storage:
+    size: 500Gi
+    storageClass: fast-ssd
+  resources:
+    requests:
+      cpu: "2"
+      memory: 8Gi
+    limits:
+      cpu: "4"
+      memory: 16Gi
+  rpc:
+    enabled: true
+    port: 8545

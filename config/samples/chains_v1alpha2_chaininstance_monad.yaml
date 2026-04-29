@@ -1,0 +1,26 @@
+apiVersion: chains.chainplane.io/v1alpha2
+kind: ChainInstance
+metadata:
+  name: monad-mainnet-01
+  namespace: blockchain-nodes
+spec:
+  chain: monad
+  network: mainnet
+  nodeType: rpc
+  nodeGroup: heavy
+  rpc:
+    enabled: true
+    httpPort: 8545
+  storage:
+    size: "500Gi"
+    storageClass: fast-nvme
+  resources:
+    requests:
+      cpu: "4"
+      memory: "16Gi"
+    limits:
+      cpu: "8"
+      memory: "32Gi"
+  health:
+    blockLagThreshold: 30
+    degradedTimeoutMinutes: 15
