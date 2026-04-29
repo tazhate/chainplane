@@ -60,6 +60,10 @@ spec:
             - --webhook-cert-path={{ .Values.webhook.certDir }}
             - --webhook-cert-name={{ .Values.webhook.certName }}
             - --webhook-cert-key={{ .Values.webhook.certKey }}
+            {{- else if .Values.webhook.certManager.enabled }}
+            - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
+            - --webhook-cert-name=tls.crt
+            - --webhook-cert-key=tls.key
             {{- end }}
             {{- with .Values.extraArgs }}
             {{- toYaml . | nindent 12 }}
@@ -121,13 +125,27 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- end }}
-          {{- if .Values.extraVolumeMounts }}
+          {{- if or .Values.extraVolumeMounts .Values.webhook.certManager.enabled }}
           volumeMounts:
-            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
+            {{- if .Values.webhook.certManager.enabled }}
+            - name: webhook-cert
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
-      {{- if .Values.extraVolumes }}
+      {{- if or .Values.extraVolumes .Values.webhook.certManager.enabled }}
       volumes:
-        {{- toYaml .Values.extraVolumes | nindent 8 }}
+        {{- if .Values.webhook.certManager.enabled }}
+        - name: webhook-cert
+          secret:
+            secretName: {{ include "chainplane.fullname" . }}-webhook-cert
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

@@ -5,6 +5,10 @@ metadata:
   name: {{ include "chainplane.fullname" . }}-validating
   labels:
     {{- include "chainplane.labels" . | nindent 4 }}
+  {{- if .Values.webhook.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "chainplane.fullname" . }}-webhook-cert
+  {{- end }}
 webhooks:
   - admissionReviewVersions:
       - v1

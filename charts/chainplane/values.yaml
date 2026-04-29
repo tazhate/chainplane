@@ -123,6 +123,15 @@ webhook:
   certDir: ""
   certName: tls.crt
   certKey: tls.key
+  # -- Provision a self-signed cert via cert-manager and inject CA bundle into
+  # the ValidatingWebhookConfiguration. Requires cert-manager installed in the cluster.
+  certManager:
+    enabled: false
+    # -- Issuer reference. By default a chart-managed self-signed Issuer is created.
+    issuerRef: {}
+    # -- Certificate duration / renewBefore (cert-manager defaults if empty)
+    duration: ""
+    renewBefore: ""
 
 prometheus:
   # -- Base URL of the Prometheus server used for node health checks
