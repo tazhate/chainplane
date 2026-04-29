@@ -34,10 +34,7 @@ func main() {
 
 	ctx := context.Background()
 
-	results, err := checkVersions(ctx, *filterChain, *concurrency, *timeout)
-	if err != nil {
-		log.Fatalf("version check failed: %v", err)
-	}
+	results := checkVersions(ctx, *filterChain, *concurrency, *timeout)
 
 	printReport(results)
 
@@ -70,7 +67,7 @@ type versionResult struct {
 
 func checkVersions(
 	ctx context.Context, filterChain string, concurrency int, timeout time.Duration,
-) ([]versionResult, error) {
+) []versionResult {
 	all := adapters.All()
 
 	type workItem struct {
@@ -147,7 +144,7 @@ func checkVersions(
 
 	wg.Wait()
 	sort.Slice(results, func(i, j int) bool { return results[i].Chain < results[j].Chain })
-	return results, nil
+	return results
 }
 
 func filterNewer(results []versionResult) []versionResult {
@@ -540,7 +537,7 @@ func writeVersionsGen(path string, images map[nodesv1alpha1.Chain]map[string]str
 			return keys[i] < keys[j]
 		})
 
-		var clientEntries []clientEntry
+		clientEntries := make([]clientEntry, 0, len(keys))
 		for _, k := range keys {
 			clientEntries = append(clientEntries, clientEntry{Key: k, Image: clients[k]})
 		}
