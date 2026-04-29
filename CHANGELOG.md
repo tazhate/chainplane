@@ -10,6 +10,23 @@ release until the API is promoted to `v1beta1`.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-29
+
+### Fixed
+
+- Helm chart `appVersion` aligned with the container image tag (`v0.2.1`).
+  Previously the chart shipped with `appVersion: "0.1.0"` while the image
+  was published as `v0.1.0` — this caused `ImagePullBackOff` on default
+  install because the chart attempted to pull `:0.1.0` (no `v` prefix)
+  which never existed.
+- `gofmt` formatting of license-header comment blocks (tab vs 4-space
+  indent before the LICENSE-2.0 URL inside `/* */`).
+- `staticcheck` ST1005 in `internal/adapters/cosmos.go` — error string
+  decapitalised (`"Cosmos health probe"` → `"cosmos health probe"`).
+- `--version` references in README install snippets bumped to `0.2.1`.
+
+## [0.2.0] - 2026-04-29
+
 ### Changed (BREAKING)
 
 - **API group renamed** `nodes.chainplane.io` → `chains.chainplane.io`.
