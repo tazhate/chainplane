@@ -335,42 +335,116 @@ func lookupChainByConst(constName string) nodesv1alpha1.Chain {
 	return nodesv1alpha1.Chain(constName)
 }
 
-// chainValueToConstName converts a chain string value to its Go constant name.
-// e.g. "bitcoin" -> "ChainBitcoin", "bsc" -> "ChainBSC"
+// chainValueToConstName maps chain string values to their exact Go constant names.
+// Generated from api/v1alpha1/blockchainnode_types.go — update when new chains are added.
 func chainValueToConstName(value string) string {
-	specials := map[string]string{
-		"bsc":              "ChainBSC",
-		"ton":              "ChainTON",
-		"tron":             "ChainTRON",
-		"xrp":              "ChainXRP",
-		"opbnb":            "ChainOpBNB",
-		"bittorrent":       "ChainBitTorrent",
-		"ethereum-archive": "ChainEthereumArchive",
-		"ethereum-beacon":  "ChainEthereumBeacon",
-		"ethereum-classic": "ChainEthereumClassic",
-		"polygon-zkevm":    "ChainPolygonZkEVM",
-		"cronos-zkevm":     "ChainCronosZkEVM",
-		"immutable-zkevm":  "ChainImmutableZkEVM",
-		"gnosis-beacon":    "ChainGnosisBeacon",
-		"zero-network":     "ChainZeroNetwork",
-		"gravity-alpha":    "ChainGravityAlpha",
-		"manta-pacific":    "ChainMantaPacific",
-		"boba-eth":         "ChainBobaEth",
-		"zksync":           "ChainZkSync",
-		"megaeth":          "ChainMegaETH",
-	}
-	if name, ok := specials[value]; ok {
-		return name
-	}
-	parts := strings.FieldsFunc(value, func(r rune) bool { return r == '-' || r == '_' })
-	var sb strings.Builder
-	sb.WriteString("Chain")
-	for _, p := range parts {
-		if len(p) > 0 {
-			sb.WriteString(strings.ToUpper(p[:1]) + p[1:])
-		}
-	}
-	return sb.String()
+	return chainConstNames[value]
+}
+
+// chainConstNames is the authoritative map from chain runtime value to Go constant name.
+var chainConstNames = map[string]string{
+	"abstract":         "ChainAbstract",
+	"aptos":            "ChainAptos",
+	"arbitrum":         "ChainArbitrum",
+	"aurora":           "ChainAurora",
+	"avalanche":        "ChainAvalanche",
+	"axelar":           "ChainAxelar",
+	"base":             "ChainBase",
+	"berachain":        "ChainBerachain",
+	"bitcoin":          "ChainBitcoin",
+	"bittorrent":       "ChainBitTorrent",
+	"blast":            "ChainBlast",
+	"bob":              "ChainBob",
+	"boba-eth":         "ChainBobaEth",
+	"bsc":              "ChainBSC",
+	"cardano":          "ChainCardano",
+	"celo":             "ChainCelo",
+	"core":             "ChainCore",
+	"cosmos":           "ChainCosmos",
+	"cronos":           "ChainCronos",
+	"cronos-zkevm":     "ChainCronosZkEVM",
+	"dash":             "ChainDash",
+	"dogecoin":         "ChainDogecoin",
+	"doma":             "ChainDoma",
+	"dymension":        "ChainDymension",
+	"ethereum":         "ChainEthereum",
+	"ethereum-archive": "ChainEthereumArchive",
+	"ethereum-beacon":  "ChainEthereumBeacon",
+	"ethereum-classic": "ChainEthereumClassic",
+	"everclear":        "ChainEverclear",
+	"evmos":            "ChainEvmos",
+	"fantom":           "ChainFantom",
+	"filecoin":         "ChainFilecoin",
+	"fraxtal":          "ChainFraxtal",
+	"fuse":             "ChainFuse",
+	"gnosis":           "ChainGnosis",
+	"gnosis-beacon":    "ChainGnosisBeacon",
+	"goat":             "ChainGoat",
+	"gravity-alpha":    "ChainGravityAlpha",
+	"haqq":             "ChainHaqq",
+	"harmony":          "ChainHarmony",
+	"hashkey":          "ChainHashKey",
+	"hemi":             "ChainHemi",
+	"hyperliquid":      "ChainHyperliquid",
+	"immutable-zkevm":  "ChainImmutableZkEVM",
+	"ink":              "ChainInk",
+	"katana":           "ChainKatana",
+	"kava":             "ChainKava",
+	"klaytn":           "ChainKlaytn",
+	"kroma":            "ChainKroma",
+	"kusama":           "ChainKusama",
+	"lens":             "ChainLens",
+	"linea":            "ChainLinea",
+	"lisk":             "ChainLisk",
+	"litecoin":         "ChainLitecoin",
+	"manta-pacific":    "ChainMantaPacific",
+	"mantle":           "ChainMantle",
+	"megaeth":          "ChainMegaETH",
+	"metis":            "ChainMetis",
+	"mezo":             "ChainMezo",
+	"moca":             "ChainMoca",
+	"mode":             "ChainMode",
+	"monad":            "ChainMonad",
+	"moonbeam":         "ChainMoonbeam",
+	"moonriver":        "ChainMoonriver",
+	"morph":            "ChainMorph",
+	"near":             "ChainNear",
+	"opbnb":            "ChainOpBNB",
+	"optimism":         "ChainOptimism",
+	"osmosis":          "ChainOsmosis",
+	"plasma":           "ChainPlasma",
+	"playnance":        "ChainPlaynance",
+	"plume":            "ChainPlume",
+	"polkadot":         "ChainPolkadot",
+	"polygon":          "ChainPolygon",
+	"polygon-zkevm":    "ChainPolygonZkEVM",
+	"ronin":            "ChainRonin",
+	"rootstock":        "ChainRootstock",
+	"scroll":           "ChainScroll",
+	"sei":              "ChainSei",
+	"shibarium":        "ChainShibarium",
+	"solana":           "ChainSolana",
+	"soneium":          "ChainSoneium",
+	"sonic":            "ChainSonic",
+	"starknet":         "ChainStarknet",
+	"stellar":          "ChainStellar",
+	"sui":              "ChainSui",
+	"superseed":        "ChainSuperseed",
+	"swell":            "ChainSwell",
+	"taiko":            "ChainTaiko",
+	"telos":            "ChainTelos",
+	"thundercore":      "ChainThundercore",
+	"ton":              "ChainTON",
+	"tron":             "ChainTRON",
+	"unichain":         "ChainUnichain",
+	"viction":          "ChainViction",
+	"wemix":            "ChainWemix",
+	"worldchain":       "ChainWorldchain",
+	"xrp":              "ChainXRP",
+	"zero-network":     "ChainZeroNetwork",
+	"zircuit":          "ChainZircuit",
+	"zksync":           "ChainZkSync",
+	"zora":             "ChainZora",
 }
 
 // versionsGenTemplate is the template for regenerating versions_gen.go.
