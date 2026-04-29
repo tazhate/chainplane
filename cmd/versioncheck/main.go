@@ -68,7 +68,9 @@ type versionResult struct {
 	Err        error
 }
 
-func checkVersions(ctx context.Context, filterChain string, concurrency int, timeout time.Duration) ([]versionResult, error) {
+func checkVersions(
+	ctx context.Context, filterChain string, concurrency int, timeout time.Duration,
+) ([]versionResult, error) {
 	all := adapters.All()
 
 	type workItem struct {
@@ -516,7 +518,7 @@ func writeVersionsGen(path string, images map[nodesv1alpha1.Chain]map[string]str
 		reverseMap[chain] = constName
 	}
 
-	var entries []chainEntry
+	entries := make([]chainEntry, 0, len(chains))
 	for _, chain := range chains {
 		constName, ok := reverseMap[chain]
 		if !ok {
