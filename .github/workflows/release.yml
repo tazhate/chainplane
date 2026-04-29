@@ -46,9 +46,20 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: false
+          sbom: false
           tags: |
             ghcr.io/tazhate/chainplane:${{ github.ref_name }}
             ghcr.io/tazhate/chainplane:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/tazhate/chainplane
+            org.opencontainers.image.url=https://github.com/tazhate/chainplane
+            org.opencontainers.image.documentation=https://github.com/tazhate/chainplane
+            org.opencontainers.image.title=chainplane
+            org.opencontainers.image.description=Kubernetes operator for blockchain full nodes
+            org.opencontainers.image.licenses=Apache-2.0
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Package and push Helm chart to GHCR
         run: |

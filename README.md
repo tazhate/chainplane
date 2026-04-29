@@ -65,7 +65,7 @@ spec:
 
 ```sh
 helm install chainplane oci://ghcr.io/tazhate/charts/chainplane \
-  --version 0.2.1 \
+  --version 0.2.2 \
   --namespace chainplane-system \
   --create-namespace
 ```
@@ -74,10 +74,10 @@ Or from a specific tag:
 
 ```sh
 helm install chainplane oci://ghcr.io/tazhate/charts/chainplane \
-  --version 0.2.1 \
+  --version 0.2.2 \
   --namespace chainplane-system \
   --create-namespace \
-  --set image.tag=v0.2.1
+  --set image.tag=v0.2.2
 ```
 
 ### Install from source

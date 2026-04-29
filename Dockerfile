@@ -26,6 +26,14 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldfl
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
+
+LABEL org.opencontainers.image.source="https://github.com/tazhate/chainplane"
+LABEL org.opencontainers.image.url="https://github.com/tazhate/chainplane"
+LABEL org.opencontainers.image.documentation="https://github.com/tazhate/chainplane"
+LABEL org.opencontainers.image.title="chainplane"
+LABEL org.opencontainers.image.description="Kubernetes operator for blockchain full nodes"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532

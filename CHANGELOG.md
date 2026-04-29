@@ -10,6 +10,20 @@ release until the API is promoted to `v1beta1`.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-04-29
+
+### Fixed
+
+- Operator container image now carries `org.opencontainers.image.source`
+  and other OCI labels, so the GHCR package gets correctly associated with
+  the GitHub repository and becomes visible in the repo Packages sidebar.
+  Without this label, GHCR creates the package as orphaned/private — even
+  though `docker buildx --push` reports success — and `helm install` fails
+  with `403 Forbidden` from the anonymous pull token endpoint.
+- `release.yml`: disabled `provenance` and `sbom` attestations (they create
+  extra manifests unrelated to package association). Added explicit OCI
+  labels via `docker/build-push-action` `labels:` input as belt-and-braces.
+
 ## [0.2.1] - 2026-04-29
 
 ### Fixed
@@ -45,7 +59,7 @@ release until the API is promoted to `v1beta1`.
 Migration: edit existing manifests to use the new `apiVersion`, `kind` and the
 new file/folder paths; the spec and status field shapes are unchanged.
 
-
+## [0.1.0] - 2026-04-28
 
 Initial OSS release.
 
