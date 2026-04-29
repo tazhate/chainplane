@@ -13,7 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultSuperseedImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
 const defaultSuperseedL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *superseedAdapter) DefaultImage(_ string) string {
-	return defaultSuperseedImage
+func (a *superseedAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSuperseed, client)
 }
 
 func (a *superseedAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

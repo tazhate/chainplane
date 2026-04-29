@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultMetisImage = "metisprotocol/l2geth:v1.4.2"
-
 const defaultMetisL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *metisAdapter) DefaultImage(_ string) string {
-	return defaultMetisImage
+func (a *metisAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMetis, client)
 }
 
 func (a *metisAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -15,8 +15,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultFilecoinImage = "filecoin/lotus:v1.35.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -63,8 +61,8 @@ const filecoinConfig = `[API]
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *filecoinAdapter) DefaultImage(_ string) string {
-	return defaultFilecoinImage
+func (a *filecoinAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainFilecoin, client)
 }
 
 func (a *filecoinAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

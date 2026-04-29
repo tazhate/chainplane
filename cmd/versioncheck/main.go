@@ -1,0 +1,470 @@
+// versioncheck checks upstream registries for newer blockchain node images and
+// optionally updates internal/adapters/versions_gen.go with the latest tags.
+package main
+
+import (
+	"bytes"
+	"context"
+	"flag"
+	"fmt"
+	"go/format"
+	"log"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"text/template"
+	"time"
+
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+	"github.com/tazhate/chainplane/internal/adapters"
+	_ "github.com/tazhate/chainplane/internal/adapters" // register all adapters via init()
+	"github.com/tazhate/chainplane/internal/registry"
+)
+
+func main() {
+	var (
+		update      = flag.Bool("update", false, "write updated versions to versions_gen.go")
+		filterChain = flag.String("chain", "", "check only this chain (e.g. bitcoin)")
+		concurrency = flag.Int("concurrency", 10, "parallel registry requests")
+		timeout     = flag.Duration("timeout", 30*time.Second, "per-request timeout")
+	)
+	flag.Parse()
+
+	ctx := context.Background()
+
+	results, err := checkVersions(ctx, *filterChain, *concurrency, *timeout)
+	if err != nil {
+		log.Fatalf("version check failed: %v", err)
+	}
+
+	printReport(results)
+
+	if !*update {
+		return
+	}
+
+	newer := filterNewer(results)
+	if len(newer) == 0 {
+		fmt.Println("\nAll versions up to date.")
+		return
+	}
+
+	if err := applyUpdates(newer); err != nil {
+		log.Fatalf("failed to update versions_gen.go: %v", err)
+	}
+	fmt.Printf("\nUpdated %d image(s) in versions_gen.go\n", len(newer))
+}
+
+// versionResult holds the check result for one chain+client pair.
+type versionResult struct {
+	Chain      nodesv1alpha1.Chain
+	Client     string // "" means chain default
+	CurrentRef string // full image ref
+	CurrentTag string // tag portion of CurrentRef
+	LatestTag  string // latest from registry (empty on error)
+	IsNewer    bool
+	Err        error
+}
+
+func checkVersions(ctx context.Context, filterChain string, concurrency int, timeout time.Duration) ([]versionResult, error) {
+	all := adapters.All()
+
+	type workItem struct {
+		chain  nodesv1alpha1.Chain
+		policy adapters.ChainVersionPolicy
+	}
+
+	var items []workItem
+	for chain, adapter := range all {
+		vp, ok := adapter.(adapters.VersionProvider)
+		if !ok {
+			continue
+		}
+		if filterChain != "" && string(chain) != filterChain {
+			continue
+		}
+		items = append(items, workItem{chain: chain, policy: vp.VersionPolicy()})
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].chain < items[j].chain })
+
+	sem := make(chan struct{}, concurrency)
+	var mu sync.Mutex
+	var results []versionResult
+	var wg sync.WaitGroup
+
+	for _, item := range items {
+		wg.Add(1)
+		go func(it workItem) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			reqCtx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+
+			res := versionResult{Chain: it.chain}
+
+			currentRef := adapters.DefaultImageFor(it.chain, "")
+			res.CurrentRef = currentRef
+			res.CurrentTag = parseTag(currentRef)
+
+			client, err := registry.NewClient(it.policy.Registry)
+			if err != nil {
+				res.Err = err
+				mu.Lock()
+				results = append(results, res)
+				mu.Unlock()
+				return
+			}
+
+			tags, err := client.LatestTags(reqCtx, it.policy, 5)
+			if err != nil {
+				res.Err = err
+				mu.Lock()
+				results = append(results, res)
+				mu.Unlock()
+				return
+			}
+
+			if len(tags) > 0 {
+				res.LatestTag = tags[0].Tag
+				res.IsNewer = registry.IsNewer(res.LatestTag, res.CurrentTag, it.policy.TagPrefix)
+			}
+
+			mu.Lock()
+			results = append(results, res)
+			mu.Unlock()
+		}(item)
+	}
+
+	wg.Wait()
+	sort.Slice(results, func(i, j int) bool { return results[i].Chain < results[j].Chain })
+	return results, nil
+}
+
+func filterNewer(results []versionResult) []versionResult {
+	var out []versionResult
+	for _, r := range results {
+		if r.IsNewer {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func printReport(results []versionResult) {
+	fmt.Printf("%-30s %-30s %-20s %s\n", "CHAIN", "CURRENT TAG", "LATEST TAG", "STATUS")
+	fmt.Println(strings.Repeat("-", 100))
+	for _, r := range results {
+		status := "up to date"
+		if r.Err != nil {
+			status = fmt.Sprintf("ERROR: %v", r.Err)
+		} else if r.IsNewer {
+			status = "UPDATE AVAILABLE"
+		}
+		fmt.Printf("%-30s %-30s %-20s %s\n", r.Chain, r.CurrentTag, r.LatestTag, status)
+	}
+}
+
+// applyUpdates patches the chainDefaultImages entries and rewrites versions_gen.go.
+func applyUpdates(updates []versionResult) error {
+	genPath, err := versionsGenPath()
+	if err != nil {
+		return err
+	}
+
+	images, err := parseVersionsGen(genPath)
+	if err != nil {
+		return fmt.Errorf("parsing versions_gen.go: %w", err)
+	}
+
+	for _, u := range updates {
+		clients, ok := images[u.Chain]
+		if !ok {
+			continue
+		}
+		if oldRef, ok2 := clients[u.Client]; ok2 {
+			clients[u.Client] = replaceTag(oldRef, u.LatestTag)
+		}
+	}
+
+	return writeVersionsGen(genPath, images)
+}
+
+// parseTag extracts the tag from an image reference (everything after the last ":").
+func parseTag(imageRef string) string {
+	if i := strings.LastIndex(imageRef, ":"); i >= 0 {
+		return imageRef[i+1:]
+	}
+	return imageRef
+}
+
+// replaceTag swaps the tag portion of an image reference.
+func replaceTag(imageRef, newTag string) string {
+	if i := strings.LastIndex(imageRef, ":"); i >= 0 {
+		return imageRef[:i+1] + newTag
+	}
+	return imageRef + ":" + newTag
+}
+
+// versionsGenPath resolves the path to versions_gen.go by walking up to find go.mod.
+func versionsGenPath() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return filepath.Join(dir, "internal", "adapters", "versions_gen.go"), nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("could not locate go.mod (run from repo root)")
+}
+
+// parseVersionsGen reads versions_gen.go and extracts the chainDefaultImages map.
+// Relies on the machine-generated file having a stable, well-known format.
+func parseVersionsGen(path string) (map[nodesv1alpha1.Chain]map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[nodesv1alpha1.Chain]map[string]string)
+	lines := strings.Split(string(data), "\n")
+
+	var currentChain nodesv1alpha1.Chain
+	inMap := false
+	inChain := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if strings.Contains(trimmed, "chainDefaultImages") && strings.Contains(trimmed, "{") {
+			inMap = true
+			continue
+		}
+		if !inMap {
+			continue
+		}
+
+		// Chain entry: nodesv1alpha1.ChainBitcoin: {
+		if strings.HasPrefix(trimmed, "nodesv1alpha1.Chain") && strings.HasSuffix(trimmed, ": {") {
+			constName := strings.TrimPrefix(strings.TrimSuffix(trimmed, ": {"), "nodesv1alpha1.")
+			currentChain = lookupChainByConst(constName)
+			result[currentChain] = make(map[string]string)
+			inChain = true
+			continue
+		}
+
+		if inChain {
+			// Client entry: "": "image:tag",  or  "geth": "image:tag",
+			if strings.Contains(trimmed, `": "`) {
+				parts := strings.SplitN(trimmed, `": "`, 2)
+				if len(parts) == 2 {
+					clientKey := strings.TrimPrefix(parts[0], `"`)
+					imageRef := strings.TrimSuffix(strings.TrimSuffix(parts[1], `",`), `"`)
+					result[currentChain][clientKey] = imageRef
+				}
+				continue
+			}
+			if trimmed == "}," || trimmed == "}" {
+				inChain = false
+				currentChain = ""
+			}
+		}
+
+		if trimmed == "}" && !inChain {
+			break
+		}
+	}
+
+	return result, nil
+}
+
+// lookupChainByConst finds the Chain value for a given Go constant name like "ChainBitcoin".
+// It builds the lookup map lazily from the adapter registry.
+var (
+	constToChain     map[string]nodesv1alpha1.Chain
+	constToChainOnce sync.Once
+)
+
+func lookupChainByConst(constName string) nodesv1alpha1.Chain {
+	constToChainOnce.Do(func() {
+		constToChain = make(map[string]nodesv1alpha1.Chain)
+		for chain := range adapters.All() {
+			constToChain[chainValueToConstName(string(chain))] = chain
+		}
+	})
+	if chain, ok := constToChain[constName]; ok {
+		return chain
+	}
+	// Fallback: return the const name as-is (shouldn't happen for well-formed files)
+	return nodesv1alpha1.Chain(constName)
+}
+
+// chainValueToConstName converts a chain string value to its Go constant name.
+// e.g. "bitcoin" -> "ChainBitcoin", "bsc" -> "ChainBSC"
+func chainValueToConstName(value string) string {
+	specials := map[string]string{
+		"bsc":              "ChainBSC",
+		"ton":              "ChainTON",
+		"tron":             "ChainTRON",
+		"xrp":              "ChainXRP",
+		"opbnb":            "ChainOpBNB",
+		"bittorrent":       "ChainBitTorrent",
+		"ethereum-archive": "ChainEthereumArchive",
+		"ethereum-beacon":  "ChainEthereumBeacon",
+		"ethereum-classic": "ChainEthereumClassic",
+		"polygon-zkevm":    "ChainPolygonZkEVM",
+		"cronos-zkevm":     "ChainCronosZkEVM",
+		"immutable-zkevm":  "ChainImmutableZkEVM",
+		"gnosis-beacon":    "ChainGnosisBeacon",
+		"zero-network":     "ChainZeroNetwork",
+		"gravity-alpha":    "ChainGravityAlpha",
+		"manta-pacific":    "ChainMantaPacific",
+		"boba-eth":         "ChainBobaEth",
+		"zksync":           "ChainZkSync",
+		"megaeth":          "ChainMegaETH",
+	}
+	if name, ok := specials[value]; ok {
+		return name
+	}
+	parts := strings.FieldsFunc(value, func(r rune) bool { return r == '-' || r == '_' })
+	var sb strings.Builder
+	sb.WriteString("Chain")
+	for _, p := range parts {
+		if len(p) > 0 {
+			sb.WriteString(strings.ToUpper(p[:1]) + p[1:])
+		}
+	}
+	return sb.String()
+}
+
+// versionsGenTemplate is the template for regenerating versions_gen.go.
+const versionsGenTemplate = `// Code generated by cmd/versioncheck on {{.Date}}. DO NOT EDIT.
+
+package adapters
+
+import (
+	"strings"
+
+	nodesv1alpha1 "github.com/tazhate/chainplane/api/v1alpha1"
+)
+
+//go:generate go run ../../cmd/versioncheck --update
+
+// chainDefaultImages maps each chain and optional client to its default container image.
+// Inner key: lowercase client name, or "" for the chain default.
+var chainDefaultImages = map[nodesv1alpha1.Chain]map[string]string{
+{{- range .Entries}}
+	nodesv1alpha1.{{.ConstName}}: {
+	{{- range .Clients}}
+		{{printf "%q" .Key}}: {{printf "%q" .Image}},
+	{{- end}}
+	},
+{{- end}}
+}
+
+// DefaultImageFor returns the default container image for a chain and client.
+// Falls back to the chain default (key "") when the client has no dedicated entry.
+func DefaultImageFor(chain nodesv1alpha1.Chain, client string) string {
+	clients, ok := chainDefaultImages[chain]
+	if !ok {
+		return ""
+	}
+	if img, ok := clients[strings.ToLower(client)]; ok {
+		return img
+	}
+	return clients[""]
+}
+`
+
+type clientEntry struct {
+	Key   string
+	Image string
+}
+
+type chainEntry struct {
+	ConstName string
+	Clients   []clientEntry
+}
+
+type templateData struct {
+	Date    string
+	Entries []chainEntry
+}
+
+func writeVersionsGen(path string, images map[nodesv1alpha1.Chain]map[string]string) error {
+	chains := make([]nodesv1alpha1.Chain, 0, len(images))
+	for chain := range images {
+		chains = append(chains, chain)
+	}
+	sort.Slice(chains, func(i, j int) bool { return chains[i] < chains[j] })
+
+	// Ensure lookup is populated
+	lookupChainByConst("_init")
+
+	reverseMap := make(map[nodesv1alpha1.Chain]string)
+	for constName, chain := range constToChain {
+		reverseMap[chain] = constName
+	}
+
+	var entries []chainEntry
+	for _, chain := range chains {
+		constName, ok := reverseMap[chain]
+		if !ok {
+			constName = chainValueToConstName(string(chain))
+		}
+
+		clients := images[chain]
+		keys := make([]string, 0, len(clients))
+		for k := range clients {
+			keys = append(keys, k)
+		}
+		sort.Slice(keys, func(i, j int) bool {
+			if keys[i] == "" {
+				return true
+			}
+			if keys[j] == "" {
+				return false
+			}
+			return keys[i] < keys[j]
+		})
+
+		var clientEntries []clientEntry
+		for _, k := range keys {
+			clientEntries = append(clientEntries, clientEntry{Key: k, Image: clients[k]})
+		}
+		entries = append(entries, chainEntry{ConstName: constName, Clients: clientEntries})
+	}
+
+	data := templateData{
+		Date:    time.Now().UTC().Format("2006-01-02"),
+		Entries: entries,
+	}
+
+	tmpl, err := template.New("versions").Parse(versionsGenTemplate)
+	if err != nil {
+		return fmt.Errorf("parsing template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return fmt.Errorf("executing template: %w", err)
+	}
+
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		_ = os.WriteFile(path+".debug", buf.Bytes(), 0644)
+		return fmt.Errorf("formatting generated code: %w (debug written to %s.debug)", err, path)
+	}
+
+	return os.WriteFile(path, formatted, 0644)
+}

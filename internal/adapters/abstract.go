@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultAbstractImage = "matterlabs/external-node:v24.5.0"
-
 const defaultAbstractL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *abstractAdapter) DefaultImage(_ string) string {
-	return defaultAbstractImage
+func (a *abstractAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainAbstract, client)
 }
 
 func (a *abstractAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

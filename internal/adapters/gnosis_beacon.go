@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultGnosisBeaconImage = "sigp/lighthouse:v6.0.1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *gnosisBeaconAdapter) DefaultImage(_ string) string {
-	return defaultGnosisBeaconImage
+func (a *gnosisBeaconAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainGnosisBeacon, client)
 }
 
 func (a *gnosisBeaconAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

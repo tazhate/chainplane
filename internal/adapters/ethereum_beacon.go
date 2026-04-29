@@ -18,8 +18,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultEthereumBeaconImage = "sigp/lighthouse:v8.0.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -42,8 +40,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *ethereumBeaconAdapter) DefaultImage(_ string) string {
-	return defaultEthereumBeaconImage
+func (a *ethereumBeaconAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainEthereumBeacon, client)
 }
 
 func (a *ethereumBeaconAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

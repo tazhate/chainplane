@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultKatanaImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
-
 const defaultKatanaL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *katanaAdapter) DefaultImage(_ string) string {
-	return defaultKatanaImage
+func (a *katanaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainKatana, client)
 }
 
 func (a *katanaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

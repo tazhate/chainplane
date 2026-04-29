@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultAxelarImage = "axelarnet/axelar-core:v1.3.4"
 
 	// axelarBlockTime is the average Axelar block interval used to estimate network tip.
 	axelarBlockTime = 6.0 // seconds
@@ -66,8 +65,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *axelarAdapter) DefaultImage(_ string) string {
-	return defaultAxelarImage
+func (a *axelarAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainAxelar, client)
 }
 
 func (a *axelarAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

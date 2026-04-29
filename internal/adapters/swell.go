@@ -13,7 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultSwellImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
 const defaultSwellL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *swellAdapter) DefaultImage(_ string) string {
-	return defaultSwellImage
+func (a *swellAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSwell, client)
 }
 
 func (a *swellAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

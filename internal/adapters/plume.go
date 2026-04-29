@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultPlumeImage = "public.ecr.aws/i6b2w2n6/nitro-node:plume-v2.3.2"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *plumeAdapter) DefaultImage(_ string) string {
-	return defaultPlumeImage
+func (a *plumeAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainPlume, client)
 }
 
 func (a *plumeAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

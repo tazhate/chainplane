@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultEverclearImage = "offchainlabs/nitro-node:v3.6.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *everclearAdapter) DefaultImage(_ string) string {
-	return defaultEverclearImage
+func (a *everclearAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainEverclear, client)
 }
 
 func (a *everclearAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

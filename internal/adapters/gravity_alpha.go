@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultGravityAlphaImage = "ghcr.io/celestiaorg/nitro:v3.6.8"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *gravityAlphaAdapter) DefaultImage(_ string) string {
-	return defaultGravityAlphaImage
+func (a *gravityAlphaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainGravityAlpha, client)
 }
 
 func (a *gravityAlphaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

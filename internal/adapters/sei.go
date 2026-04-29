@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultSeiImage = "seiprotocol/seid:v6.2.0"
 
 	// seiBlockTime is the average Sei block interval used to estimate network tip.
 	seiBlockTime = 0.4 // seconds — Sei targets sub-second finality
@@ -47,8 +46,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *seiAdapter) DefaultImage(_ string) string {
-	return defaultSeiImage
+func (a *seiAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSei, client)
 }
 
 func (a *seiAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

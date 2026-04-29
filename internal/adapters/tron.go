@@ -18,7 +18,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultTRONImage = "tronprotocol/java-tron:GreatVoyage-v4.8.1"
 
 	// tronSyncedThreshold is the maximum number of remaining blocks (unFetchSynNum)
 	// across all peers below which the node is considered fully synced.
@@ -217,8 +216,8 @@ genesis.block = {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *tronAdapter) DefaultImage(_ string) string {
-	return defaultTRONImage
+func (a *tronAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainTRON, client)
 }
 
 func (a *tronAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

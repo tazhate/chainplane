@@ -19,7 +19,6 @@ import (
 // uphold/docker-litecoin-core:0.21 contains v0.21.2.2 (latest published, Feb 2024).
 // Litecoin Core v0.21.4 (security fixes CVE-2024-35202) is not yet available on
 // any major Docker Hub publisher as of 2026-03. Track: https://github.com/uphold/docker-litecoin-core
-const defaultLitecoinImage = "uphold/litecoin-core:0.21"
 
 // --------------------------------------------------------------------------
 // Type
@@ -71,8 +70,8 @@ maxorphantx=10
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *litecoinAdapter) DefaultImage(_ string) string {
-	return defaultLitecoinImage
+func (a *litecoinAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainLitecoin, client)
 }
 
 func (a *litecoinAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

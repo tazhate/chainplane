@@ -19,8 +19,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultTONImage = "ghcr.io/ton-blockchain/ton:v2026.02-1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -53,8 +51,8 @@ const tonGlobalConfig = `{"@type":"config.global","dht":{"@type":"dht.config.glo
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *tonAdapter) DefaultImage(_ string) string {
-	return defaultTONImage
+func (a *tonAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainTON, client)
 }
 
 func (a *tonAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

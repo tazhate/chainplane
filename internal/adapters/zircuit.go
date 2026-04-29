@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultZircuitImage = "ghcr.io/zircuit-labs/l2-geth-public:v1.0.0"
-
 const defaultZircuitL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *zircuitAdapter) DefaultImage(_ string) string {
-	return defaultZircuitImage
+func (a *zircuitAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainZircuit, client)
 }
 
 func (a *zircuitAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

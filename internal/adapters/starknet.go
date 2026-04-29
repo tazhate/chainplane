@@ -15,8 +15,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultStarknetImage = "nethermindeth/juno:v0.12.5"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -56,8 +54,8 @@ const starknetConfig = `{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *starknetAdapter) DefaultImage(_ string) string {
-	return defaultStarknetImage
+func (a *starknetAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainStarknet, client)
 }
 
 func (a *starknetAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

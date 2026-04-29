@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultCosmosImage = "ghcr.io/cosmos/gaia:v27.0.0"
 
 	// cosmosBlockTime is the average Cosmos Hub block interval used to estimate network tip.
 	cosmosBlockTime = 6.5 // seconds
@@ -88,8 +87,8 @@ type cosmosConsensusStateResponse struct {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *cosmosAdapter) DefaultImage(_ string) string {
-	return defaultCosmosImage
+func (a *cosmosAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainCosmos, client)
 }
 
 func (a *cosmosAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

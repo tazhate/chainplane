@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultCoreImage = "coredao/core-chain:v1.0.22"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *coreAdapter) DefaultImage(_ string) string {
-	return defaultCoreImage
+func (a *coreAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainCore, client)
 }
 
 func (a *coreAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

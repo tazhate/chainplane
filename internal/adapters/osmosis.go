@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultOsmosisImage = "osmolabs/osmosis:v31.0.0"
 
 	// osmosisBlockTime is the average Osmosis block interval used to estimate network tip.
 	osmosisBlockTime = 6.0 // seconds
@@ -47,8 +46,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *osmosisAdapter) DefaultImage(_ string) string {
-	return defaultOsmosisImage
+func (a *osmosisAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainOsmosis, client)
 }
 
 func (a *osmosisAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

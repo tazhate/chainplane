@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // Mezo is Cosmos SDK with EVMOS EVM extension (not OP Stack).
-const defaultMezoImage = "mezo/mezod:v2.0.1"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *mezoAdapter) DefaultImage(_ string) string {
-	return defaultMezoImage
+func (a *mezoAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMezo, client)
 }
 
 func (a *mezoAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -1,0 +1,47 @@
+name: Update node image versions
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # каждый понедельник 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check for version updates
+        run: go run ./cmd/versioncheck --update
+        env:
+          # Optional: set to avoid Docker Hub anonymous rate limits (600 req/h)
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create PR if versions changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: |
+            chore: update blockchain node default images
+
+            Ran cmd/versioncheck against upstream registries.
+            Updated internal/adapters/versions_gen.go.
+          title: 'chore: update node images'
+          body: |
+            ## Automated image version update
+
+            `cmd/versioncheck` found newer tags in upstream registries and updated
+            `internal/adapters/versions_gen.go`.
+
+            **Review the diff before merging** — verify each updated image is a
+            stable release (not a pre-release or breaking change).
+          branch: chore/update-node-images
+          delete-branch: true
+          labels: dependencies

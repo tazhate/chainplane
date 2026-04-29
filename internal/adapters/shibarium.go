@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // Shibarium is a Polygon Bor-based sidechain (chainId 109), not OP Stack.
-const defaultShibariumImage = "shibaone/bor:v1.3.7-bone"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *shibariumAdapter) DefaultImage(_ string) string {
-	return defaultShibariumImage
+func (a *shibariumAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainShibarium, client)
 }
 
 func (a *shibariumAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

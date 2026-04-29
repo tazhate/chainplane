@@ -17,7 +17,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: No official Dogecoin Docker image exists. Using community image ruimarinho/dogecoin.
-const defaultDogecoinImage = "ruimarinho/dogecoin:1-alpine"
 
 // --------------------------------------------------------------------------
 // Type
@@ -64,8 +63,8 @@ maxconnections=125
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *dogecoinAdapter) DefaultImage(_ string) string {
-	return defaultDogecoinImage
+func (a *dogecoinAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainDogecoin, client)
 }
 
 func (a *dogecoinAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

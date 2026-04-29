@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultHashKeyImage = "hashkeychain/hashkey-geth:v1.0.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,9 +35,9 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *hashkeyAdapter) DefaultImage(_ string) string {
+func (a *hashkeyAdapter) DefaultImage(client string) string {
 	// TODO: hashkeychain/hashkey-geth image org is unverified. Verify at docs.hsk.xyz before production use.
-	return defaultHashKeyImage
+	return DefaultImageFor(nodesv1alpha1.ChainHashKey, client)
 }
 
 func (a *hashkeyAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

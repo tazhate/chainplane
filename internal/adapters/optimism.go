@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultOptimismImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2"
-
 const defaultOptimismL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *optimismAdapter) DefaultImage(_ string) string {
-	return defaultOptimismImage
+func (a *optimismAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainOptimism, client)
 }
 
 func (a *optimismAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

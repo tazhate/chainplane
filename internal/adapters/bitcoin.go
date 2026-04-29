@@ -16,8 +16,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultBitcoinImage = "lncm/bitcoind:v28.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -77,8 +75,8 @@ txindex=1
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *bitcoinAdapter) DefaultImage(_ string) string {
-	return defaultBitcoinImage
+func (a *bitcoinAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainBitcoin, client)
 }
 
 func (a *bitcoinAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

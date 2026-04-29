@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultThundercoreImage = "thundercore/thunder:r4.1.3"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *thundercoreAdapter) DefaultImage(_ string) string {
-	return defaultThundercoreImage
+func (a *thundercoreAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainThundercore, client)
 }
 
 func (a *thundercoreAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

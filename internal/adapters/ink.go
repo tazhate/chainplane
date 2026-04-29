@@ -13,7 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultInkImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
 const defaultInkL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *inkAdapter) DefaultImage(_ string) string {
-	return defaultInkImage
+func (a *inkAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainInk, client)
 }
 
 func (a *inkAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

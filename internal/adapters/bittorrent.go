@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // Fixed org: bttcprotocol (not tronprotocol). BTTC is Polygon CDK (Bor+Delivery dual-client).
-const defaultBitTorrentImage = "bttcprotocol/bttc:v1.0.3"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *bittorrentAdapter) DefaultImage(_ string) string {
-	return defaultBitTorrentImage
+func (a *bittorrentAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainBitTorrent, client)
 }
 
 func (a *bittorrentAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

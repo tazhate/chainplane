@@ -20,8 +20,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultNearImage = "nearprotocol/nearcore:2.10.7"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -121,8 +119,8 @@ type nearStatusResponse struct {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *nearAdapter) DefaultImage(_ string) string {
-	return defaultNearImage
+func (a *nearAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainNear, client)
 }
 
 func (a *nearAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultLiskImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5"
-
 const defaultLiskL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *liskAdapter) DefaultImage(_ string) string {
-	return defaultLiskImage
+func (a *liskAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainLisk, client)
 }
 
 func (a *liskAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

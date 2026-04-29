@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultKlaytnImage = "klaytn/klaytn:v2.2.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *klaytnAdapter) DefaultImage(_ string) string {
-	return defaultKlaytnImage
+func (a *klaytnAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainKlaytn, client)
 }
 
 func (a *klaytnAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

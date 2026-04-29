@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // defaultVictionImage uses the official Viction (formerly TomoChain) image.
-const defaultVictionImage = "buildonviction/node:v2.5.1"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *victionAdapter) DefaultImage(_ string) string {
-	return defaultVictionImage
+func (a *victionAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainViction, client)
 }
 
 func (a *victionAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

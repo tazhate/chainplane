@@ -13,7 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultBlastImage = "blastio/blast-geth:mainnet-v1.7.0"
 const defaultBlastL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *blastAdapter) DefaultImage(_ string) string {
-	return defaultBlastImage
+func (a *blastAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainBlast, client)
 }
 
 func (a *blastAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

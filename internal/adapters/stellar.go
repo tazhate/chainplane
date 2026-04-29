@@ -19,8 +19,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultStellarImage = "stellar/stellar-core:v19.12.0"
-
 // catchupRe matches stellar-core status lines like:
 // "Catching up to ledger 61631039: Applying buckets 89%..."
 // "Catching up to ledger 61631039: downloading and verifying buckets: 15/34 (44%)"
@@ -105,8 +103,8 @@ get="curl -sf http://history.stellar.org.s3.amazonaws.com/prd/core-live/core_liv
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *stellarAdapter) DefaultImage(_ string) string {
-	return defaultStellarImage
+func (a *stellarAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainStellar, client)
 }
 
 func (a *stellarAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

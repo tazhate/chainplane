@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultArbitrumImage = "offchainlabs/nitro-node:v3.9.7"
-
 const defaultArbitrumL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *arbitrumAdapter) DefaultImage(_ string) string {
-	return defaultArbitrumImage
+func (a *arbitrumAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainArbitrum, client)
 }
 
 func (a *arbitrumAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

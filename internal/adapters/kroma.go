@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultKromaImage = "kromanetwork/geth:v0.5.0"
-
 const defaultKromaL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *kromaAdapter) DefaultImage(_ string) string {
-	return defaultKromaImage
+func (a *kromaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainKroma, client)
 }
 
 func (a *kromaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

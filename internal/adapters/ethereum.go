@@ -19,11 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultGethImage       = "ethereum/client-go:v1.17.1"
-	defaultRethImage       = "ghcr.io/paradigmxyz/reth:v1.11.3"
-	defaultErigonImage     = "erigontech/erigon:v2.61.3"
-	defaultNethermindImage = "nethermind/nethermind:1.36.1"
-
 	rethMetricsPort       = int32(9001)
 	gethMetricsPort       = int32(6060)
 	erigonMetricsPort     = int32(6060)
@@ -122,17 +117,8 @@ var ethConfigFilenames = map[string]string{
 // --------------------------------------------------------------------------
 
 func (a *ethereumAdapter) DefaultImage(client string) string {
-	switch strings.ToLower(client) {
-	case "geth":
-		// v1.15+ changed DB format (PBSS). Existing nodes must resync when upgrading from v1.14.x.
-		return defaultGethImage
-	case "reth":
-		return defaultRethImage
-	case "erigon":
-		return defaultErigonImage
-	default:
-		return defaultNethermindImage
-	}
+	// v1.15+ changed DB format (PBSS). Existing geth nodes must resync when upgrading from v1.14.x.
+	return DefaultImageFor(nodesv1alpha1.ChainEthereum, client)
 }
 
 func (a *ethereumAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

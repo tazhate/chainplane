@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultMoonbeamImage = "moonbeamfoundation/moonbeam:v0.39.1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *moonbeamAdapter) DefaultImage(_ string) string {
-	return defaultMoonbeamImage
+func (a *moonbeamAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMoonbeam, client)
 }
 
 func (a *moonbeamAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

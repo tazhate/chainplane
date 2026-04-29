@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultDomaImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
-
 const defaultDomaL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *domaAdapter) DefaultImage(_ string) string {
-	return defaultDomaImage
+func (a *domaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainDoma, client)
 }
 
 func (a *domaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

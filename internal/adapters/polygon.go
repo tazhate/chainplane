@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultPolygonImage = "0xpolygon/bor:2.6.3"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -78,8 +76,8 @@ gcmode = "archive"
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *polygonAdapter) DefaultImage(_ string) string {
-	return defaultPolygonImage
+func (a *polygonAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainPolygon, client)
 }
 
 func (a *polygonAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

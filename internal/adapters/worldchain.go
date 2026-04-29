@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultWorldchainImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5"
-
 const defaultWorldchainL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *worldchainAdapter) DefaultImage(_ string) string {
-	return defaultWorldchainImage
+func (a *worldchainAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainWorldchain, client)
 }
 
 func (a *worldchainAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

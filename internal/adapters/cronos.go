@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultCronosImage = "crypto-org-chain/cronos:v1.4.4"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *cronosAdapter) DefaultImage(_ string) string {
-	return defaultCronosImage
+func (a *cronosAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainCronos, client)
 }
 
 func (a *cronosAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: MegaETH does not have a public node image as of 2026. This adapter is a placeholder.
-const defaultMegaETHImage = "megaeth-labs/node:latest"
 
 const defaultMegaETHL1URL = "http://ethereum:8545"
 
@@ -40,8 +39,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *megaethAdapter) DefaultImage(_ string) string {
-	return defaultMegaETHImage
+func (a *megaethAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMegaETH, client)
 }
 
 func (a *megaethAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

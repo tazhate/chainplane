@@ -15,7 +15,6 @@ import (
 
 // NOTE: fantomfoundation/sonic:v1.2.0 was the legacy Fantom Opera client and is
 // explicitly INCOMPATIBLE with Sonic mainnet. Sonic is a standalone L1 chain.
-const defaultSonicImage = "ghcr.io/0xsoniclabs/sonic:v2.1.6"
 
 // --------------------------------------------------------------------------
 // Type
@@ -39,8 +38,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *sonicAdapter) DefaultImage(_ string) string {
-	return defaultSonicImage
+func (a *sonicAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSonic, client)
 }
 
 func (a *sonicAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

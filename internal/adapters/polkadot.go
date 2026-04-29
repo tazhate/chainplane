@@ -17,8 +17,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultPolkadotImage = "parity/polkadot:v1.16.2"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -67,8 +65,8 @@ const polkadotConfig = `{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *polkadotAdapter) DefaultImage(_ string) string {
-	return defaultPolkadotImage
+func (a *polkadotAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainPolkadot, client)
 }
 
 func (a *polkadotAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

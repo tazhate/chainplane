@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: opBNB uses bnb-chain/op-geth fork (BNB-specific patches). Upstream oplabs/op-geth may lack BNB-specific consensus modifications.
-const defaultOpBNBImage = "ghcr.io/bnb-chain/op-geth:v0.5.2"
 
 // defaultOpBNBL1URL points to the BNB Smart Chain L1 node (not Ethereum).
 const defaultOpBNBL1URL = "http://bsc:8545"
@@ -41,8 +40,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *opbnbAdapter) DefaultImage(_ string) string {
-	return defaultOpBNBImage
+func (a *opbnbAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainOpBNB, client)
 }
 
 func (a *opbnbAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 // plasma-next/node:v0.1.0 is a placeholder image — no public node image exists yet.
-const defaultPlasmaImage = "plasma-next/node:v0.1.0"
 
 // --------------------------------------------------------------------------
 // Type
@@ -43,8 +42,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *plasmaAdapter) DefaultImage(_ string) string {
-	return defaultPlasmaImage
+func (a *plasmaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainPlasma, client)
 }
 
 func (a *plasmaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultEvmosImage = "tharsishq/evmos:v20.0.0"
 
 	// evmosBlockTime is the average Evmos block interval used to estimate network tip.
 	evmosBlockTime = 2.0 // seconds
@@ -47,8 +46,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *evmosAdapter) DefaultImage(_ string) string {
-	return defaultEvmosImage
+func (a *evmosAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainEvmos, client)
 }
 
 func (a *evmosAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

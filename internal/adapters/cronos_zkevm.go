@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultCronosZkEVMImage = "ghcr.io/cronos-labs/external-node:mainnet-v29.6.0"
-
 const defaultCronosZkEVML1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *cronosZkEVMAdapter) DefaultImage(_ string) string {
-	return defaultCronosZkEVMImage
+func (a *cronosZkEVMAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainCronosZkEVM, client)
 }
 
 func (a *cronosZkEVMAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

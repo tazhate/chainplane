@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultTelosImage = "telosnetwork/telos-evm-rpc:v2.0.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *telosAdapter) DefaultImage(_ string) string {
-	return defaultTelosImage
+func (a *telosAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainTelos, client)
 }
 
 func (a *telosAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

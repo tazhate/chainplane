@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultHaqqImage = "alhaqq/haqq:v1.8.1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *haqqAdapter) DefaultImage(_ string) string {
-	return defaultHaqqImage
+func (a *haqqAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainHaqq, client)
 }
 
 func (a *haqqAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

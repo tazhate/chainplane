@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: immutable-geth requires 'immutable bootstrap rpc' subcommand on first run.
-const defaultImmutableZkEVMImage = "ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0"
 
 const defaultImmutableZkEVML1URL = "http://ethereum:8545"
 
@@ -40,8 +39,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *immutableZkEVMAdapter) DefaultImage(_ string) string {
-	return defaultImmutableZkEVMImage
+func (a *immutableZkEVMAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainImmutableZkEVM, client)
 }
 
 func (a *immutableZkEVMAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -21,8 +21,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultSuiImage = "mysten/sui-node:v1.39.2"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -95,8 +93,8 @@ state-archive-read-config:
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *suiAdapter) DefaultImage(_ string) string {
-	return defaultSuiImage
+func (a *suiAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSui, client)
 }
 
 func (a *suiAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

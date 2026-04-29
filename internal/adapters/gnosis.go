@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultGnosisImage = "nethermind/nethermind:1.36.1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *gnosisAdapter) DefaultImage(_ string) string {
-	return defaultGnosisImage
+func (a *gnosisAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainGnosis, client)
 }
 
 func (a *gnosisAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

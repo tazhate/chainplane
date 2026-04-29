@@ -13,7 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultSoneiumImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0"
 const defaultSoneiumL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *soneiumAdapter) DefaultImage(_ string) string {
-	return defaultSoneiumImage
+func (a *soneiumAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSoneium, client)
 }
 
 func (a *soneiumAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

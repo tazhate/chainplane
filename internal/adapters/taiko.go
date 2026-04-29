@@ -13,7 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultTaikoImage = "taikoxyz/taiko-geth:v1.8.0"
 const defaultTaikoL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *taikoAdapter) DefaultImage(_ string) string {
-	return defaultTaikoImage
+func (a *taikoAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainTaiko, client)
 }
 
 func (a *taikoAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

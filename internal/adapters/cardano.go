@@ -21,8 +21,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultCardanoImage = "ghcr.io/intersectmbo/cardano-node:10.6.2"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -71,8 +69,8 @@ const cardanoConfig = `{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *cardanoAdapter) DefaultImage(_ string) string {
-	return defaultCardanoImage
+func (a *cardanoAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainCardano, client)
 }
 
 func (a *cardanoAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

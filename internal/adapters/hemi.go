@@ -13,7 +13,6 @@ import (
 // The EVM execution layer is hemilabs/op-geth (fork of op-geth).
 // NOTE: Do NOT use hemilabs/heminetwork — that image contains only the
 // Bitcoin-finality daemon suite (bfgd/bssd/popmd), not the EVM node.
-const defaultHemiImage = "hemilabs/op-geth:v1.101408.0"
 
 const defaultHemiL1URL = "http://ethereum:8545"
 
@@ -27,8 +26,8 @@ func init() {
 	})
 }
 
-func (a *hemiAdapter) DefaultImage(_ string) string {
-	return defaultHemiImage
+func (a *hemiAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainHemi, client)
 }
 
 func (a *hemiAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

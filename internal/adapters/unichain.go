@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultUnichainImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101608.0"
-
 const defaultUnichainL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *unichainAdapter) DefaultImage(_ string) string {
-	return defaultUnichainImage
+func (a *unichainAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainUnichain, client)
 }
 
 func (a *unichainAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

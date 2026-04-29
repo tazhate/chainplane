@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultKavaImage = "kava-labs/kava:v0.26.2"
 
 	// kavaBlockTime is the average Kava block interval used to estimate network tip.
 	kavaBlockTime = 6.5 // seconds
@@ -47,8 +46,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *kavaAdapter) DefaultImage(_ string) string {
-	return defaultKavaImage
+func (a *kavaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainKava, client)
 }
 
 func (a *kavaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

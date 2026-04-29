@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultFuseImage = "fusenet/node:2.0.2"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *fuseAdapter) DefaultImage(_ string) string {
-	return defaultFuseImage
+func (a *fuseAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainFuse, client)
 }
 
 func (a *fuseAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

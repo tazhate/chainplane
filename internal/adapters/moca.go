@@ -20,7 +20,6 @@ import (
 
 // TODO: moca chain is Cosmos/EVMOS-based; verify correct image before deploying.
 // moca-network/moca:v0.1.0 is a placeholder until the official image is confirmed.
-const defaultMocaImage = "moca-network/moca:v0.1.0"
 
 // mocaBlockTime is the average Moca block interval used to estimate network tip.
 const mocaBlockTime = 2.0 // seconds
@@ -47,8 +46,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *mocaAdapter) DefaultImage(_ string) string {
-	return defaultMocaImage
+func (a *mocaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMoca, client)
 }
 
 func (a *mocaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

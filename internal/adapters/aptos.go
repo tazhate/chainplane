@@ -22,8 +22,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultAptosImage = "aptoslabs/validator:mainnet"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -91,8 +89,8 @@ type aptosLedgerResponse struct {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *aptosAdapter) DefaultImage(_ string) string {
-	return defaultAptosImage
+func (a *aptosAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainAptos, client)
 }
 
 func (a *aptosAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

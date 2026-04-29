@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultMantaPacificImage = "mantanetwork/op-geth:v1.101304.3"
-
 const defaultMantaPacificL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *mantaPacificAdapter) DefaultImage(_ string) string {
-	return defaultMantaPacificImage
+func (a *mantaPacificAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMantaPacific, client)
 }
 
 func (a *mantaPacificAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

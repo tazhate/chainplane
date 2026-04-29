@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultLensImage = "matterlabs/external-node:v24.5.0"
-
 const defaultLensL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *lensAdapter) DefaultImage(_ string) string {
-	return defaultLensImage
+func (a *lensAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainLens, client)
 }
 
 func (a *lensAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -18,7 +18,6 @@ import (
 // NOTE: Hyperliquid does not publish an official Docker image. hl-visor is binary-only.
 // This adapter requires a custom-built image wrapping the binary from binaries.hyperliquid.xyz/Mainnet/hl-visor
 // Build reference: https://github.com/CryptoManufaktur-io/hyperliquid-docker
-const defaultHyperliquidImage = "hyperliquid/hl-node:latest"
 
 // --------------------------------------------------------------------------
 // Type
@@ -52,8 +51,8 @@ const hyperliquidConfig = `{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *hyperliquidAdapter) DefaultImage(_ string) string {
-	return defaultHyperliquidImage
+func (a *hyperliquidAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainHyperliquid, client)
 }
 
 func (a *hyperliquidAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

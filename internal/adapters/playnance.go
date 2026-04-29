@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultPlaynanceImage = "offchainlabs/nitro-node:v3.6.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *playnanceAdapter) DefaultImage(_ string) string {
-	return defaultPlaynanceImage
+func (a *playnanceAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainPlaynance, client)
 }
 
 func (a *playnanceAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

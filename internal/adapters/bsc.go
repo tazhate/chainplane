@@ -15,8 +15,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultBSCImage = "ghcr.io/bnb-chain/bsc:1.6.7"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -66,8 +64,8 @@ PriceLimit = 3000000000
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *bscAdapter) DefaultImage(_ string) string {
-	return defaultBSCImage
+func (a *bscAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainBSC, client)
 }
 
 func (a *bscAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

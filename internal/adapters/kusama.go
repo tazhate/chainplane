@@ -15,8 +15,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultKusamaImage = "parity/polkadot:v1.15.1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -69,8 +67,8 @@ const kusamaConfig = `{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *kusamaAdapter) DefaultImage(_ string) string {
-	return defaultKusamaImage
+func (a *kusamaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainKusama, client)
 }
 
 func (a *kusamaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

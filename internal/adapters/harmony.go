@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultHarmonyImage = "harmonyone/harmony:v8.5.4"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *harmonyAdapter) DefaultImage(_ string) string {
-	return defaultHarmonyImage
+func (a *harmonyAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainHarmony, client)
 }
 
 func (a *harmonyAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultRoninImage = "ghcr.io/ronin-chain/ronin:v2.8.3"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *roninAdapter) DefaultImage(_ string) string {
-	return defaultRoninImage
+func (a *roninAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainRonin, client)
 }
 
 func (a *roninAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

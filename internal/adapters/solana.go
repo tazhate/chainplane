@@ -17,8 +17,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultSolanaImage = "solanalabs/agave:v2.1.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -55,8 +53,8 @@ entrypoint: "{{ .Entrypoint }}"
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *solanaAdapter) DefaultImage(_ string) string {
-	return defaultSolanaImage
+func (a *solanaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainSolana, client)
 }
 
 func (a *solanaAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

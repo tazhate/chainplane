@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultWemixImage = "wemixnetwork/wemix:v1.2.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *wemixAdapter) DefaultImage(_ string) string {
-	return defaultWemixImage
+func (a *wemixAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainWemix, client)
 }
 
 func (a *wemixAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -19,7 +19,6 @@ import (
 // --------------------------------------------------------------------------
 
 const (
-	defaultDymensionImage = "dymensionxyz/dymd:v3.1.0"
 
 	// dymensionBlockTime is the average Dymension block interval used to estimate network tip.
 	dymensionBlockTime = 6.0 // seconds
@@ -66,8 +65,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *dymensionAdapter) DefaultImage(_ string) string {
-	return defaultDymensionImage
+func (a *dymensionAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainDymension, client)
 }
 
 func (a *dymensionAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

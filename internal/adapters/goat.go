@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultGoatImage = "ghcr.io/goatnetwork/goat-geth:v0.4.2"
-
 const defaultGoatL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *goatAdapter) DefaultImage(_ string) string {
-	return defaultGoatImage
+func (a *goatAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainGoat, client)
 }
 
 func (a *goatAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

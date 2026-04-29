@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: Monad node access is permissioned. No public Docker image confirmed as of 2026.
-const defaultMonadImage = "monadlabs/monad-node:latest"
 
 // --------------------------------------------------------------------------
 // Type
@@ -57,8 +56,8 @@ const monadConfig = `{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *monadAdapter) DefaultImage(_ string) string {
-	return defaultMonadImage
+func (a *monadAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMonad, client)
 }
 
 func (a *monadAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // TODO: verify exact image path before production use; ghcr.io/morphprotocol/node is best current estimate.
-const defaultMorphImage = "ghcr.io/morphprotocol/node:v0.3.0"
 const defaultMorphL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +38,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *morphAdapter) DefaultImage(_ string) string {
-	return defaultMorphImage
+func (a *morphAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMorph, client)
 }
 
 func (a *morphAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

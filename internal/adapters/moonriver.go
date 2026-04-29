@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // Moonriver uses the same binary as Moonbeam; chain is selected via CLI flags.
-const defaultMoonriverImage = "moonbeamfoundation/moonbeam:v0.39.1"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *moonriverAdapter) DefaultImage(_ string) string {
-	return defaultMoonriverImage
+func (a *moonriverAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMoonriver, client)
 }
 
 func (a *moonriverAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

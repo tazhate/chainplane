@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultLineaImage = "consensys/linea-besu:24.12.2"
-
 const defaultLineaL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -64,8 +62,8 @@ p2p-port=30303
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *lineaAdapter) DefaultImage(_ string) string {
-	return defaultLineaImage
+func (a *lineaAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainLinea, client)
 }
 
 func (a *lineaAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultZkSyncImage = "matterlabs/external-node:v2.0.22"
-
 const defaultZkSyncL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -52,8 +50,8 @@ EN_MERKLE_TREE_PATH=/data/tree
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *zksyncAdapter) DefaultImage(_ string) string {
-	return defaultZkSyncImage
+func (a *zksyncAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainZkSync, client)
 }
 
 func (a *zksyncAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultZeroNetworkImage = "matterlabs/external-node:v24.5.0"
-
 const defaultZeroNetworkL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *zeroNetworkAdapter) DefaultImage(_ string) string {
-	return defaultZeroNetworkImage
+func (a *zeroNetworkAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainZeroNetwork, client)
 }
 
 func (a *zeroNetworkAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

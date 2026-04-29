@@ -15,8 +15,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultXRPImage = "xrpllabsofficial/xrpld:3.1.2"
-
 // xrpSyncedStates are server_state values where the node is healthy for RPC.
 var xrpSyncedStates = map[string]bool{
 	"full":       true,
@@ -121,8 +119,8 @@ huge
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *xrpAdapter) DefaultImage(_ string) string {
-	return defaultXRPImage
+func (a *xrpAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainXRP, client)
 }
 
 func (a *xrpAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

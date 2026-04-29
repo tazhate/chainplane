@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultBobaEthImage = "bobanetwork/op-geth:v1.101411.4"
-
 const defaultBobaEthL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *bobaEthAdapter) DefaultImage(_ string) string {
-	return defaultBobaEthImage
+func (a *bobaEthAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainBobaEth, client)
 }
 
 func (a *bobaEthAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

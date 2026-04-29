@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: Besu has deprecated ETC/classic network support. Consider migrating to etclabscore/core-geth.
-const defaultEthereumClassicImage = "hyperledger/besu:24.12.0"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *ethereumClassicAdapter) DefaultImage(_ string) string {
-	return defaultEthereumClassicImage
+func (a *ethereumClassicAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainEthereumClassic, client)
 }
 
 func (a *ethereumClassicAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

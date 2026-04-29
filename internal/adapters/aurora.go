@@ -14,7 +14,6 @@ import (
 // --------------------------------------------------------------------------
 
 // NOTE: aurora-relayer is deprecated. This uses standalone-rpc (nearaurora/srpc2-relayer). Full Aurora setup requires refiner + nearcore sidecars.
-const defaultAuroraImage = "nearaurora/srpc2-relayer:latest"
 
 // --------------------------------------------------------------------------
 // Type
@@ -38,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *auroraAdapter) DefaultImage(_ string) string {
-	return defaultAuroraImage
+func (a *auroraAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainAurora, client)
 }
 
 func (a *auroraAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

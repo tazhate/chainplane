@@ -23,8 +23,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultAvalancheImage = "avaplatform/avalanchego:v1.14.1"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -61,8 +59,8 @@ var avaxConfigTpl = template.Must(template.New("avax-config").Parse(`{
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *avalancheAdapter) DefaultImage(_ string) string {
-	return defaultAvalancheImage
+func (a *avalancheAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainAvalanche, client)
 }
 
 func (a *avalancheAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

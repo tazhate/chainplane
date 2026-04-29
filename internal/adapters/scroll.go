@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultScrollImage = "scrolltech/l2geth:scroll-v5.9.0"
-
 const defaultScrollL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -64,8 +62,8 @@ ListenAddr = ":30303"
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *scrollAdapter) DefaultImage(_ string) string {
-	return defaultScrollImage
+func (a *scrollAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainScroll, client)
 }
 
 func (a *scrollAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

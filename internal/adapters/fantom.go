@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultFantomImage = "fantomfoundation/go-opera:v1.1.3-txtracing"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *fantomAdapter) DefaultImage(_ string) string {
-	return defaultFantomImage
+func (a *fantomAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainFantom, client)
 }
 
 func (a *fantomAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

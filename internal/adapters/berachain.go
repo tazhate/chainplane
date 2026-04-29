@@ -21,7 +21,6 @@ import (
 //	EL (companion):    ghcr.io/berachain/reth
 //
 // See: https://docs.berachain.com/nodes/run-a-node
-const defaultBerachainImage = "ghcr.io/berachain/beacon-kit:v0.2.0"
 
 type berachainAdapter struct {
 	baseAdapter
@@ -34,8 +33,8 @@ func init() {
 	})
 }
 
-func (a *berachainAdapter) DefaultImage(_ string) string {
-	return defaultBerachainImage
+func (a *berachainAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainBerachain, client)
 }
 
 func (a *berachainAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

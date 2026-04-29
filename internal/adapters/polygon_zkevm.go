@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultPolygonZkEVMImage = "0xpolygonhermez/zkevm-node:v0.7.0"
-
 const defaultPolygonZkEVML1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------
@@ -39,8 +37,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *polygonZkEVMAdapter) DefaultImage(_ string) string {
-	return defaultPolygonZkEVMImage
+func (a *polygonZkEVMAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainPolygonZkEVM, client)
 }
 
 func (a *polygonZkEVMAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

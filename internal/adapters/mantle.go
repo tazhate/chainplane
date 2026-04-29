@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultMantleImage = "mantlenetworkio/op-geth:v1.0.3"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *mantleAdapter) DefaultImage(_ string) string {
-	return defaultMantleImage
+func (a *mantleAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainMantle, client)
 }
 
 func (a *mantleAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

@@ -165,6 +165,17 @@ func MustGet(chain nodesv1alpha1.Chain) ChainAdapter {
 	return a
 }
 
+// All returns a snapshot of all registered adapters, keyed by chain.
+func All() map[nodesv1alpha1.Chain]ChainAdapter {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	out := make(map[nodesv1alpha1.Chain]ChainAdapter, len(registry))
+	for k, v := range registry {
+		out[k] = v
+	}
+	return out
+}
+
 // DefaultNodeSelector returns a node selector for specialised node groups only.
 // Generic groups (light/medium/heavy) return nil so pods schedule on any node.
 func DefaultNodeSelector(nodeGroup nodesv1alpha1.NodeGroup) map[string]string {

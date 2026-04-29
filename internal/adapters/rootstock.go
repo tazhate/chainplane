@@ -13,8 +13,6 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultRootstockImage = "rsksmart/rskj:ARROWHEAD-6.4.0"
-
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -37,8 +35,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *rootstockAdapter) DefaultImage(_ string) string {
-	return defaultRootstockImage
+func (a *rootstockAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainRootstock, client)
 }
 
 func (a *rootstockAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

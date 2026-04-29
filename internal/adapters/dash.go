@@ -17,7 +17,6 @@ import (
 // --------------------------------------------------------------------------
 
 // Live production nodes confirmed on dashpay/dashd:23.1.0 (without v-prefix).
-const defaultDashImage = "dashpay/dashd:23.1.0"
 
 // --------------------------------------------------------------------------
 // Type
@@ -65,8 +64,8 @@ maxconnections=125
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *dashAdapter) DefaultImage(_ string) string {
-	return defaultDashImage
+func (a *dashAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainDash, client)
 }
 
 func (a *dashAdapter) ConfigTemplate(spec nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {

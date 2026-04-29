@@ -15,7 +15,6 @@ import (
 
 // NOTE: Celo migrated from a standalone EVM chain to OP Stack L2 in June 2024.
 // The adapter is rewritten accordingly.
-const defaultCeloImage = "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5"
 
 const defaultCeloL1URL = "http://ethereum:8545"
 
@@ -41,8 +40,8 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *celoAdapter) DefaultImage(_ string) string {
-	return defaultCeloImage
+func (a *celoAdapter) DefaultImage(client string) string {
+	return DefaultImageFor(nodesv1alpha1.ChainCelo, client)
 }
 
 func (a *celoAdapter) ConfigTemplate(_ nodesv1alpha1.BlockchainNodeSpec) (string, string, error) {
