@@ -6,7 +6,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,12 +49,12 @@ type dashAdapter struct {
 func init() {
 	Register(chainsv1alpha2.ChainDash, &dashAdapter{
 		utxoProtocolAdapter: utxoProtocolAdapter{
-			protocolAdapter:    protocolAdapter{livenessPort: 9998},
-			rpcUserEnv:     "DASH_RPC_USER",
-			rpcPasswordEnv: "DASH_RPC_PASSWORD",
-			defaultUser:    "rpc",
-			defaultPass:    "rpc",
-			useRetry:       false,
+			protocolAdapter: protocolAdapter{livenessPort: 9998},
+			rpcUserEnv:      "DASH_RPC_USER",
+			rpcPasswordEnv:  "DASH_RPC_PASSWORD",
+			defaultUser:     "rpc",
+			defaultPass:     "rpc",
+			useRetry:        false,
 		},
 	})
 }

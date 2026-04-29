@@ -6,7 +6,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,12 +51,12 @@ type litecoinAdapter struct {
 func init() {
 	Register(chainsv1alpha2.ChainLitecoin, &litecoinAdapter{
 		utxoProtocolAdapter: utxoProtocolAdapter{
-			protocolAdapter:    protocolAdapter{livenessPort: 9332},
-			rpcUserEnv:     "LTC_RPC_USER",
-			rpcPasswordEnv: "LTC_RPC_PASSWORD",
-			defaultUser:    "rpc",
-			defaultPass:    "rpc",
-			useRetry:       true,
+			protocolAdapter: protocolAdapter{livenessPort: 9332},
+			rpcUserEnv:      "LTC_RPC_USER",
+			rpcPasswordEnv:  "LTC_RPC_PASSWORD",
+			defaultUser:     "rpc",
+			defaultPass:     "rpc",
+			useRetry:        true,
 		},
 	})
 }
