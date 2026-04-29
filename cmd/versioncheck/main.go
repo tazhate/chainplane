@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -253,6 +254,12 @@ func versionsGenPath() (string, error) {
 	return "", fmt.Errorf("could not locate go.mod (run from repo root)")
 }
 
+// mapEntryRe matches Go map string entries in both normal and aligned formats:
+//
+//	"key": "value",
+//	"key":    "value",
+var mapEntryRe = regexp.MustCompile(`^"([^"]*)"\s*:\s*"([^"]*)"\s*,?\s*$`)
+
 // parseVersionsGen reads versions_gen.go and extracts the chainDefaultImages map.
 // Relies on the machine-generated file having a stable, well-known format.
 func parseVersionsGen(path string) (map[nodesv1alpha1.Chain]map[string]string, error) {
@@ -289,14 +296,9 @@ func parseVersionsGen(path string) (map[nodesv1alpha1.Chain]map[string]string, e
 		}
 
 		if inChain {
-			// Client entry: "": "image:tag",  or  "geth": "image:tag",
-			if strings.Contains(trimmed, `": "`) {
-				parts := strings.SplitN(trimmed, `": "`, 2)
-				if len(parts) == 2 {
-					clientKey := strings.TrimPrefix(parts[0], `"`)
-					imageRef := strings.TrimSuffix(strings.TrimSuffix(parts[1], `",`), `"`)
-					result[currentChain][clientKey] = imageRef
-				}
+			// Client entry: "key": "value",  or aligned: "key":   "value",
+			if m := mapEntryRe.FindStringSubmatch(trimmed); m != nil {
+				result[currentChain][m[1]] = m[2]
 				continue
 			}
 			if trimmed == "}," || trimmed == "}" {
