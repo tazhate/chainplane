@@ -1,0 +1,25 @@
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dco:
+    name: DCO check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get PR commits
+        id: get-commits
+        uses: tim-actions/get-pr-commits@v1.3.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Signed-off-by trailer
+        uses: tim-actions/dco@v1.1.0
+        with:
+          commits: ${{ steps.get-commits.outputs.commits }}

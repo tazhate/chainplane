@@ -2,6 +2,22 @@
 
 Thank you for your interest in contributing. This document covers the development workflow, testing, and how to add support for new blockchain chains.
 
+## Developer Certificate of Origin (DCO)
+
+All contributions to chainplane must be made under the [Developer Certificate of Origin](https://developercertificate.org/). By signing off your commits you certify that:
+
+- The contribution was created by you and you have the right to submit it under the project license; or
+- The contribution is based on previous work licensed under the same open-source license; or
+- The contribution was provided to you by a third party who has the right to submit it under the project license.
+
+**How to sign off:** add `Signed-off-by: Your Name <you@example.com>` to each commit. The `git commit -s` flag does this automatically.
+
+A DCO check runs on every pull request. PRs without sign-off cannot be merged.
+
+## License of Contributions
+
+All contributions are accepted under the [Apache License, Version 2.0](LICENSE). New source files must include the SPDX header from `hack/boilerplate.go.txt`.
+
 ## Prerequisites
 
 - **Go 1.23+** (version pinned in `go.mod`)
