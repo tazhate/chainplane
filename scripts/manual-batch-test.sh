@@ -20,7 +20,7 @@ set -uo pipefail
 BATCH_SIZE="${BATCH_SIZE:-5}"
 READY_TIMEOUT="${READY_TIMEOUT:-600}"
 STORAGE_CLASS="${STORAGE_CLASS:-standard}"
-STORAGE_SIZE="${STORAGE_SIZE:-5Gi}"
+STORAGE_SIZE="${STORAGE_SIZE:-1Gi}"
 NAMESPACE="${NAMESPACE:-chainplane-batch}"
 CHAINS_FILTER="${CHAINS_FILTER:-}"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts}"
@@ -281,6 +281,7 @@ while [[ ${i} -lt ${TOTAL} ]]; do
   [[ ${end} -gt ${TOTAL} ]] && end=${TOTAL}
   echo
   echo "=== batch $((i / BATCH_SIZE + 1)) [$((i+1))-${end}/${TOTAL}] ==="
+  df -h / 2>&1 | tail -1 | awk '{printf "    disk: %s free, %s used (%s)\n", $4, $3, $5}'
   run_batch "${ALL_SAMPLES[@]:i:$((end - i))}"
   i=${end}
 done
