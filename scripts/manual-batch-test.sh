@@ -165,9 +165,13 @@ fail=0
   printf "|%s|%s|%s\n" "$(printf '%.s-' {1..42})" "$(printf '%.s-' {1..8})" "$(printf '%.s-' {1..40})"
   for n in "${!RESULTS_NAME[@]}"; do
     printf "| %-40s | %-6s | %s\n" "${RESULTS_NAME[$n]}" "${RESULTS_STATUS[$n]}" "${RESULTS_REASON[$n]}"
-    [[ "${RESULTS_STATUS[$n]}" == "FAIL" ]] && fail=$((fail + 1))
   done
-} | tee "${ARTIFACTS_DIR}/summary.txt"
+} > "${ARTIFACTS_DIR}/summary.txt"
+cat "${ARTIFACTS_DIR}/summary.txt"
+
+for n in "${!RESULTS_NAME[@]}"; do
+  [[ "${RESULTS_STATUS[$n]}" == "FAIL" ]] && fail=$((fail + 1))
+done
 
 echo
 echo "passed=$(( ${#RESULTS_NAME[@]} - fail )) failed=${fail} total=${#RESULTS_NAME[@]}"

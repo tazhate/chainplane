@@ -10,7 +10,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-nodes-chainplane-io-v1alpha2-chaininstance
+      path: /validate-chains-chainplane-io-v1alpha2-chaininstance
   failurePolicy: Fail
   name: vchaininstance.kb.io
   rules:

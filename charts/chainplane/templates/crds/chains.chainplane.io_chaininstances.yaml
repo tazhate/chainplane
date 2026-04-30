@@ -6,8 +6,6 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.1
   name: chaininstances.chains.chainplane.io
-  labels:
-    {{- include "chainplane.labels" . | nindent 4 }}
 spec:
   group: chains.chainplane.io
   names:
@@ -49,8 +47,9 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          ChainInstance manages the full lifecycle of a blockchain node:
-          StatefulSet, PVC, Services, ConfigMap, and health monitoring.
+          ChainInstance manages the full lifecycle of a blockchain node: StatefulSet,
+          PVC, Services, ConfigMap, and health monitoring. It is the primary custom
+          resource of the chainplane.
         properties:
           apiVersion:
             description: |-
@@ -70,14 +69,20 @@ spec:
           metadata:
             type: object
           spec:
-            description: ChainInstanceSpec defines the desired state of ChainInstance.
+            description: |-
+              ChainInstanceSpec defines the desired state of a ChainInstance resource.
+              It captures the full configuration needed to provision and operate a
+              blockchain node: chain type, client software, resource requirements,
+              storage, health monitoring, and sidecar containers.
             properties:
               chain:
-                description: Chain is the blockchain to run (e.g. ethereum, bitcoin,
-                  solana)
+                description: |-
+                  Chain selects the blockchain protocol (e.g. "ethereum", "bitcoin", "solana").
+                  This field is immutable after creation.
                 enum:
                 - ethereum
                 - ethereum-archive
+                - ethereum-beacon
                 - bitcoin
                 - solana
                 - bsc
@@ -94,20 +99,100 @@ spec:
                 - sui
                 - aptos
                 - cardano
+                - arbitrum
+                - optimism
+                - base
+                - fantom
+                - gnosis
+                - gnosis-beacon
+                - mantle
+                - zksync
+                - linea
+                - scroll
+                - berachain
+                - cronos
+                - ronin
+                - celo
+                - blast
+                - mode
+                - zora
+                - taiko
+                - dogecoin
+                - osmosis
+                - sei
+                - evmos
+                - kava
+                - polkadot
+                - starknet
+                - filecoin
+                - moonbeam
+                - moonriver
+                - polygon-zkevm
+                - manta-pacific
+                - metis
+                - fraxtal
+                - lisk
+                - kroma
+                - bob
+                - boba-eth
+                - soneium
+                - swell
+                - superseed
+                - ink
+                - morph
+                - worldchain
+                - unichain
+                - lens
+                - plume
+                - hemi
+                - abstract
+                - megaeth
+                - zero-network
+                - zircuit
+                - immutable-zkevm
+                - axelar
+                - dymension
+                - aurora
+                - harmony
+                - rootstock
+                - telos
+                - klaytn
+                - shibarium
+                - core
+                - haqq
+                - hashkey
+                - ethereum-classic
+                - opbnb
+                - fuse
+                - thundercore
+                - wemix
+                - viction
+                - cronos-zkevm
+                - sonic
+                - goat
+                - katana
+                - mezo
+                - plasma
+                - playnance
+                - kusama
+                - hyperliquid
+                - monad
                 type: string
               client:
-                description: Client is the specific client software (e.g. nethermind,
-                  geth, reth, erigon)
+                description: |-
+                  Client overrides the default client software for the chain
+                  (e.g. "nethermind", "geth", "reth", "erigon" for Ethereum).
+                  When empty the adapter's default client is used.
                 type: string
               extraArgs:
-                description: ExtraArgs are additional command-line arguments for the
-                  node process
+                description: ExtraArgs are additional command-line arguments passed
+                  to the node process.
                 items:
                   type: string
                 type: array
               extraEnv:
-                description: ExtraEnv are additional environment variables for the
-                  node container
+                description: ExtraEnv are additional environment variables injected
+                  into the node container.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -227,7 +312,7 @@ spec:
               extraVolumeMounts:
                 description: |-
                   ExtraVolumeMounts are additional volume mounts for the main node container.
-                  Use together with ExtraVolumes to expose secrets/configmaps to the node process.
+                  Use together with ExtraVolumes to expose secrets or configmaps.
                 items:
                   description: VolumeMount describes a mounting of a Volume within
                     a container.
@@ -292,8 +377,8 @@ spec:
                 type: array
               extraVolumes:
                 description: |-
-                  ExtraVolumes are additional pod volumes (e.g. JWT secrets for Engine API).
-                  Volumes defined here are appended to the default "data" and "config" volumes.
+                  ExtraVolumes are additional pod-level volumes (e.g. JWT secrets for Engine API).
+                  They are appended to the default "data" and "config" volumes.
                 items:
                   description: Volume represents a named volume in a pod that may
                     be accessed by any container in the pod.
@@ -2077,48 +2162,79 @@ spec:
                   type: object
                 type: array
               health:
-                description: Health configures health monitoring thresholds.
+                description: Health configures health-monitoring thresholds.
                 properties:
                   blockLagThreshold:
                     description: |-
-                      BlockLagThreshold is the maximum number of blocks the node may lag behind
-                      the public chain tip before being marked Degraded.
-                      If not set, a chain-specific default is used (ETH=30, BTC=2, TRON=200).
+                      BlockLagThreshold is the maximum allowed block lag behind the chain tip
+                      before the node is marked Degraded.
+                      When unset, a chain-specific default applies (ETH=30, BTC=2, TRON=200).
                     format: int64
                     type: integer
                   degradedTimeoutMinutes:
                     default: 15
                     description: |-
-                      DegradedTimeoutMinutes is how long (in minutes) a node may remain in
-                      Degraded phase before the controller deletes its pod to trigger a restart.
-                      0 disables auto-restart. Defaults to 15.
+                      DegradedTimeoutMinutes is how many minutes a node may remain Degraded
+                      before the controller deletes its pod to trigger a restart.
+                      Set to 0 to disable auto-restart. Defaults to 15.
                     format: int32
                     type: integer
                 type: object
               image:
                 description: |-
-                  Image overrides the default image for this chain/client.
-                  If not specified, the adapter's default image is used.
+                  Image overrides the default container image for this chain/client.
+                  When nil the adapter's default image is used.
                 properties:
                   pullPolicy:
                     default: IfNotPresent
-                    description: PullPolicy is the image pull policy
+                    description: PullPolicy overrides the default image pull policy.
                     type: string
                   repository:
-                    description: Repository is the image repository (e.g. nethermind/nethermind)
+                    description: Repository is the container image repository (e.g.
+                      "nethermind/nethermind").
                     minLength: 1
                     type: string
                   tag:
-                    description: Tag is the image tag (e.g. 1.26.0)
+                    description: Tag is the image tag or digest (e.g. "1.26.0").
                     minLength: 1
                     type: string
                 required:
                 - repository
                 - tag
                 type: object
+              monitoring:
+                description: Monitoring configures observability resources for this
+                  node.
+                properties:
+                  podMonitor:
+                    description: PodMonitor configures automatic PodMonitor creation
+                      for Prometheus Operator.
+                    properties:
+                      enabled:
+                        description: |-
+                          Enabled controls whether a PodMonitor resource is created for this node.
+                          Requires monitoring.coreos.com CRDs (prometheus-operator) to be installed.
+                          Has no effect if the chain adapter does not expose a "metrics" port.
+                        type: boolean
+                      interval:
+                        description: |-
+                          Interval is the Prometheus scrape interval (e.g. "30s", "1m").
+                          Defaults to the global Prometheus scrape interval when empty.
+                        type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Labels are additional labels applied to the PodMonitor.
+                          Use this to match your Prometheus Operator's podMonitorSelector.
+                        type: object
+                    type: object
+                type: object
               network:
                 default: mainnet
-                description: Network is the network environment
+                description: |-
+                  Network selects the target network (mainnet, testnet, or devnet).
+                  This field is immutable after creation.
                 enum:
                 - mainnet
                 - testnet
@@ -2126,7 +2242,7 @@ spec:
                 type: string
               nodeGroup:
                 default: medium
-                description: NodeGroup defines which hardware tier to schedule on
+                description: NodeGroup selects the hardware scheduling tier.
                 enum:
                 - light
                 - medium
@@ -2137,7 +2253,7 @@ spec:
                 type: string
               nodeType:
                 default: rpc
-                description: NodeType is the type of node to run
+                description: NodeType determines the operational role of the node.
                 enum:
                 - rpc
                 - archive
@@ -2146,14 +2262,16 @@ spec:
                 type: string
               replicas:
                 default: 1
-                description: Replicas is the number of node instances. Set to 0 to
-                  pause the node.
+                description: |-
+                  Replicas is the number of node instances to run.
+                  Set to 0 to pause the node (scale-down without data loss).
                 format: int32
                 maximum: 10
                 minimum: 0
                 type: integer
               resources:
-                description: Resources defines CPU/memory requests and limits
+                description: Resources defines the CPU and memory requests/limits
+                  for the node container.
                 properties:
                   claims:
                     description: |-
@@ -2212,19 +2330,21 @@ spec:
                     type: object
                 type: object
               rpc:
-                description: RPC configures the RPC endpoint exposure
+                description: RPC configures the JSON-RPC endpoint exposure.
                 properties:
                   enabled:
                     default: true
-                    description: Enabled controls whether to expose RPC endpoints
+                    description: Enabled controls whether RPC endpoints are exposed
+                      via a Service.
                     type: boolean
                   port:
                     default: 8545
-                    description: Port is the HTTP RPC port
+                    description: Port is the HTTP JSON-RPC listen port.
                     format: int32
                     type: integer
                   wsPort:
-                    description: WSPort is the WebSocket RPC port
+                    description: WSPort is the WebSocket RPC listen port. When zero,
+                      WebSocket is disabled.
                     format: int32
                     type: integer
                 required:
@@ -2232,9 +2352,9 @@ spec:
                 type: object
               sidecars:
                 description: |-
-                  Sidecars are additional containers to run alongside the main node container.
-                  Useful for consensus-layer clients (e.g. Lighthouse for Ethereum EL+CL) or
-                  helper processes. Sidecars share the "data" volume with the main container.
+                  Sidecars are additional containers running alongside the node container.
+                  Common use case: consensus-layer clients (e.g. Lighthouse for Ethereum EL+CL).
+                  Sidecars share the "data" volume with the main container.
                 items:
                   description: A single application container that you want to run
                     within a pod.
@@ -3658,42 +3778,47 @@ spec:
                 type: array
               snapshot:
                 description: |-
-                  Snapshot configures snapshot bootstrapping behaviour.
-                  If nil, the operator uses its default MinIO-based bootstrap when MINIO_ENDPOINT is set.
+                  Snapshot configures snapshot-based bootstrapping.
+                  When nil, the operator uses its default MinIO-based bootstrap if MINIO_ENDPOINT is set.
                 properties:
                   bucket:
-                    description: Bucket overrides the default MinIO bucket ("snapshots-{chain}").
+                    description: Bucket overrides the default MinIO bucket name ("snapshots-{chain}").
                     type: string
                   disabled:
-                    description: Disabled=true → native sync from genesis, no snapshot
-                      init container.
+                    description: Disabled skips snapshot bootstrapping entirely; the
+                      node syncs from genesis.
                     type: boolean
                   key:
-                    description: Key overrides the specific object key in the MinIO
-                      bucket.
+                    description: Key overrides the specific object key inside the
+                      MinIO bucket.
                     type: string
                   type:
                     default: full
                     description: |-
                       Type selects the snapshot variant: "full" (default) or "lite".
-                      Lite snapshots are much smaller but may lack full transaction history.
+                      Lite snapshots are smaller but may lack full transaction history.
                     enum:
                     - full
                     - lite
                     type: string
                 type: object
               storage:
-                description: Storage defines the persistent volume configuration
+                description: Storage defines persistent volume configuration for chain
+                  data.
                 properties:
                   size:
                     anyOf:
                     - type: integer
                     - type: string
-                    description: Size is the storage size (e.g. 4Ti)
+                    description: |-
+                      Size is the requested PVC capacity (e.g. "4Ti", "500Gi").
+                      Must be greater than zero.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   storageClass:
-                    description: StorageClass is the Kubernetes storage class name
+                    description: |-
+                      StorageClass overrides the default Kubernetes StorageClass.
+                      When empty the cluster default is used.
                     type: string
                 required:
                 - size
@@ -3706,15 +3831,19 @@ spec:
             - storage
             type: object
           status:
-            description: ChainInstanceStatus defines the observed state of ChainInstance.
+            description: |-
+              ChainInstanceStatus defines the observed state of ChainInstance as
+              reported by the controller's reconciliation loop and health checks.
             properties:
               blockHeight:
-                description: BlockHeight is the latest confirmed block number
+                description: BlockHeight is the latest confirmed block number known
+                  to the node.
                 format: int64
                 type: integer
               conditions:
-                description: Conditions represent the latest available observations
-                  of the node's state
+                description: |-
+                  Conditions represent the latest available observations of the node state.
+                  Supported condition types: Ready, Syncing, Degraded.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -3774,25 +3903,27 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedGeneration:
-                description: ObservedGeneration is the generation last processed by
-                  the controller
+                description: ObservedGeneration is the .metadata.generation that was
+                  last reconciled.
                 format: int64
                 type: integer
               peersCount:
-                description: PeersCount is the number of connected peers
+                description: PeersCount is the number of connected p2p peers.
                 format: int32
                 type: integer
               phase:
-                description: Phase is the current lifecycle phase of the node
+                description: Phase is the high-level lifecycle phase of the node.
                 type: string
               syncETA:
                 description: |-
-                  SyncETA is the estimated time remaining until the node is fully synced (e.g. "2h15m").
-                  Empty when the node is synced, stalled, or the rate cannot be calculated yet.
+                  SyncETA is the estimated time remaining until the node is fully synced
+                  (e.g. "2h15m"). Empty when synced, stalled, or the rate cannot be
+                  calculated yet.
                 type: string
               syncProgress:
-                description: SyncProgress is the human-readable sync percentage (e.g.
-                  "98.5%")
+                description: |-
+                  SyncProgress is the human-readable sync percentage (e.g. "98.5%").
+                  Empty when fully synced.
                 type: string
             type: object
         type: object

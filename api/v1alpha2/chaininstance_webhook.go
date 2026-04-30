@@ -197,7 +197,7 @@ func (r *ChainInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // ChainInstanceValidator implements webhook.CustomValidator for ChainInstance.
-// +kubebuilder:webhook:path=/validate-nodes-chainplane-io-v1alpha2-chaininstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=chains.chainplane.io,resources=chaininstances,verbs=create;update,versions=v1alpha2,name=vchaininstance.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-chains-chainplane-io-v1alpha2-chaininstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=chains.chainplane.io,resources=chaininstances,verbs=create;update,versions=v1alpha2,name=vchaininstance.kb.io,admissionReviewVersions=v1
 type ChainInstanceValidator struct{}
 
 var _ webhook.CustomValidator = &ChainInstanceValidator{}
