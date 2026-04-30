@@ -153,6 +153,11 @@ spec:
                 - kusama
                 - hyperliquid
                 - monad
+                - bittorrent
+                - doma
+                - everclear
+                - gravity-alpha
+                - moca
                 type: string
               checkInterval:
                 description: |-
