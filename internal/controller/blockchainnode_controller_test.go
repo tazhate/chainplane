@@ -96,13 +96,14 @@ func reconcileOnce(ctx context.Context, name types.NamespacedName) (reconcile.Re
 var _ = Describe("ChainInstance Controller", func() {
 	const testNS = "default"
 
-	Context("Finalizer management", func() {
-		It("should add finalizer on first reconcile", func() {
+	Context("Legacy finalizer cleanup", func() {
+		It("should strip legacy finalizer if present on existing CR", func() {
 			ctx := context.Background()
-			name := "test-finalizer"
+			name := "test-legacy-finalizer"
 			nn := types.NamespacedName{Name: name, Namespace: testNS}
 
 			node := newTestNode(name, testNS)
+			controllerutil.AddFinalizer(node, chainsv1alpha2.FinalizerName)
 			Expect(k8sClient.Create(ctx, node)).To(Succeed())
 			DeferCleanup(func() {
 				n := &chainsv1alpha2.ChainInstance{}
@@ -113,14 +114,13 @@ var _ = Describe("ChainInstance Controller", func() {
 				}
 			})
 
-			// First reconcile adds the finalizer and requeues.
 			result, err := reconcileOnce(ctx, nn)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Requeue).To(BeTrue())
 
 			updated := &chainsv1alpha2.ChainInstance{}
 			Expect(k8sClient.Get(ctx, nn, updated)).To(Succeed())
-			Expect(controllerutil.ContainsFinalizer(updated, chainsv1alpha2.FinalizerName)).To(BeTrue())
+			Expect(controllerutil.ContainsFinalizer(updated, chainsv1alpha2.FinalizerName)).To(BeFalse())
 		})
 	})
 
@@ -384,7 +384,7 @@ var _ = Describe("ChainInstance Controller", func() {
 	})
 
 	Context("Deletion handling", func() {
-		It("should remove finalizer and allow deletion", func() {
+		It("should not block deletion (no finalizer set on new CRs)", func() {
 			ctx := context.Background()
 			name := fmt.Sprintf("test-delete-%d", time.Now().UnixNano())
 			nn := types.NamespacedName{Name: name, Namespace: testNS}
@@ -392,32 +392,17 @@ var _ = Describe("ChainInstance Controller", func() {
 			node := newTestNode(name, testNS)
 			Expect(k8sClient.Create(ctx, node)).To(Succeed())
 
-			// Reconcile to add finalizer and create resources.
 			_, _ = reconcileOnce(ctx, nn)
 			_, _ = reconcileOnce(ctx, nn)
 
-			// Verify finalizer exists.
 			fetched := &chainsv1alpha2.ChainInstance{}
 			Expect(k8sClient.Get(ctx, nn, fetched)).To(Succeed())
-			Expect(controllerutil.ContainsFinalizer(fetched, chainsv1alpha2.FinalizerName)).To(BeTrue())
+			Expect(controllerutil.ContainsFinalizer(fetched, chainsv1alpha2.FinalizerName)).To(BeFalse())
 
-			// Delete the resource.
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 
-			// Reconcile handles deletion: scales down and removes finalizer.
-			// May take multiple reconciles for the full flow.
-			for i := 0; i < 5; i++ {
-				_, _ = reconcileOnce(ctx, nn)
-			}
-
-			// Object should be gone (or have no finalizer, allowing GC).
 			err := k8sClient.Get(ctx, nn, fetched)
-			if err == nil {
-				// If still exists, finalizer should be gone.
-				Expect(controllerutil.ContainsFinalizer(fetched, chainsv1alpha2.FinalizerName)).To(BeFalse())
-			} else {
-				Expect(errors.IsNotFound(err)).To(BeTrue())
-			}
+			Expect(errors.IsNotFound(err)).To(BeTrue())
 		})
 	})
 

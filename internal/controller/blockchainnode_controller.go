@@ -102,18 +102,18 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.patchPhase(ctx, node, chainsv1alpha2.NodePhaseFailed)
 	}
 
-	// Handle deletion before anything else.
-	if !node.DeletionTimestamp.IsZero() {
-		return r.teardown(ctx, node)
-	}
-
-	// Ensure the finalizer is present.
-	if !controllerutil.ContainsFinalizer(node, chainsv1alpha2.FinalizerName) {
-		controllerutil.AddFinalizer(node, chainsv1alpha2.FinalizerName)
+	// Strip legacy finalizer left on CRs created by older operator versions;
+	// owner-reference cascade now handles graceful pod shutdown.
+	if controllerutil.ContainsFinalizer(node, chainsv1alpha2.FinalizerName) {
+		controllerutil.RemoveFinalizer(node, chainsv1alpha2.FinalizerName)
 		if err := r.Update(ctx, node); err != nil {
-			return ctrl.Result{}, fmt.Errorf("adding finalizer to %s/%s: %w", node.Namespace, node.Name, err)
+			return ctrl.Result{}, fmt.Errorf("removing legacy finalizer from %s/%s: %w", node.Namespace, node.Name, err)
 		}
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if !node.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, nil
 	}
 
 	// Reconcile owned resources in dependency order.
@@ -148,42 +148,6 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
-}
-
-// ---------------------------------------------------------------------------
-// Deletion
-// ---------------------------------------------------------------------------
-
-// teardown performs a graceful scale-down and removes the finalizer once pods
-// have terminated.
-func (r *ChainInstanceReconciler) teardown(ctx context.Context, node *chainsv1alpha2.ChainInstance) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
-	sts := &appsv1.StatefulSet{}
-	key := client.ObjectKeyFromObject(node)
-	if err := r.Get(ctx, key, sts); err == nil {
-		if sts.Spec.Replicas == nil || *sts.Spec.Replicas > 0 {
-			zero := int32(0)
-			sts.Spec.Replicas = &zero
-			if err := r.Update(ctx, sts); err != nil {
-				return ctrl.Result{}, fmt.Errorf("scaling StatefulSet %s/%s to zero: %w", node.Namespace, node.Name, err)
-			}
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-		}
-		if sts.Status.ReadyReplicas > 0 {
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-		}
-	}
-
-	if controllerutil.ContainsFinalizer(node, chainsv1alpha2.FinalizerName) {
-		controllerutil.RemoveFinalizer(node, chainsv1alpha2.FinalizerName)
-		if err := r.Update(ctx, node); err != nil {
-			return ctrl.Result{}, fmt.Errorf("removing finalizer from %s/%s: %w", node.Namespace, node.Name, err)
-		}
-		logger.Info("finalizer removed, node deleted gracefully")
-	}
-
-	return ctrl.Result{}, nil
 }
 
 // ---------------------------------------------------------------------------
