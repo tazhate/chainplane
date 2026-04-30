@@ -95,7 +95,7 @@ classify() {
     return
   fi
 
-  pod_json="$(kubectl -n "${NAMESPACE}" get pods -l "chains.chainplane.io/instance=${nm}" -o json 2>/dev/null || echo '{"items":[]}')"
+  pod_json="$(kubectl -n "${NAMESPACE}" get pods -l "app=${nm}" -o json 2>/dev/null || echo '{"items":[]}')"
   local n_pods
   n_pods=$(jq '.items | length' <<<"${pod_json}")
 
@@ -163,10 +163,10 @@ dump_artifacts() {
     kubectl -n "${NAMESPACE}" describe chaininstance "${name}" 2>&1 || true
     echo
     echo "=== describe pods ==="
-    kubectl -n "${NAMESPACE}" describe pods -l "chains.chainplane.io/instance=${name}" 2>&1 || true
+    kubectl -n "${NAMESPACE}" describe pods -l "app=${name}" 2>&1 || true
     echo
     echo "=== pod logs (current + previous) ==="
-    for p in $(kubectl -n "${NAMESPACE}" get pods -l "chains.chainplane.io/instance=${name}" -o name 2>/dev/null); do
+    for p in $(kubectl -n "${NAMESPACE}" get pods -l "app=${name}" -o name 2>/dev/null); do
       echo "--- ${p} current ---"
       kubectl -n "${NAMESPACE}" logs "${p}" --all-containers --tail=200 2>&1 || true
       echo "--- ${p} previous ---"
@@ -268,8 +268,10 @@ run_batch() {
     [[ "${done_status[$nm]}" =~ ^FAIL_ ]] && dump_artifacts "${nm}"
   done
 
-  kubectl delete -f "${tmpdir}/" --wait=false >/dev/null 2>&1 || true
-  kubectl -n "${NAMESPACE}" delete pvc -l app.kubernetes.io/managed-by=chainplane --wait=false 2>/dev/null || true
+  kubectl delete -f "${tmpdir}/" --wait=true --timeout=60s >/dev/null 2>&1 || true
+  # PVCs created by StatefulSet aren't auto-deleted; nuke everything in the
+  # batch namespace so the next batch starts clean.
+  kubectl -n "${NAMESPACE}" delete pvc --all --wait=false >/dev/null 2>&1 || true
   rm -rf "${tmpdir}"
 }
 
