@@ -41,7 +41,7 @@ cover.out
 testbin/
 
 # Compiled binaries (use bin/ for build artifacts)
-versioncheck
+/versioncheck
 
 # Logo lives in assets/, not in repo root
 /logo.png
