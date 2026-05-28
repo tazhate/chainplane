@@ -30,12 +30,19 @@ import (
 )
 
 // ociClient speaks the Docker Distribution / OCI v2 tag-listing protocol.
-// It handles any public registry that issues anonymous Bearer tokens, including
-// Google Artifact Registry (us-docker.pkg.dev) and Amazon ECR Public (public.ecr.aws).
+// It handles public OCI registries with two flavors:
+//
+//   - Google Artifact Registry (us-docker.pkg.dev): public repos are
+//     anonymous-readable; tags are returned in a non-standard nested shape
+//     under {"manifest": {digest: {"tag": [...]}}}.
+//   - Standard OCI registries (e.g. public.ecr.aws): require a bearer token
+//     fetched from /token; tags are returned as {"tags": [...]}.
 type ociClient struct {
 	host string
 	http *http.Client
 }
+
+const garHost = "us-docker.pkg.dev"
 
 func (c *ociClient) httpClient() *http.Client {
 	if c.http == nil {
@@ -44,13 +51,123 @@ func (c *ociClient) httpClient() *http.Client {
 	return c.http
 }
 
+// LatestTags fetches tags from the configured OCI registry and filters them by
+// policy.TagPattern. The maxResults cap applies after filtering.
+func (c *ociClient) LatestTags(ctx context.Context, policy adapters.ChainVersionPolicy, maxResults int) ([]TagEntry, error) {
+	repo := policy.Repository
+	if strings.HasPrefix(repo, c.host+"/") {
+		repo = strings.TrimPrefix(repo, c.host+"/")
+	}
+
+	var (
+		tags []string
+		err  error
+	)
+	if c.host == garHost {
+		tags, err = c.fetchGARTags(ctx, repo)
+	} else {
+		tags, err = c.fetchStandardTags(ctx, repo, maxResults)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	pattern, perr := regexp.Compile(policy.TagPattern)
+	if perr != nil {
+		return nil, fmt.Errorf("compile tag pattern %q: %w", policy.TagPattern, perr)
+	}
+
+	entries := make([]TagEntry, 0, maxResults)
+	for _, tag := range tags {
+		if !pattern.MatchString(tag) {
+			continue
+		}
+		entries = append(entries, TagEntry{Tag: tag})
+		if len(entries) >= maxResults {
+			break
+		}
+	}
+	return entries, nil
+}
+
+// fetchGARTags reads all tags from a GAR repository. GAR ignores ?n= pagination
+// and dumps every digest's tag list in one response, so we accept the full
+// payload (typically a few MB for active op-stack repos) and flatten it.
+func (c *ociClient) fetchGARTags(ctx context.Context, repo string) ([]string, error) {
+	tagsURL := fmt.Sprintf("https://%s/v2/%s/tags/list", c.host, repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tagsURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build GAR tags request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GAR tags request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GAR returned %d for %s", resp.StatusCode, repo)
+	}
+
+	var result garTagsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode GAR tags response: %w", err)
+	}
+
+	out := make([]string, 0, len(result.Manifest))
+	for _, m := range result.Manifest {
+		out = append(out, m.Tag...)
+	}
+	return out, nil
+}
+
+// fetchStandardTags uses the Docker Distribution token flow: anonymous bearer
+// token from /token, then /v2/{repo}/tags/list with the token attached.
+func (c *ociClient) fetchStandardTags(ctx context.Context, repo string, maxResults int) ([]string, error) {
+	token, err := c.getToken(ctx, repo)
+	if err != nil {
+		return nil, err
+	}
+
+	fetchN := maxResults * 10
+	if fetchN < 100 {
+		fetchN = 100
+	}
+
+	tagsURL := fmt.Sprintf("https://%s/v2/%s/tags/list?n=%d", c.host, repo, fetchN)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tagsURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build tags request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("tags request to %s: %w", c.host, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s returned %d for %s", c.host, resp.StatusCode, repo)
+	}
+
+	var result ociTagsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode tags response: %w", err)
+	}
+	return result.Tags, nil
+}
+
 type ociTokenResponse struct {
 	Token       string `json:"token"`
 	AccessToken string `json:"access_token"` // ECR Public uses this field
 }
 
 // getToken obtains an anonymous pull token via the standard OAuth2 scope URL.
-// Both GAR and ECR Public follow the same www-authenticate/token pattern.
+// ECR Public follows the standard www-authenticate/token pattern.
 func (c *ociClient) getToken(ctx context.Context, repo string) (string, error) {
 	tokenURL := fmt.Sprintf("https://%s/token?scope=repository:%s:pull&service=%s",
 		c.host, url.QueryEscape(repo), c.host)
@@ -83,66 +200,14 @@ func (c *ociClient) getToken(ctx context.Context, repo string) (string, error) {
 
 type ociTagsResponse struct {
 	Tags []string `json:"tags"`
-	// next page link is in the Link response header — ignored for now since
-	// we request enough tags in one shot via ?n=
 }
 
-func (c *ociClient) LatestTags(ctx context.Context, policy adapters.ChainVersionPolicy, maxResults int) ([]TagEntry, error) {
-	token, err := c.getToken(ctx, policy.Repository)
-	if err != nil {
-		return nil, err
-	}
+// garTagsResponse is the non-standard envelope returned by Google Artifact
+// Registry. Tags are buried inside per-digest manifest entries.
+type garTagsResponse struct {
+	Manifest map[string]garManifestEntry `json:"manifest"`
+}
 
-	// Request more than maxResults so we have room to filter by pattern.
-	fetchN := maxResults * 10
-	if fetchN < 100 {
-		fetchN = 100
-	}
-
-	// Normalize repo path: strip leading "us-docker.pkg.dev/" or host prefix
-	// if the caller accidentally included it.
-	repo := policy.Repository
-	if strings.HasPrefix(repo, c.host+"/") {
-		repo = strings.TrimPrefix(repo, c.host+"/")
-	}
-
-	tagsURL := fmt.Sprintf("https://%s/v2/%s/tags/list?n=%d", c.host, repo, fetchN)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tagsURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build tags request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.httpClient().Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("tags request to %s: %w", c.host, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s returned %d for %s", c.host, resp.StatusCode, repo)
-	}
-
-	var result ociTagsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode tags response: %w", err)
-	}
-
-	pattern, err := regexp.Compile(policy.TagPattern)
-	if err != nil {
-		return nil, fmt.Errorf("compile tag pattern %q: %w", policy.TagPattern, err)
-	}
-
-	entries := make([]TagEntry, 0, maxResults)
-	for _, tag := range result.Tags {
-		if !pattern.MatchString(tag) {
-			continue
-		}
-		entries = append(entries, TagEntry{Tag: tag})
-		if len(entries) >= maxResults {
-			break
-		}
-	}
-	return entries, nil
+type garManifestEntry struct {
+	Tag []string `json:"tag"`
 }
