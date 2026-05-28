@@ -36,6 +36,23 @@ func IsNewer(candidate, current, prefix string) bool {
 	return semver.Compare(c, cur) > 0
 }
 
+// Newest returns the tag from the slice that is greatest by semver under the
+// given prefix. Tags that fail semver parsing are skipped. Returns "" if no
+// candidate parses successfully. Callers should pre-filter pre-releases /
+// floating tags before passing tags in.
+func Newest(tags []string, prefix string) string {
+	best := ""
+	for _, t := range tags {
+		if !semver.IsValid(normalizeTag(t, prefix)) {
+			continue
+		}
+		if best == "" || IsNewer(t, best, prefix) {
+			best = t
+		}
+	}
+	return best
+}
+
 // normalizeTag strips prefix, ensures a leading "v", and pads to vMAJOR.MINOR.PATCH
 // to satisfy golang.org/x/mod/semver strict validation (no leading zeros, 3 parts).
 func normalizeTag(tag, prefix string) string {
