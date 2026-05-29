@@ -77,7 +77,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "dashpay/dashd:23.1.2",
 	},
 	chainsv1alpha2.ChainDogecoin: {
-		"": "ruimarinho/dogecoin:1-alpine",
+		"": "fiftysix/dogecoin-core:1.14.9",
 	},
 	chainsv1alpha2.ChainDoma: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0",
@@ -214,7 +214,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "moonbeamfoundation/moonbeam:v0.51.0",
 	},
 	chainsv1alpha2.ChainMorph: {
-		"": "ghcr.io/morphprotocol/node:v0.3.0",
+		"": "ghcr.io/morph-l2/node:0.5.7",
 	},
 	chainsv1alpha2.ChainNear: {
 		"": "nearprotocol/nearcore:2.10.7",

@@ -116,8 +116,8 @@ func (a *dogecoinAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []c
 func (a *dogecoinAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
-		Repository: "ruimarinho/dogecoin",
-		TagPattern: `^\d+-alpine$`,
+		Repository: "fiftysix/dogecoin-core",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }
 
