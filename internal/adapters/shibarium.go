@@ -82,14 +82,6 @@ func (a *shibariumAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *shibariumAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "shibaone/bor",
-		TagPattern: `^v\d+\.\d+\.\d+`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------

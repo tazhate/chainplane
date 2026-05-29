@@ -88,14 +88,6 @@ func (a *sonicAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *sonicAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "ghcr.io",
-		Repository: "0xsoniclabs/sonic",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------

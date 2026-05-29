@@ -84,14 +84,6 @@ func (a *wemixAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *wemixAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "wemixnetwork/wemix",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------

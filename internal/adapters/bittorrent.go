@@ -81,14 +81,6 @@ func (a *bittorrentAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *bittorrentAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "bttcprotocol/bttc",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------
