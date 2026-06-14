@@ -144,13 +144,18 @@ func checkVersions(
 				return
 			}
 
-			// Pick the latest stable tag (skip pre-releases, nightly, latest, etc.)
+			// Collect all stable tags, then pick the semver-max — registries
+			// don't guarantee ordering (Docker Hub sorts by last_pushed, which
+			// can rank a stale patch above a real major release).
+			stable := make([]string, 0, len(tags))
 			for _, t := range tags {
 				if isStableTag(t.Tag, it.policy.TagPrefix) {
-					res.LatestTag = t.Tag
-					res.IsNewer = registry.IsNewer(res.LatestTag, res.CurrentTag, it.policy.TagPrefix)
-					break
+					stable = append(stable, t.Tag)
 				}
+			}
+			if latest := registry.Newest(stable, it.policy.TagPrefix); latest != "" {
+				res.LatestTag = latest
+				res.IsNewer = registry.IsNewer(res.LatestTag, res.CurrentTag, it.policy.TagPrefix)
 			}
 
 			mu.Lock()

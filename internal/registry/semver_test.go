@@ -41,6 +41,55 @@ func TestIsNewer(t *testing.T) {
 	}
 }
 
+func TestNewest(t *testing.T) {
+	cases := []struct {
+		name   string
+		tags   []string
+		prefix string
+		want   string
+	}{
+		{
+			name: "registry returns mixed order picks max",
+			tags: []string{"v27.2", "v28.0", "v27.1", "v26.5"},
+			want: "v28.0",
+		},
+		{
+			name: "CalVer year-month",
+			tags: []string{"v2024.08-1", "v2026.02-1", "v2025.06-1"},
+			want: "v2026.02-1",
+		},
+		{
+			name:   "with prefix",
+			tags:   []string{"GreatVoyage-v4.8.0", "GreatVoyage-v4.8.1", "GreatVoyage-v4.7.9"},
+			prefix: "GreatVoyage-",
+			want:   "GreatVoyage-v4.8.1",
+		},
+		{
+			name: "skips garbage tags",
+			tags: []string{"nightly", "v1.2.3", "stable"},
+			want: "v1.2.3",
+		},
+		{
+			name: "empty input",
+			tags: nil,
+			want: "",
+		},
+		{
+			name: "all invalid",
+			tags: []string{"foo", "bar"},
+			want: "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Newest(tc.tags, tc.prefix)
+			if got != tc.want {
+				t.Errorf("Newest(%v, %q) = %q, want %q", tc.tags, tc.prefix, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestNormalizeTag(t *testing.T) {
 	cases := []struct {
 		tag, prefix, want string
