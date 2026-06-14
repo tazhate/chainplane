@@ -14,7 +14,7 @@ import (
 // Inner key: lowercase client name, or "" for the chain default.
 var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 	chainsv1alpha2.ChainAbstract: {
-		"": "matterlabs/external-node:v24.5.0",
+		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainAptos: {
 		"": "aptoslabs/validator:mainnet",
@@ -32,7 +32,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "axelarnet/axelar-core:v1.4.7",
 	},
 	chainsv1alpha2.ChainBase: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainBerachain: {
 		"": "ghcr.io/berachain/beacon-kit:v0.2.0",
@@ -118,7 +118,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "filecoin/lotus:v1.36.0",
 	},
 	chainsv1alpha2.ChainFraxtal: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.1",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainFuse: {
 		"": "fusenet/node:2.0.2",
@@ -157,7 +157,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.1",
 	},
 	chainsv1alpha2.ChainKatana: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101604.0",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.0",
 	},
 	chainsv1alpha2.ChainKava: {
 		"": "kava-labs/kava:v0.26.2",
@@ -172,7 +172,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "parity/polkadot:v1.22.3",
 	},
 	chainsv1alpha2.ChainLens: {
-		"": "matterlabs/external-node:v24.5.0",
+		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainLinea: {
 		"": "consensys/linea-besu:24.12.2",
@@ -196,7 +196,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "metisprotocol/l2geth:v1.4.2",
 	},
 	chainsv1alpha2.ChainMezo: {
-		"": "mezo/mezod:v9.1.0",
+		"": "mezo/mezod:v11.0.0",
 	},
 	chainsv1alpha2.ChainMoca: {
 		"": "moca-network/moca:v0.1.0",
@@ -208,16 +208,16 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "monadlabs/monad-node:latest",
 	},
 	chainsv1alpha2.ChainMoonbeam: {
-		"": "moonbeamfoundation/moonbeam:v0.52.0",
+		"": "moonbeamfoundation/moonbeam:v0.52.3",
 	},
 	chainsv1alpha2.ChainMoonriver: {
-		"": "moonbeamfoundation/moonbeam:v0.52.0",
+		"": "moonbeamfoundation/moonbeam:v0.52.3",
 	},
 	chainsv1alpha2.ChainMorph: {
 		"": "ghcr.io/morph-l2/node:0.5.7",
 	},
 	chainsv1alpha2.ChainNear: {
-		"": "nearprotocol/nearcore:2.10.7",
+		"": "nearprotocol/nearcore:2.12.0",
 	},
 	chainsv1alpha2.ChainOpBNB: {
 		"": "ghcr.io/bnb-chain/op-geth:v0.5.2",
@@ -265,7 +265,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "solanalabs/agave:v2.1.0",
 	},
 	chainsv1alpha2.ChainSoneium: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101701.0",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.1",
 	},
 	chainsv1alpha2.ChainSonic: {
 		"": "ghcr.io/0xsoniclabs/sonic:v2.1.6",
@@ -310,22 +310,22 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "wemixnetwork/wemix:v1.2.0",
 	},
 	chainsv1alpha2.ChainWorldchain: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.0",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.1",
 	},
 	chainsv1alpha2.ChainXRP: {
 		"": "xrpllabsofficial/xrpld:3.1.3",
 	},
 	chainsv1alpha2.ChainZeroNetwork: {
-		"": "matterlabs/external-node:v24.5.0",
+		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainZircuit: {
 		"": "ghcr.io/zircuit-labs/l2-geth-public:v1.0.0",
 	},
 	chainsv1alpha2.ChainZkSync: {
-		"": "matterlabs/external-node:v2.0.22",
+		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainZora: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.1",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.2",
 	},
 }
 
