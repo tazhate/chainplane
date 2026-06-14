@@ -26,13 +26,13 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "nearaurora/srpc2-relayer:latest",
 	},
 	chainsv1alpha2.ChainAvalanche: {
-		"": "avaplatform/avalanchego:v1.14.1",
+		"": "avaplatform/avalanchego:v1.14.2",
 	},
 	chainsv1alpha2.ChainAxelar: {
 		"": "axelarnet/axelar-core:v1.4.7",
 	},
 	chainsv1alpha2.ChainBase: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101500.1",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5",
 	},
 	chainsv1alpha2.ChainBerachain: {
 		"": "ghcr.io/berachain/beacon-kit:v0.2.0",
@@ -47,7 +47,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "blastio/blast-geth:mainnet-v1.8.0",
 	},
 	chainsv1alpha2.ChainBob: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.1",
 	},
 	chainsv1alpha2.ChainBobaEth: {
 		"": "bobanetwork/op-geth:v1.101411.4",
@@ -59,7 +59,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/intersectmbo/cardano-node:10.6.2",
 	},
 	chainsv1alpha2.ChainCelo: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101608.0",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainCore: {
 		"": "coredao/core-chain:v1.0.22",
@@ -103,7 +103,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "sigp/lighthouse:v8.1.3",
 	},
 	chainsv1alpha2.ChainEthereumClassic: {
-		"": "hyperledger/besu:26.5.0",
+		"": "hyperledger/besu:26.6.0",
 	},
 	chainsv1alpha2.ChainEverclear: {
 		"": "offchainlabs/nitro-node:v3.6.0",
@@ -118,13 +118,13 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "filecoin/lotus:v1.36.0",
 	},
 	chainsv1alpha2.ChainFraxtal: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.0",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.1",
 	},
 	chainsv1alpha2.ChainFuse: {
 		"": "fusenet/node:2.0.2",
 	},
 	chainsv1alpha2.ChainGnosis: {
-		"": "nethermind/nethermind:1.37.2",
+		"": "nethermind/nethermind:1.38.0",
 	},
 	chainsv1alpha2.ChainGnosisBeacon: {
 		"": "sigp/lighthouse:v8.1.3",
@@ -154,10 +154,10 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0",
 	},
 	chainsv1alpha2.ChainInk: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.1",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.1",
 	},
 	chainsv1alpha2.ChainKatana: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.1",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101604.0",
 	},
 	chainsv1alpha2.ChainKava: {
 		"": "kava-labs/kava:v0.26.2",
@@ -265,22 +265,22 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "solanalabs/agave:v2.1.0",
 	},
 	chainsv1alpha2.ChainSoneium: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101701.0",
 	},
 	chainsv1alpha2.ChainSonic: {
 		"": "ghcr.io/0xsoniclabs/sonic:v2.1.6",
 	},
 	chainsv1alpha2.ChainStarknet: {
-		"": "nethermindeth/juno:v0.16.0",
+		"": "nethermindeth/juno:v0.16.2",
 	},
 	chainsv1alpha2.ChainStellar: {
 		"": "stellar/stellar-core:v19.12.0",
 	},
 	chainsv1alpha2.ChainSui: {
-		"": "mysten/sui-node:v1.39.2",
+		"": "mysten/sui-node:mainnet-v1.72.5",
 	},
 	chainsv1alpha2.ChainSuperseed: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.1",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainSwell: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101701.0",
@@ -310,7 +310,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "wemixnetwork/wemix:v1.2.0",
 	},
 	chainsv1alpha2.ChainWorldchain: {
-		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101609.2",
+		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.0",
 	},
 	chainsv1alpha2.ChainXRP: {
 		"": "xrpllabsofficial/xrpld:3.1.3",
