@@ -244,7 +244,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "0xpolygon/bor:2.8.3",
 	},
 	chainsv1alpha2.ChainPolygonZkEVM: {
-		"": "0xpolygonhermez/zkevm-node:v0.7.0",
+		"": "ghcr.io/0xpolygon/cdk-erigon:v2.64.2",
 	},
 	chainsv1alpha2.ChainRonin: {
 		"": "ghcr.io/ronin-chain/ronin:v2.8.3",
