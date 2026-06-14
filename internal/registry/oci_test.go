@@ -38,19 +38,19 @@ func pointTo(t *testing.T, srv *httptest.Server, host string) *ociClient {
 		t.Fatalf("parse test server URL: %v", err)
 	}
 	// Custom transport rewrites scheme+host to the test server.
-	rt := &rewriteTransport{base: http.DefaultTransport, target: u}
+	rt := &ociRewriteTransport{base: http.DefaultTransport, target: u}
 	return &ociClient{
 		host: host,
 		http: &http.Client{Transport: rt, Timeout: 5 * time.Second},
 	}
 }
 
-type rewriteTransport struct {
+type ociRewriteTransport struct {
 	base   http.RoundTripper
 	target *url.URL
 }
 
-func (r *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (r *ociRewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.URL.Scheme = r.target.Scheme
 	req.URL.Host = r.target.Host
 	return r.base.RoundTrip(req)
@@ -95,7 +95,7 @@ func TestOCIClient_GAR_NoTokenAndFlattensManifest(t *testing.T) {
 		t.Errorf("GAR client must not call /token endpoint")
 	}
 
-	got := tagSet(entries)
+	got := ociTagList(entries)
 	want := []string{"v1.101408.0", "v1.101408.0-rc1", "v1.101411.2"}
 	sort.Strings(got)
 	if !equalStrings(got, want) {
@@ -158,8 +158,8 @@ func TestOCIClient_Standard_UsesBearerToken(t *testing.T) {
 	}
 
 	want := []string{"v3.6.2", "v3.6.1", "v3.6.3"}
-	if !equalStrings(tagSet(entries), want) {
-		t.Errorf("got %v, want %v", tagSet(entries), want)
+	if !equalStrings(ociTagList(entries), want) {
+		t.Errorf("got %v, want %v", ociTagList(entries), want)
 	}
 }
 
@@ -213,7 +213,7 @@ func TestOCIClient_GAR_ReturnsErrorOnNon200(t *testing.T) {
 	}
 }
 
-func tagSet(entries []TagEntry) []string {
+func ociTagList(entries []TagEntry) []string {
 	out := make([]string, 0, len(entries))
 	for _, e := range entries {
 		out = append(out, e.Tag)
