@@ -77,8 +77,8 @@ func (a *morphAdapter) DefaultResources() ResourceDefaults {
 func (a *morphAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "ghcr.io",
-		Repository: "morphprotocol/node",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Repository: "morph-l2/node",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }
 
