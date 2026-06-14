@@ -218,26 +218,45 @@ func applyUpdates(updates []versionResult) error {
 	return writeVersionsGen(genPath, images)
 }
 
-// isStableTag reports whether tag is a stable release — not a pre-release, nightly, or floating tag.
-// prefix is stripped before the check (e.g. "GreatVoyage-" for TRON).
+// knownVersionPrefixes are network/release prefixes some projects prepend to an
+// otherwise clean version (e.g. "mainnet-v1.8.0", "GreatVoyage-v4.8.1"). These
+// must NOT cause a tag to be classified as unstable. They are stripped (in
+// addition to the policy prefix) before the semver shape is validated.
+var knownVersionPrefixes = []string{
+	"mainnet-", "testnet-", "greatvoyage-", "scroll-", "plume-", "arrowhead-",
+}
+
+// stableTagRe matches a clean semver-ish version with no pre-release / build
+// suffix: an optional leading "v", then dot-separated numeric components.
+// Examples that match: v28.0, v1.101411.2, 1.37.2, 10.6.2.
+// Anything carrying a "-<something>" (e.g. -rc.1, -synctest.0, -cdfpl.1,
+// -overrides.1, -beta) or other non-numeric junk fails to match.
+var stableTagRe = regexp.MustCompile(`^v?[0-9]+(\.[0-9]+)*$`)
+
+// isStableTag reports whether tag is a stable release — not a pre-release,
+// nightly, service build, or floating tag. prefix (the policy TagPrefix, e.g.
+// "GreatVoyage-" for TRON) is stripped before the check, as are any of the
+// well-known network prefixes some op-stack / cosmos projects prepend.
+//
+// The check is structural rather than a brittle keyword denylist: after
+// stripping recognized prefixes, the remaining tag must be a clean semver
+// (optionally "v"-prefixed) with no "-<suffix>" component. This rejects
+// op-stack service builds such as v1.101511.1-cdfpl.1, v1.101605.0-synctest.0,
+// and v1.101308.2-overrides.1 without needing to enumerate every suffix.
 func isStableTag(tag, prefix string) bool {
 	stripped := strings.TrimPrefix(tag, prefix)
 	lower := strings.ToLower(stripped)
-	// Reject floating / non-versioned tags
-	floating := []string{"latest", "nightly", "canary", "edge", "develop", "main", "master", "unstable"}
-	for _, f := range floating {
-		if lower == f {
-			return false
+
+	// Strip any single known network/release prefix that precedes the version.
+	for _, p := range knownVersionPrefixes {
+		if strings.HasPrefix(lower, p) {
+			lower = strings.TrimPrefix(lower, p)
+			break
 		}
 	}
-	// Reject pre-release suffix keywords that appear after a "-"
-	preRelease := []string{"-alpha", "-beta", "-rc", "-dev", "-pre", "-snapshot", "-test", "-experimental"}
-	for _, p := range preRelease {
-		if strings.Contains(lower, p) {
-			return false
-		}
-	}
-	return true
+
+	// Must be a clean, dotted numeric version with no pre-release/build suffix.
+	return stableTagRe.MatchString(lower)
 }
 
 // parseTag extracts the tag from an image reference (everything after the last ":").
