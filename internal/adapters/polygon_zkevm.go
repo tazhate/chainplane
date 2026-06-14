@@ -118,11 +118,3 @@ func (a *polygonZkEVMAdapter) DefaultResources() ResourceDefaults {
 		Storage:       resource.MustParse("500Gi"),
 	}
 }
-
-func (a *polygonZkEVMAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "0xpolygonhermez/zkevm-node",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}

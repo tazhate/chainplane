@@ -100,9 +100,9 @@ func (a *mantaPacificAdapter) DefaultResources() ResourceDefaults {
 
 func (a *mantaPacificAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "mantanetwork/op-geth",
-		TagPattern: `^v\d+\.\d+\.\d+\.\d+$`,
+		Registry:   "public.ecr.aws",
+		Repository: "i6b2w2n6/op-geth",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }
 

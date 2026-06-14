@@ -90,9 +90,9 @@ func (a *bobaEthAdapter) DefaultResources() ResourceDefaults {
 
 func (a *bobaEthAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "bobanetwork/op-geth",
-		TagPattern: `^v\d+\.\d+\.\d+\.\d+$`,
+		Registry:   "us-docker.pkg.dev",
+		Repository: "oplabs-tools-artifacts/images/op-geth",
+		TagPattern: `^v\d+\.\d+`,
 	}
 }
 

@@ -187,8 +187,8 @@ func (a *seiAdapter) DefaultResources() ResourceDefaults {
 
 func (a *seiAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "seiprotocol/seid",
+		Registry:   "ghcr.io",
+		Repository: "sei-protocol/sei",
 		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }

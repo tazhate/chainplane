@@ -81,9 +81,9 @@ func (a *coreAdapter) DefaultResources() ResourceDefaults {
 
 func (a *coreAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "coredao/core-chain",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Registry:   "ghcr.io",
+		Repository: "coredao-org/core-chain",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }
 

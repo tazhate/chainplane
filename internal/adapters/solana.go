@@ -141,7 +141,7 @@ func (a *solanaAdapter) DefaultResources() ResourceDefaults {
 func (a *solanaAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
-		Repository: "solanalabs/agave",
+		Repository: "anzaxyz/agave",
 		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }

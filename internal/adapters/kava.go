@@ -188,7 +188,7 @@ func (a *kavaAdapter) DefaultResources() ResourceDefaults {
 func (a *kavaAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
-		Repository: "kava-labs/kava",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Repository: "kava/kava",
+		TagPattern: `^v\d+\.\d+\.\d+-goleveldb$`,
 	}
 }
