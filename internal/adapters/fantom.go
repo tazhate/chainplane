@@ -100,14 +100,6 @@ func (a *fantomAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *fantomAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "fantomfoundation/go-opera",
-		TagPattern: `^v\d+\.\d+\.\d+`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config (static)
 // --------------------------------------------------------------------------

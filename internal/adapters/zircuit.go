@@ -73,14 +73,6 @@ func (a *zircuitAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *zircuitAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "ghcr.io",
-		Repository: "zircuit-labs/l2-geth-public",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 func (a *zircuitAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }

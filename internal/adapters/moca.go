@@ -163,14 +163,6 @@ func (a *mocaAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *mocaAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "moca-network/moca",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------

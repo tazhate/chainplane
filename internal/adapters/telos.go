@@ -84,14 +84,6 @@ func (a *telosAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *telosAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "telosnetwork/telos-evm-rpc",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------

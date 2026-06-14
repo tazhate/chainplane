@@ -81,14 +81,6 @@ func (a *cronosAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *cronosAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "crypto-org-chain/cronos",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
 // --------------------------------------------------------------------------
 // Config
 // --------------------------------------------------------------------------
