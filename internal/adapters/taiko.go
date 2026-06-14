@@ -75,8 +75,8 @@ func (a *taikoAdapter) DefaultResources() ResourceDefaults {
 
 func (a *taikoAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "taikoxyz/taiko-geth",
+		Registry:   "us-docker.pkg.dev",
+		Repository: "evmchain/images/taiko-geth",
 		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }

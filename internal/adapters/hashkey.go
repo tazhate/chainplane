@@ -82,9 +82,9 @@ func (a *hashkeyAdapter) DefaultResources() ResourceDefaults {
 
 func (a *hashkeyAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "hashkeychain/hashkey-geth",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Registry:   "us-docker.pkg.dev",
+		Repository: "oplabs-tools-artifacts/images/op-geth",
+		TagPattern: `^v\d+\.\d+`,
 	}
 }
 

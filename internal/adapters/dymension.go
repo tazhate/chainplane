@@ -184,8 +184,8 @@ func (a *dymensionAdapter) DefaultResources() ResourceDefaults {
 
 func (a *dymensionAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "dymensionxyz/dymd",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Registry:   "ghcr.io",
+		Repository: "dymensionxyz/dymension",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }

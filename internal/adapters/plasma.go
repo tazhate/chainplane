@@ -88,9 +88,9 @@ func (a *plasmaAdapter) DefaultResources() ResourceDefaults {
 
 func (a *plasmaAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "plasma-next/node",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Registry:   "ghcr.io",
+		Repository: "plasmalaboratories/plasma-consensus-public",
+		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }
 

@@ -101,7 +101,7 @@ func (a *metisAdapter) DefaultResources() ResourceDefaults {
 func (a *metisAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
-		Repository: "metisprotocol/l2geth",
+		Repository: "metisdao/l2geth",
 		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
 }
