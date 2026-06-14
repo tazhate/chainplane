@@ -10,6 +10,37 @@ release until the API is promoted to `v1beta1`.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-14
+
+### Added
+
+- `polygon-zkevm` migrated from the archived `zkevm-node` to `cdk-erigon`
+  (Erigon-based client). New `hermez-mainnet` config, image
+  `ghcr.io/0xpolygon/cdk-erigon`, and bumped resource defaults.
+
+### Changed
+
+- `versioncheck` now picks the semver-max stable tag instead of the first
+  stable tag, paginates Docker Hub so the newest release is actually seen,
+  rejects op-stack service-build tags, and talks to Google Artifact
+  Registry without a token (parsing its nested tag shape).
+- Refreshed ~48 default node images to their latest stable tags.
+- Repointed 13 chains whose image repositories had moved or were renamed:
+  morph, dogecoin, kava, sei, dymension, solana, core, metis, taiko,
+  manta-pacific, plasma, boba-eth, hashkey.
+
+### Removed
+
+- Dropped automatic version tracking for chains that publish no public,
+  version-tagged image (cronos, telos, fantom, wemix, shibarium,
+  bittorrent, sonic, zircuit, moca). Their pinned defaults are unchanged.
+
+## [0.3.0] - 2026-05-06
+
+### Changed
+
+- Updated blockchain node default images.
+
 ## [0.2.3] - 2026-04-29
 
 ### Fixed

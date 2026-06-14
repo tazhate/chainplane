@@ -2,8 +2,8 @@ apiVersion: v2
 name: chainplane
 description: A Kubernetes operator for managing blockchain node lifecycle
 type: application
-version: 0.2.3
-appVersion: "v0.2.3"
+version: 0.4.0
+appVersion: "v0.4.0"
 kubeVersion: ">=1.26.0-0"
 home: https://github.com/tazhate/chainplane
 sources:
