@@ -274,7 +274,8 @@ func labelsContain(labels, required map[string]string) bool {
 func (t *LabelBasedTrafficManager) podInEndpoints(
 	ctx context.Context, epName, namespace, podIP string,
 ) (bool, error) {
-	var ep corev1.Endpoints
+	// TODO: migrate to discoveryv1.EndpointSlice (needs RBAC for discovery.k8s.io).
+	var ep corev1.Endpoints //nolint:staticcheck // Endpoints is deprecated in v1.33+ but still served.
 	if err := t.kube.Get(ctx, types.NamespacedName{
 		Name: epName, Namespace: namespace,
 	}, &ep); err != nil {

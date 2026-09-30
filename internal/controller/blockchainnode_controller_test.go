@@ -116,7 +116,7 @@ var _ = Describe("ChainInstance Controller", func() {
 
 			result, err := reconcileOnce(ctx, nn)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Requeue).To(BeTrue())
+			Expect(result.RequeueAfter).To(BeNumerically(">", 0))
 
 			updated := &chainsv1alpha2.ChainInstance{}
 			Expect(k8sClient.Get(ctx, nn, updated)).To(Succeed())

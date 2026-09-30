@@ -109,7 +109,7 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := r.Update(ctx, node); err != nil {
 			return ctrl.Result{}, fmt.Errorf("removing legacy finalizer from %s/%s: %w", node.Namespace, node.Name, err)
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	if !node.DeletionTimestamp.IsZero() {
