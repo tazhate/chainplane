@@ -23,7 +23,10 @@ jobs:
       - name: Check for version updates
         run: go run ./cmd/versioncheck --update
         env:
-          # Optional: set to avoid Docker Hub anonymous rate limits (600 req/h)
+          # Optional: authenticate to lift Docker Hub's anonymous rate limit
+          # (180 req/min per IP). Both must be set; the token is a Docker Hub
+          # personal access token with read-only public repo scope.
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Verify build after update

@@ -17,18 +17,40 @@ limitations under the License.
 package registry
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/tazhate/chainplane/internal/adapters"
 )
 
 const dockerHubAPIBase = "https://hub.docker.com/v2/repositories"
+
+// dockerHubAuthURL exchanges a username and personal access token for a
+// short-lived bearer token.
+const dockerHubAuthURL = "https://hub.docker.com/v2/auth/token"
+
+// dockerHubMaxAttempts bounds how many times one page is requested when Docker
+// Hub rate-limits us. Anonymous callers get 180 requests per minute per IP, and
+// a full versioncheck run walks well over that, so a throttled page must wait
+// for the window to reset instead of failing the chain.
+const dockerHubMaxAttempts = 4
+
+// dockerHubDefaultWait is used when a throttled response carries neither
+// Retry-After nor X-RateLimit-Reset. dockerHubMaxWait caps what we honour from
+// those headers so a bogus value cannot stall the run.
+const (
+	dockerHubDefaultWait = 10 * time.Second
+	dockerHubMaxWait     = 65 * time.Second
+)
 
 // dockerHubPageSize is the per-page tag count requested from Docker Hub.
 const dockerHubPageSize = 100
@@ -38,8 +60,76 @@ const dockerHubPageSize = 100
 // could send us into a near-unbounded crawl.
 const dockerHubMaxPages = 20
 
+// dockerHubAnonymousMaxPages is the deepest anonymous callers may page: Docker
+// Hub rejects offsets past 1000 without a login ("pagination offset too large
+// for anonymous requests") with a 403, which used to fail the whole chain.
+const dockerHubAnonymousMaxPages = 1000 / dockerHubPageSize
+
 type dockerHubClient struct {
 	http *http.Client
+	// auth is nil for anonymous access.
+	auth *dockerHubAuth
+}
+
+// dockerHubAuth holds credentials and the bearer token exchanged for them. One
+// instance is shared by every Docker Hub client in the process so the token is
+// fetched once per run, not once per chain.
+type dockerHubAuth struct {
+	username string
+	secret   string
+
+	mu    sync.Mutex
+	token string
+}
+
+// defaultDockerHubAuth reads DOCKERHUB_USERNAME and DOCKERHUB_TOKEN once. Both
+// must be set; otherwise requests stay anonymous.
+var defaultDockerHubAuth = sync.OnceValue(func() *dockerHubAuth {
+	username, secret := os.Getenv("DOCKERHUB_USERNAME"), os.Getenv("DOCKERHUB_TOKEN")
+	if username == "" || secret == "" {
+		return nil
+	}
+	return &dockerHubAuth{username: username, secret: secret}
+})
+
+// bearer returns a cached bearer token, exchanging the credentials on first use.
+func (a *dockerHubAuth) bearer(ctx context.Context, client *http.Client) (string, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.token != "" {
+		return a.token, nil
+	}
+
+	body, err := json.Marshal(map[string]string{"identifier": a.username, "secret": a.secret})
+	if err != nil {
+		return "", fmt.Errorf("encode docker hub credentials: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dockerHubAuthURL, bytes.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("build docker hub auth request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("docker hub auth request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("docker hub auth returned %d for user %s", resp.StatusCode, a.username)
+	}
+
+	var result struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decode docker hub auth response: %w", err)
+	}
+	if result.AccessToken == "" {
+		return "", fmt.Errorf("docker hub auth returned an empty token for user %s", a.username)
+	}
+	a.token = result.AccessToken
+	return a.token, nil
 }
 
 func (c *dockerHubClient) httpClient() *http.Client {
@@ -69,7 +159,7 @@ type dockerHubTag struct {
 // it and versioncheck reports a stale "latest". We therefore follow the
 // response's "next" link, accumulating matching tags across pages until we hold
 // a generous surplus (roughly maxResults*4), the pages run out, or we hit
-// dockerHubMaxPages. Because ordering is not semver, we collect generously
+// dockerHubMaxPages (dockerHubAnonymousMaxPages without credentials). Because ordering is not semver, we collect generously
 // rather than trusting the first N — the caller picks the semver max (IsNewer).
 func (c *dockerHubClient) LatestTags(ctx context.Context, policy adapters.ChainVersionPolicy, maxResults int) ([]TagEntry, error) {
 	owner, repo := splitRepository(policy.Repository)
@@ -91,7 +181,12 @@ func (c *dockerHubClient) LatestTags(ctx context.Context, policy adapters.ChainV
 
 	entries := make([]TagEntry, 0, target)
 
-	for page := 0; page < dockerHubMaxPages && next != ""; page++ {
+	maxPages := dockerHubMaxPages
+	if c.auth == nil {
+		maxPages = dockerHubAnonymousMaxPages
+	}
+
+	for page := 0; page < maxPages && next != ""; page++ {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -144,25 +239,83 @@ func resolveDockerHubNext(current, next string) string {
 }
 
 func (c *dockerHubClient) fetchPage(ctx context.Context, pageURL, owner, repo string) (*dockerHubTagsResponse, error) {
+	for attempt := 1; ; attempt++ {
+		result, wait, err := c.fetchPageOnce(ctx, pageURL, owner, repo)
+		if wait == 0 || attempt == dockerHubMaxAttempts {
+			return result, err
+		}
+
+		timer := time.NewTimer(wait)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, fmt.Errorf("%w (while waiting out docker hub rate limit)", ctx.Err())
+		case <-timer.C:
+		}
+	}
+}
+
+// fetchPageOnce performs a single request. A non-zero wait means Docker Hub
+// throttled us and the caller should retry after that long.
+func (c *dockerHubClient) fetchPageOnce(ctx context.Context, pageURL, owner, repo string) (*dockerHubTagsResponse, time.Duration, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return nil, 0, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 
+	if c.auth != nil {
+		token, err := c.auth.bearer(ctx, c.httpClient())
+		if err != nil {
+			return nil, 0, err
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	resp, err := c.httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("docker hub request: %w", err)
+		return nil, 0, fmt.Errorf("docker hub request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("docker hub returned %d for %s/%s", resp.StatusCode, owner, repo)
+		err := fmt.Errorf("docker hub returned %d for %s/%s", resp.StatusCode, owner, repo)
+		if isDockerHubThrottled(resp) {
+			return nil, dockerHubRetryWait(resp.Header, time.Now()), err
+		}
+		return nil, 0, err
 	}
 
 	var result dockerHubTagsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
+		return nil, 0, fmt.Errorf("decode response: %w", err)
 	}
-	return &result, nil
+	return &result, 0, nil
+}
+
+// isDockerHubThrottled reports whether a response is a rate-limit rejection.
+// Besides the usual 429, Docker Hub answers 403 once the per-IP budget is spent;
+// X-RateLimit-Remaining: 0 tells that apart from a real permission error.
+func isDockerHubThrottled(resp *http.Response) bool {
+	switch resp.StatusCode {
+	case http.StatusTooManyRequests:
+		return true
+	case http.StatusForbidden:
+		return resp.Header.Get("X-RateLimit-Remaining") == "0"
+	default:
+		return false
+	}
+}
+
+// dockerHubRetryWait derives how long to back off from Retry-After (seconds) or
+// X-RateLimit-Reset (unix time), clamped to dockerHubMaxWait. A zero result is
+// bumped to one second so the caller still treats the response as retryable.
+func dockerHubRetryWait(h http.Header, now time.Time) time.Duration {
+	wait := dockerHubDefaultWait
+	if secs, err := strconv.Atoi(h.Get("Retry-After")); err == nil {
+		wait = time.Duration(secs) * time.Second
+	} else if reset, err := strconv.ParseInt(h.Get("X-RateLimit-Reset"), 10, 64); err == nil {
+		wait = time.Unix(reset, 0).Sub(now)
+	}
+	return min(max(wait, time.Second), dockerHubMaxWait)
 }
