@@ -88,13 +88,9 @@ func (a *bobaEthAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *bobaEthAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
-	}
-}
+// Boba ETH supports only op-reth since 2026-05-31 and is a legacy-migrated
+// chain that starts from a reth snapshot with Boba's patched chainspec. No
+// default image until the adapter models that, so nothing to track.
 
 // --------------------------------------------------------------------------
 // Config

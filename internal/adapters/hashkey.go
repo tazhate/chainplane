@@ -17,24 +17,19 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
-
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 )
 
 // --------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
 
+// hashkeyAdapter runs HashKey Chain on op-reth with an op-node sidecar; flags,
+// ports and the sidecar come from opRethProtocolAdapter.
 type hashkeyAdapter struct {
-	protocolAdapter
+	opRethProtocolAdapter
 }
 
 // --------------------------------------------------------------------------
@@ -43,34 +38,15 @@ type hashkeyAdapter struct {
 
 func init() {
 	Register(chainsv1alpha2.ChainHashKey, &hashkeyAdapter{
-		protocolAdapter: protocolAdapter{livenessPort: 8545},
+		opRethProtocolAdapter: newOpRethProtocolAdapter(
+			chainsv1alpha2.ChainHashKey, "hashkeychain", "hashkeychain-mainnet", "https://hashkeychain-mainnet.alt.technology",
+		),
 	})
 }
 
 // --------------------------------------------------------------------------
 // Interface methods
 // --------------------------------------------------------------------------
-
-func (a *hashkeyAdapter) DefaultImage(client string) string {
-	// HashKey Chain is an OP Stack L2; the default is upstream op-geth (see versions_gen.go).
-	return DefaultImageFor(chainsv1alpha2.ChainHashKey, client)
-}
-
-func (a *hashkeyAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.toml", hashkeyConfig, nil
-}
-
-func (a *hashkeyAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return evmHealthCheck(ctx, rpcURL)
-}
-
-func (a *hashkeyAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
-}
-
-func (a *hashkeyAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
-}
 
 func (a *hashkeyAdapter) DefaultResources() ResourceDefaults {
 	return ResourceDefaults{
@@ -79,36 +55,3 @@ func (a *hashkeyAdapter) DefaultResources() ResourceDefaults {
 		Storage:       resource.MustParse("200Gi"),
 	}
 }
-
-func (a *hashkeyAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
-	}
-}
-
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const hashkeyConfig = `# HashKey Chain EVM node configuration
-[Eth]
-SyncMode = "snap"
-
-[Node]
-DataDir = "/data"
-HTTPHost = "0.0.0.0"
-HTTPPort = 8545
-HTTPModules = ["eth", "net", "web3", "txpool", "debug"]
-HTTPVirtualHosts = ["*"]
-HTTPCors = ["*"]
-WSHost = "0.0.0.0"
-WSPort = 8546
-WSModules = ["eth", "net", "web3"]
-WSOrigins = ["*"]
-
-[Node.P2P]
-MaxPeers = 50
-ListenAddr = ":30303"
-`

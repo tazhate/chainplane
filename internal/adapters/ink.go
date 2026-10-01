@@ -17,26 +17,19 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
-
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 )
 
 // --------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------
-
-const defaultInkL1URL = "http://ethereum:8545"
-
-// --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
 
+// inkAdapter runs Ink on op-reth with an op-node sidecar; flags, ports and the
+// sidecar come from opRethProtocolAdapter.
 type inkAdapter struct {
-	protocolAdapter
+	opRethProtocolAdapter
 }
 
 // --------------------------------------------------------------------------
@@ -45,7 +38,9 @@ type inkAdapter struct {
 
 func init() {
 	Register(chainsv1alpha2.ChainInk, &inkAdapter{
-		protocolAdapter: protocolAdapter{livenessPort: 8545},
+		opRethProtocolAdapter: newOpRethProtocolAdapter(
+			chainsv1alpha2.ChainInk, "ink", "ink-mainnet", "https://rpc-gel.inkonchain.com",
+		),
 	})
 }
 
@@ -53,69 +48,10 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *inkAdapter) DefaultImage(client string) string {
-	return DefaultImageFor(chainsv1alpha2.ChainInk, client)
-}
-
-func (a *inkAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.toml", inkConfig, nil
-}
-
-func (a *inkAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return evmHealthCheck(ctx, rpcURL)
-}
-
-func (a *inkAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
-}
-
-func (a *inkAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
-}
-
-// ContainerEnv injects the L1_RPC_URL environment variable required by OP Stack L2 nodes.
-func (a *inkAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{Name: "L1_RPC_URL", Value: defaultInkL1URL},
-	}
-}
-
 func (a *inkAdapter) DefaultResources() ResourceDefaults {
 	return ResourceDefaults{
 		CPURequest:    resource.MustParse("2"),
 		MemoryRequest: resource.MustParse("4Gi"),
 		Storage:       resource.MustParse("100Gi"),
-	}
-}
-
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const inkConfig = `# Ink L2 (OP Stack) op-geth node
-[Eth]
-SyncMode = "snap"
-
-[Node]
-DataDir = "/data"
-HTTPHost = "0.0.0.0"
-HTTPPort = 8545
-HTTPModules = ["eth", "net", "web3", "txpool"]
-HTTPVirtualHosts = ["*"]
-HTTPCors = ["*"]
-WSHost = "0.0.0.0"
-WSPort = 8546
-WSModules = ["eth", "net", "web3"]
-WSOrigins = ["*"]
-
-[Node.P2P]
-MaxPeers = 50
-`
-
-func (a *inkAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
 	}
 }

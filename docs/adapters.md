@@ -24,8 +24,8 @@ This document describes every blockchain adapter supported by the operator, incl
 | XRP | rippled | `xrpllabsofficial/xrpld:3.1.2` | 5005 (HTTP) | 6006 (WS) | Syncs from current ledger tip (`--net`) |
 | Aptos | aptos-node | `aptoslabs/validator:aptos-node-v1.48.7-hotfix` | 8080 | - | HTTP health probe, startup probe (4h) |
 | Blast | blast-geth | `blastio/blast-geth:v1.2.0` | 8545 | 8546 | OP Stack L2, L1_RPC_URL env |
-| Mode | op-geth | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 | 8546 | OP Stack L2, L1_RPC_URL env |
-| Zora | op-geth | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 | 8546 | OP Stack L2, L1_RPC_URL env |
+| Mode | op-reth + op-node | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 | 8546 | OP Stack L2, op-node sidecar, L1_RPC_URL + L1_BEACON_URL |
+| Zora | op-reth + op-node | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 | 8546 | OP Stack L2, op-node sidecar, L1_RPC_URL + L1_BEACON_URL |
 | Taiko | taiko-geth | `taikoxyz/taiko-geth:v1.8.0` | 8545 | 8546 | L2, L1_RPC_URL env |
 
 ---
@@ -520,7 +520,8 @@ This document describes every blockchain adapter supported by the operator, incl
 
 **Configuration:**
 - OP Stack L2 (NetworkId=81457)
-- `SyncMode = "snap"`
+- `SyncMode = "full"`, as in blast-io/deployment
+- On first start the command fetches the mainnet `genesis.json` pinned to a blast-io/deployment commit, checks its SHA-256 and runs `geth init`
 
 **Special features:**
 - **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
@@ -531,23 +532,25 @@ This document describes every blockchain adapter supported by the operator, incl
 
 ### Mode
 
-**Supported clients:** op-geth
-**Default image:** `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2`
-**Config file:** `config.toml`
+**Supported clients:** op-reth with an op-node sidecar
+**Default image:** `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0`, sidecar `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:v1.19.8`
+**Config file:** none, flags only
 
 **Ports:**
 - RPC: 8545
 - WS: 8546
-- P2P: 30303 (TCP + UDP)
+- P2P: 30303 (TCP + UDP), op-node 9222 (TCP + UDP)
+- Metrics: 9001 (op-reth), 7300 (op-node)
 
 **Health check:** Delegates to EVM health check (`eth_syncing` + `eth_blockNumber`).
 
 **Configuration:**
-- OP Stack L2 (NetworkId=34443)
-- `SyncMode = "snap"`
+- OP Stack L2 (chain 34443): op-reth `--chain mode`, op-node `--network mode-mainnet`
+- op-reth data in `/data/reth`, op-node state in `/data/op-node`
+- op-node drives op-reth over the engine API on `127.0.0.1:8551` with `--syncmode execution-layer`
 
 **Special features:**
-- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
+- **op-node env:** `L1_RPC_URL` (default `http://ethereum:8545`) and `L1_BEACON_URL` (default `http://ethereum-beacon:5052`) from `spec.extraEnv`; other `OP_NODE_*` entries pass through
 
 **Storage:** 500+ GiB for mainnet
 
@@ -555,23 +558,25 @@ This document describes every blockchain adapter supported by the operator, incl
 
 ### Zora
 
-**Supported clients:** op-geth
-**Default image:** `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2`
-**Config file:** `config.toml`
+**Supported clients:** op-reth with an op-node sidecar
+**Default image:** `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0`, sidecar `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:v1.19.8`
+**Config file:** none, flags only
 
 **Ports:**
 - RPC: 8545
 - WS: 8546
-- P2P: 30303 (TCP + UDP)
+- P2P: 30303 (TCP + UDP), op-node 9222 (TCP + UDP)
+- Metrics: 9001 (op-reth), 7300 (op-node)
 
 **Health check:** Delegates to EVM health check (`eth_syncing` + `eth_blockNumber`).
 
 **Configuration:**
-- OP Stack L2 (NetworkId=7777777)
-- `SyncMode = "snap"`
+- OP Stack L2 (chain 7777777): op-reth `--chain zora`, op-node `--network zora-mainnet`
+- op-reth data in `/data/reth`, op-node state in `/data/op-node`
+- op-node drives op-reth over the engine API on `127.0.0.1:8551` with `--syncmode execution-layer`
 
 **Special features:**
-- **ContainerEnv:** `L1_RPC_URL` defaults to `http://ethereum:8545`
+- **op-node env:** `L1_RPC_URL` (default `http://ethereum:8545`) and `L1_BEACON_URL` (default `http://ethereum-beacon:5052`) from `spec.extraEnv`; other `OP_NODE_*` entries pass through
 
 **Storage:** 500+ GiB for mainnet
 

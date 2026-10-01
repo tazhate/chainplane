@@ -17,26 +17,27 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
-
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 )
 
 // --------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------
-
-const defaultOptimismL1URL = "http://ethereum:8545"
-
-// --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
 
+// optimismAdapter runs OP Mainnet on op-reth with an op-node sidecar; flags,
+// ports and the sidecar come from opRethProtocolAdapter.
+//
+// OP Mainnet requires spec.snapshot. op-reth cannot sync the pre-Bedrock
+// state, and v2.5.0 dropped import-op: on an empty datadir it exits with
+// "Op-mainnet has been launched without importing the pre-Bedrock state".
+// The operator's snapshot restore (MINIO_ENDPOINT, default bucket
+// snapshots-optimism) extracts into /data, so the archive has to carry the
+// op-reth datadir as reth/. The alternative is op-reth init-state
+// --without-ovm from a Bedrock state dump before the first start.
 type optimismAdapter struct {
-	protocolAdapter
+	opRethProtocolAdapter
 }
 
 // --------------------------------------------------------------------------
@@ -45,7 +46,9 @@ type optimismAdapter struct {
 
 func init() {
 	Register(chainsv1alpha2.ChainOptimism, &optimismAdapter{
-		protocolAdapter: protocolAdapter{livenessPort: 8545},
+		opRethProtocolAdapter: newOpRethProtocolAdapter(
+			chainsv1alpha2.ChainOptimism, "optimism", "op-mainnet", "https://mainnet-sequencer.optimism.io",
+		),
 	})
 }
 
@@ -53,81 +56,10 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *optimismAdapter) DefaultImage(client string) string {
-	return DefaultImageFor(chainsv1alpha2.ChainOptimism, client)
-}
-
-func (a *optimismAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.toml", optimismConfig, nil
-}
-
-func (a *optimismAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return evmHealthCheck(ctx, rpcURL)
-}
-
-func (a *optimismAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return append(evmPorts(30303), corev1.ContainerPort{
-		Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP,
-	})
-}
-
-// ContainerArgs passes the config file path to op-geth.
-func (a *optimismAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{
-		"--config", "/config/config.toml",
-		"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060",
-	}
-}
-
-// ContainerEnv injects the OP_NODE_L1_ETH_RPC environment variable required by op-geth.
-func (a *optimismAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{Name: "OP_NODE_L1_ETH_RPC", Value: defaultOptimismL1URL},
-	}
-}
-
 func (a *optimismAdapter) DefaultResources() ResourceDefaults {
 	return ResourceDefaults{
 		CPURequest:    resource.MustParse("4"),
 		MemoryRequest: resource.MustParse("16Gi"),
 		Storage:       resource.MustParse("1Ti"),
-	}
-}
-
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const optimismConfig = `# op-geth configuration for OP Mainnet
-[Eth]
-NetworkId = 10
-SyncMode = "snap"
-
-[Node]
-DataDir = "/data"
-
-[Node.HTTPHost]
-HTTPHost = "0.0.0.0"
-HTTPPort = 8545
-HTTPVirtualHosts = ["*"]
-HTTPCorsDomain = ["*"]
-HTTPModules = ["eth", "net", "web3", "debug", "txpool"]
-
-[Node.WSHost]
-WSHost = "0.0.0.0"
-WSPort = 8546
-WSOrigins = ["*"]
-WSModules = ["eth", "net", "web3"]
-
-[Node.P2P]
-MaxPeers = 50
-ListenAddr = ":30303"
-`
-
-func (a *optimismAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
 	}
 }

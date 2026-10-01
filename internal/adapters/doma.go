@@ -118,10 +118,6 @@ MaxPeers = 50
 ListenAddr = ":30303"
 `
 
-func (a *domaAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
-	}
-}
+// Doma runs conduit-op-reth with Celestia alt-DA and is not in the
+// superchain registry; its genesis is only served by the Conduit API. No
+// default image until the adapter models that, so nothing to track.

@@ -27,7 +27,10 @@ spec:
     wsPort: 8546
   health:
     blockLagThreshold: 30
-  # Override default L1 RPC URL (default: http://ethereum:8545)
+  # op-node runs as a sidecar and follows L1 through an execution and a
+  # beacon endpoint (defaults: http://ethereum:8545, http://ethereum-beacon:5052).
   # extraEnv:
-  # - name: OP_NODE_L1_ETH_RPC
+  # - name: L1_RPC_URL
   #   value: "http://your-ethereum-rpc:8545"
+  # - name: L1_BEACON_URL
+  #   value: "http://your-ethereum-beacon:5052"
