@@ -117,6 +117,10 @@ func (a *haqqAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
+// VersionPolicy tracks alhaqq/haqq. Docker Hub v1.10.0 is the
+// v1.10.0-rc1 build and cannot start (haqqd is linked against a
+// libwasmvm the image lacks), while mainnet runs v1.9.5; the default stays
+// on v1.9.5 until a working v1.10 image ships, so review such bumps by hand.
 func (a *haqqAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
