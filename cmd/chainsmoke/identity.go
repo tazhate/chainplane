@@ -144,9 +144,14 @@ func checkIdentity(ctx context.Context, t identityTarget) identityFindings {
 		if err == nil {
 			got, err = parseChainID(body)
 		}
-		if err != nil {
+		switch {
+		case err != nil:
 			f.warns = append(f.warns, "rpc not ready: "+firstLine(err.Error()))
-		} else {
+		case got == 0:
+			// Pre-EIP155 clients (victionchain before block 3) answer 0 until
+			// they pass their EIP155 block; net_version carries the network id.
+			f.checkNetVersion(ctx, t)
+		default:
 			f.add(chainIDFinding(got, t.chainID))
 		}
 	}
@@ -164,6 +169,25 @@ func checkIdentity(ctx context.Context, t identityTarget) identityFindings {
 		}
 	}
 	return f
+}
+
+// checkNetVersion compares net_version with the expected chain id when
+// eth_chainId reported 0. No usable answer is a warning, not a failure.
+func (f *identityFindings) checkNetVersion(ctx context.Context, t identityTarget) {
+	body, err := rpcCall(ctx, t, t.evmRPC, `{"jsonrpc":"2.0","id":1,"method":"net_version","params":[]}`)
+	var got uint64
+	if err == nil {
+		got, err = parseNetVersion(body)
+	}
+	if err != nil || got == 0 {
+		f.warns = append(f.warns, "chain id not reported yet (eth_chainId=0)")
+		return
+	}
+	fail, fact := chainIDFinding(got, t.chainID)
+	if fact != "" {
+		fact += " via net_version (eth_chainId=0 before EIP155)"
+	}
+	f.add(fail, fact)
 }
 
 // add records the outcome of one check: a failure or a verified fact.
@@ -301,6 +325,21 @@ func parseChainID(body string) (uint64, error) {
 	n, err := strconv.ParseUint(hex, 16, 64)
 	if err != nil {
 		return 0, fmt.Errorf("eth_chainId: result %q: %w", resp.Result, err)
+	}
+	return n, nil
+}
+
+// parseNetVersion decodes a net_version response (a decimal string).
+func parseNetVersion(body string) (uint64, error) {
+	var resp struct {
+		Result string `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(body), &resp); err != nil {
+		return 0, fmt.Errorf("net_version: not JSON-RPC: %s", truncate(strings.TrimSpace(body), 80))
+	}
+	n, err := strconv.ParseUint(resp.Result, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("net_version: result %q: %w", resp.Result, err)
 	}
 	return n, nil
 }
