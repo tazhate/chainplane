@@ -340,7 +340,9 @@ func (r *ChainInstanceReconciler) detectHeightStall(
 	stallAt, err := time.Parse(time.RFC3339, stallSince)
 	if err != nil {
 		node.Annotations[annotationSyncStallSince] = time.Now().UTC().Format(time.RFC3339)
-		_ = r.persistAnnotations(ctx, node)
+		if err := r.persistAnnotations(ctx, node); err != nil {
+			logger.Error(err, "resetting malformed stall-since timestamp")
+		}
 		return false, ""
 	}
 
@@ -619,7 +621,9 @@ func (r *ChainInstanceReconciler) blockRateETA(
 	if !hasSnapshot || now.Sub(snapshotAt) >= progressSnapshotInterval {
 		node.Annotations[annotationBlockSnapshotHeight] = strconv.FormatInt(currentBlock, 10)
 		node.Annotations[annotationBlockSnapshotAt] = now.Format(time.RFC3339)
-		_ = r.persistAnnotations(ctx, node)
+		if err := r.persistAnnotations(ctx, node); err != nil {
+			log.FromContext(ctx).Error(err, "persisting block-rate snapshot annotations")
+		}
 		return ""
 	}
 

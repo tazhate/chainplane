@@ -65,7 +65,9 @@ func (r *ChainInstanceReconciler) ensurePodMonitor(
 	pm.SetNamespace(node.Namespace)
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pm, func() error {
-		applyPodMonitorSpec(pm, node)
+		if err := applyPodMonitorSpec(pm, node); err != nil {
+			return err
+		}
 		return controllerutil.SetControllerReference(node, pm, r.Scheme)
 	})
 	if err != nil {
@@ -95,8 +97,9 @@ func (r *ChainInstanceReconciler) deletePodMonitor(ctx context.Context, node *ch
 }
 
 // applyPodMonitorSpec writes the desired PodMonitor spec into the unstructured object.
-// Called both on Create and Update so the function is idempotent.
-func applyPodMonitorSpec(pm *unstructured.Unstructured, node *chainsv1alpha2.ChainInstance) {
+// Called both on Create and Update so the function is idempotent. It fails only
+// when an existing object has a non-map value along the spec path.
+func applyPodMonitorSpec(pm *unstructured.Unstructured, node *chainsv1alpha2.ChainInstance) error {
 	spec := node.Spec.Monitoring.PodMonitor
 
 	endpoint := map[string]interface{}{
@@ -113,8 +116,13 @@ func applyPodMonitorSpec(pm *unstructured.Unstructured, node *chainsv1alpha2.Cha
 	}
 	pm.SetLabels(labels)
 
-	_ = unstructured.SetNestedField(pm.Object, selectorLabelsUnstructured(node), "spec", "selector", "matchLabels")
-	_ = unstructured.SetNestedSlice(pm.Object, []interface{}{endpoint}, "spec", "podMetricsEndpoints")
+	if err := unstructured.SetNestedField(pm.Object, selectorLabelsUnstructured(node), "spec", "selector", "matchLabels"); err != nil {
+		return fmt.Errorf("setting PodMonitor spec.selector.matchLabels: %w", err)
+	}
+	if err := unstructured.SetNestedSlice(pm.Object, []interface{}{endpoint}, "spec", "podMetricsEndpoints"); err != nil {
+		return fmt.Errorf("setting PodMonitor spec.podMetricsEndpoints: %w", err)
+	}
+	return nil
 }
 
 // selectorLabelsUnstructured returns selectorLabels as map[string]interface{} for unstructured use.

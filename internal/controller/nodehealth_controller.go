@@ -163,7 +163,7 @@ func (r *NodeHealthReconciler) evaluateTriggers(
 
 	if err := r.Replacement.StartReplacement(ctx, node); err != nil {
 		logger.Error("failed to start replacement", "error", err)
-		return ctrl.Result{RequeueAfter: healthPollingInterval}, fmt.Errorf("starting replacement for %s/%s: %w", node.Namespace, node.Name, err)
+		return ctrl.Result{}, fmt.Errorf("starting replacement for %s/%s: %w", node.Namespace, node.Name, err)
 	}
 
 	return ctrl.Result{RequeueAfter: replacementPollingInterval}, nil
@@ -194,7 +194,7 @@ func (r *NodeHealthReconciler) advanceReplacement(
 		logger.Warn("found stale rollback phase, retrying rollback")
 		if err := r.Replacement.RollbackReplacement(ctx, node); err != nil {
 			logger.Error("retry rollback failed", "error", err)
-			return ctrl.Result{RequeueAfter: healthPollingInterval}, fmt.Errorf("retrying rollback for %s/%s: %w", node.Namespace, node.Name, err)
+			return ctrl.Result{}, fmt.Errorf("retrying rollback for %s/%s: %w", node.Namespace, node.Name, err)
 		}
 		return ctrl.Result{RequeueAfter: healthPollingInterval}, nil
 
@@ -218,7 +218,7 @@ func (r *NodeHealthReconciler) handleVerifying(
 		logger.Error("replacement monitoring failed, rolling back", "error", err)
 		if rbErr := r.Replacement.RollbackReplacement(ctx, node); rbErr != nil {
 			logger.Error("rollback also failed", "error", rbErr)
-			return ctrl.Result{RequeueAfter: healthPollingInterval}, fmt.Errorf("rollback after monitoring failure for %s/%s: %w", node.Namespace, node.Name, rbErr)
+			return ctrl.Result{}, fmt.Errorf("rollback after monitoring failure for %s/%s: %w", node.Namespace, node.Name, rbErr)
 		}
 		return ctrl.Result{RequeueAfter: healthPollingInterval}, nil
 	}
@@ -231,7 +231,7 @@ func (r *NodeHealthReconciler) handleVerifying(
 	logger.Info("replacement pod verified healthy, completing replacement")
 	if err := r.Replacement.CompleteReplacement(ctx, node); err != nil {
 		logger.Error("failed to complete replacement", "error", err)
-		return ctrl.Result{RequeueAfter: replacementPollingInterval}, fmt.Errorf("completing replacement for %s/%s: %w", node.Namespace, node.Name, err)
+		return ctrl.Result{}, fmt.Errorf("completing replacement for %s/%s: %w", node.Namespace, node.Name, err)
 	}
 
 	logger.Info("replacement completed successfully")
