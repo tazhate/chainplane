@@ -144,6 +144,8 @@ type ChainVersionPolicy struct {
 	// Repository is the image repository, e.g. "lncm/bitcoind".
 	Repository string
 	// TagPattern is a regexp that matching tags must satisfy, e.g. `^v\d+`.
+	// A named group "version" narrows stability and semver checks to the
+	// captured part, for tags that carry a build suffix after the version.
 	TagPattern string
 	// TagPrefix is stripped from the tag before semver comparison, e.g. "GreatVoyage-" for TRON.
 	TagPrefix string

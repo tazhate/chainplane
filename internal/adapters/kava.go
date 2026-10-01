@@ -189,6 +189,6 @@ func (a *kavaAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
 		Repository: "kava/kava",
-		TagPattern: `^v\d+\.\d+\.\d+-goleveldb$`,
+		TagPattern: `^(?P<version>v\d+\.\d+\.\d+)-goleveldb$`,
 	}
 }

@@ -232,7 +232,9 @@ func (a *stellarAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
 		Repository: "stellar/stellar-core",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		// Releases are published as <version>-<build>.<commit>.<distro>, e.g.
+		// 29.0.0-3589.4eb833373.noble. The old v-prefixed tags stopped at v17.
+		TagPattern: `^(?P<version>\d+\.\d+\.\d+)-\d+\.[0-9a-f]+\.noble$`,
 	}
 }
 

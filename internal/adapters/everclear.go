@@ -99,6 +99,8 @@ func (a *everclearAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
 		Repository: "offchainlabs/nitro-node",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		// Releases are tagged v<version>-<short commit>; plain v<version>
+		// tags are no longer published.
+		TagPattern: `^(?P<version>v\d+\.\d+\.\d+)-[0-9a-f]{7}$`,
 	}
 }

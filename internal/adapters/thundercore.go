@@ -83,7 +83,7 @@ func (a *thundercoreAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
 		Repository: "thundercore/thunder",
-		TagPattern: `^r\d+\.\d+\.\d+$`,
+		TagPattern: `^r(?P<version>\d+\.\d+\.\d+)$`,
 	}
 }
 

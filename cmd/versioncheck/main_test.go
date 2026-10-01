@@ -4,7 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 */
 package main
 
-import "testing"
+import (
+	"errors"
+	"testing"
+
+	"github.com/tazhate/chainplane/internal/adapters"
+	"github.com/tazhate/chainplane/internal/registry"
+)
 
 func TestIsStableTag(t *testing.T) {
 	tests := []struct {
@@ -47,5 +53,118 @@ func TestIsStableTag(t *testing.T) {
 				t.Errorf("isStableTag(%q, %q) = %v, want %v", tt.tag, tt.prefix, got, tt.want)
 			}
 		})
+	}
+}
+
+func tagEntries(tags ...string) []registry.TagEntry {
+	out := make([]registry.TagEntry, 0, len(tags))
+	for _, t := range tags {
+		out = append(out, registry.TagEntry{Tag: t})
+	}
+	return out
+}
+
+func TestPickLatest(t *testing.T) {
+	semverPolicy := adapters.ChainVersionPolicy{TagPattern: `^v\d+\.\d+\.\d+$`}
+	stellarPolicy := adapters.ChainVersionPolicy{
+		TagPattern: `^(?P<version>\d+\.\d+\.\d+)-\d+\.[0-9a-f]+\.noble$`,
+	}
+	kavaPolicy := adapters.ChainVersionPolicy{TagPattern: `^(?P<version>v\d+\.\d+\.\d+)-goleveldb$`}
+
+	tests := []struct {
+		name       string
+		policy     adapters.ChainVersionPolicy
+		current    string
+		tags       []registry.TagEntry
+		wantLatest string
+		wantNewer  bool
+		wantMajor  bool
+	}{
+		{
+			name: "minor bump", policy: semverPolicy, current: "v1.4.7",
+			tags:       tagEntries("v1.4.7", "v1.5.5", "v1.5.0-rc.1"),
+			wantLatest: "v1.5.5", wantNewer: true,
+		},
+		{
+			name: "major bump", policy: semverPolicy, current: "v29.17.0",
+			tags:       tagEntries("v29.17.0", "v31.1.0"),
+			wantLatest: "v31.1.0", wantNewer: true, wantMajor: true,
+		},
+		{
+			name: "zero-x minor is major", policy: semverPolicy, current: "v0.5.7",
+			tags:       tagEntries("v0.5.7", "v0.6.3"),
+			wantLatest: "v0.6.3", wantNewer: true, wantMajor: true,
+		},
+		{
+			name: "up to date", policy: semverPolicy, current: "v2.0.0",
+			tags:       tagEntries("v1.9.0", "v2.0.0"),
+			wantLatest: "v2.0.0",
+		},
+		{
+			name: "no match", policy: semverPolicy, current: "v1.0.0",
+			tags: tagEntries("latest", "v1.1.0-beta.1"),
+		},
+		{
+			name: "version group with build suffix", policy: stellarPolicy, current: "28.1.0-3001.abc1234.noble",
+			tags: tagEntries(
+				"28.1.0-3001.abc1234.noble", "29.0.0-3589.4eb833373.noble",
+				"29.0.0-3589.4eb833373.jammy", "29.1.0rc1-3600.1234abc.noble", "29",
+			),
+			wantLatest: "29.0.0-3589.4eb833373.noble", wantNewer: true, wantMajor: true,
+		},
+		{
+			name: "version group with legacy pin", policy: stellarPolicy, current: "v19.12.0",
+			tags:       tagEntries("29.0.0-3589.4eb833373.noble"),
+			wantLatest: "29.0.0-3589.4eb833373.noble", wantNewer: true, wantMajor: true,
+		},
+		{
+			name: "version group suffix pin", policy: kavaPolicy, current: "v0.28.2-goleveldb",
+			tags:       tagEntries("v0.28.2-goleveldb", "v0.28.3-goleveldb", "v0.28.3"),
+			wantLatest: "v0.28.3-goleveldb", wantNewer: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			latest, newer, major, err := pickLatest(tt.policy, tt.current, tt.tags)
+			if err != nil {
+				t.Fatalf("pickLatest: %v", err)
+			}
+			if latest != tt.wantLatest || newer != tt.wantNewer || major != tt.wantMajor {
+				t.Fatalf("got (%q, newer=%v, major=%v), want (%q, newer=%v, major=%v)",
+					latest, newer, major, tt.wantLatest, tt.wantNewer, tt.wantMajor)
+			}
+		})
+	}
+}
+
+func TestFilterNewerHoldsMajors(t *testing.T) {
+	results := []versionResult{
+		{Chain: "a", IsNewer: true},
+		{Chain: "b", IsNewer: true, IsMajor: true},
+		{Chain: "c"},
+	}
+	if got := filterNewer(results, false); len(got) != 1 || got[0].Chain != "a" {
+		t.Fatalf("without allow-major got %v", got)
+	}
+	if got := filterNewer(results, true); len(got) != 2 {
+		t.Fatalf("with allow-major got %v", got)
+	}
+}
+
+func TestResultStatusAndFailures(t *testing.T) {
+	results := []versionResult{
+		{Chain: "ok"},
+		{Chain: "nomatch", NoMatch: true},
+		{Chain: "err", Err: errors.New("boom")},
+		{Chain: "major", IsNewer: true, IsMajor: true},
+	}
+	want := []string{"up to date", "NO MATCH", "ERROR: boom", "MAJOR AVAILABLE"}
+	for i, r := range results {
+		if got := resultStatus(r); got != want[i] {
+			t.Errorf("%s: status %q, want %q", r.Chain, got, want[i])
+		}
+	}
+	if got := countFailures(results); got != 2 {
+		t.Fatalf("countFailures = %d, want 2", got)
 	}
 }

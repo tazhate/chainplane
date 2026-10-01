@@ -107,3 +107,26 @@ func TestNormalizeTag(t *testing.T) {
 		}
 	}
 }
+
+func TestIsMajorBump(t *testing.T) {
+	tests := []struct {
+		candidate, current, prefix string
+		want                       bool
+	}{
+		{"v31.1.0", "v29.17.0", "", true},
+		{"2.0.0", "1.38.0", "", true},
+		{"v2026.1.3", "v8.5.4", "", true},
+		{"v1.101702.2", "v1.101609.0", "", false},
+		{"v1.5.5", "v1.4.7", "", false},
+		{"0.6.3", "0.5.7", "", true},
+		{"0.5.9", "0.5.7", "", false},
+		{"v1.0.0", "v2.0.0", "", false},
+		{"GreatVoyage-v5.0.0", "GreatVoyage-v4.8.2", "GreatVoyage-", true},
+		{"latest", "v1.0.0", "", false},
+	}
+	for _, tt := range tests {
+		if got := IsMajorBump(tt.candidate, tt.current, tt.prefix); got != tt.want {
+			t.Errorf("IsMajorBump(%q, %q) = %v, want %v", tt.candidate, tt.current, got, tt.want)
+		}
+	}
+}
