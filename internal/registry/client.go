@@ -37,7 +37,7 @@ type Client interface {
 func NewClient(reg string) (Client, error) {
 	switch reg {
 	case "docker.io", "":
-		return &dockerHubClient{}, nil
+		return &dockerHubClient{auth: defaultDockerHubAuth()}, nil
 	case "ghcr.io":
 		return &ghcrClient{}, nil
 	case "us-docker.pkg.dev", "public.ecr.aws":

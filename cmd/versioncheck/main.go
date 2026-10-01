@@ -45,7 +45,7 @@ func main() {
 		update      = flag.Bool("update", false, "write updated versions to versions_gen.go")
 		filterChain = flag.String("chain", "", "check only this chain (e.g. bitcoin)")
 		concurrency = flag.Int("concurrency", 10, "parallel registry requests")
-		timeout     = flag.Duration("timeout", 30*time.Second, "per-request timeout")
+		timeout     = flag.Duration("timeout", 3*time.Minute, "per-chain timeout, incl. Docker Hub rate-limit waits")
 	)
 	flag.Parse()
 
