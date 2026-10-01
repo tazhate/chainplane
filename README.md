@@ -305,7 +305,7 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | `sei` | `seiprotocol/seid:v6.2.0` | 26657 |
 | `axelar` | `axelarnet/axelar-core:v1.3.4` | 26657 |
 | `kava` | `kava-labs/kava:v0.26.2` | 26657 |
-| `evmos` | `tharsishq/evmos:v20.0.0` | 26657 |
+| `evmos` | none, chain halted 2026-05-18 (proposal #331) | 26657 |
 | `dymension` | `dymensionxyz/dymd:v3.1.0` | 26657 |
 | `mezo` | `mezo/mezod:v2.0.1` | 26657 |
 | `moca` | `ghcr.io/mocachain/mocad:v1.4.1` | 26657 |
