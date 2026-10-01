@@ -346,11 +346,14 @@ func (a *tonAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
+// VersionPolicy tracks the amd64 tags: upstream publishes releases only as
+// arch-suffixed tags (v2026.08-amd64, v2026.08-arm64), with no multi-arch
+// manifest under the plain version.
 func (a *tonAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "ghcr.io",
 		Repository: "ton-blockchain/ton",
-		TagPattern: `^v\d+`,
+		TagPattern: `^(?P<version>v\d{4}\.\d{2})-amd64$`,
 	}
 }
 

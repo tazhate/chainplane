@@ -174,16 +174,19 @@ func TestGetUnknownChainReturnsNil(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // imageRequiredChains have no default image: upstream publishes no public
-// container image, the network is shut down (fantom), or the network moved to
-// a stack the adapter does not model yet (ronin, zircuit, linea, aurora).
+// container image, the network is shut down (fantom, zero-network), or the
+// network moved to a stack the adapter does not model yet (ronin, zircuit,
+// linea, aurora, mantle, hemi).
 // Keep this list explicit so a default is never blanked by accident.
 var imageRequiredChains = map[chainsv1alpha2.Chain]bool{
 	chainsv1alpha2.ChainAurora:      true,
 	chainsv1alpha2.ChainBitTorrent:  true,
 	chainsv1alpha2.ChainCronos:      true,
 	chainsv1alpha2.ChainFantom:      true,
+	chainsv1alpha2.ChainHemi:        true,
 	chainsv1alpha2.ChainHyperliquid: true,
 	chainsv1alpha2.ChainLinea:       true,
+	chainsv1alpha2.ChainMantle:      true,
 	chainsv1alpha2.ChainMegaETH:     true,
 	chainsv1alpha2.ChainMonad:       true,
 	chainsv1alpha2.ChainRonin:       true,
@@ -191,6 +194,7 @@ var imageRequiredChains = map[chainsv1alpha2.Chain]bool{
 	chainsv1alpha2.ChainSonic:       true,
 	chainsv1alpha2.ChainTelos:       true,
 	chainsv1alpha2.ChainWemix:       true,
+	chainsv1alpha2.ChainZeroNetwork: true,
 	chainsv1alpha2.ChainZircuit:     true,
 }
 
@@ -213,6 +217,35 @@ func TestAllAdaptersDefaultImage(t *testing.T) {
 				t.Errorf("chain %s: DefaultImage %q does not look like a valid container image", chain, img)
 			}
 		})
+	}
+}
+
+// floatingTags move without notice, so a default pinned to one is not
+// reproducible and versioncheck cannot track it.
+var floatingTags = map[string]bool{
+	"latest": true, "mainnet": true, "testnet": true, "stable": true, "main": true,
+	"master": true, "nightly": true, "develop": true, "edge": true,
+}
+
+func TestDefaultImagesArePinned(t *testing.T) {
+	for chain, clients := range adapters.DefaultImages() {
+		for client, ref := range clients {
+			if ref == "" {
+				continue // image-required chain
+			}
+			if strings.Contains(ref, "@") {
+				continue // pinned by digest
+			}
+			// The tag follows the last ":" after the last "/"; a ":" before
+			// that is a registry port. No tag at all means "latest".
+			tag := "latest"
+			if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
+				tag = ref[i+1:]
+			}
+			if floatingTags[strings.ToLower(tag)] {
+				t.Errorf("chain %s client %q: default %q uses floating tag %q", chain, client, ref, tag)
+			}
+		}
 	}
 }
 
@@ -724,6 +757,32 @@ func TestTRONImplementsContainerCommandProvider(t *testing.T) {
 	joined := strings.Join(cmd, " ")
 	if !strings.Contains(joined, "java") {
 		t.Error("TRON ContainerCommand should invoke java directly")
+	}
+}
+
+// TestBerachainNetworkFilesVerified pins the SHA-256 of every file the
+// berachain start script downloads from beacon-kit v1.4.1.
+func TestBerachainNetworkFilesVerified(t *testing.T) {
+	adapter, ok := adapters.Get(chainsv1alpha2.ChainBerachain)
+	if !ok {
+		t.Fatal("berachain adapter not registered")
+	}
+	ccp, ok := adapter.(adapters.ContainerCommandProvider)
+	if !ok {
+		t.Fatal("berachain adapter does not implement ContainerCommandProvider")
+	}
+	script := strings.Join(ccp.ContainerCommand(chainsv1alpha2.ChainInstanceSpec{}), " ")
+	if !strings.Contains(script, "sha256sum -c -") {
+		t.Error("berachain script does not verify downloads with sha256sum")
+	}
+	for file, sum := range map[string]string{
+		"genesis.json":           "d83b50211850d5a3abcbba7e85037468add496b7605aa23bdf72523cf979ec6c",
+		"config.toml":            "85b7b4031e4ed967691e7b09f96329e33280707a8c266abad3222991a6d11ed8",
+		"kzg-trusted-setup.json": "0229b43f4fac9b17374809520eb621b5ee1a7f74547e7d36918e7d4b122e178d",
+	} {
+		if !strings.Contains(script, "fetch "+file+" "+sum) {
+			t.Errorf("berachain script does not fetch %s with sha256 %s", file, sum)
+		}
 	}
 }
 

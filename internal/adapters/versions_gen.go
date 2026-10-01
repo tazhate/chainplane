@@ -17,7 +17,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainAptos: {
-		"": "aptoslabs/validator:mainnet",
+		"": "aptoslabs/validator:aptos-node-v1.48.7-hotfix",
 	},
 	chainsv1alpha2.ChainArbitrum: {
 		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
@@ -35,7 +35,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainBerachain: {
-		"": "ghcr.io/berachain/beacon-kit:v0.2.0",
+		"": "ghcr.io/berachain/beacon-kit:v1.4.1",
 	},
 	chainsv1alpha2.ChainBitcoin: {
 		"": "lncm/bitcoind:v28.0",
@@ -139,19 +139,19 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "alhaqq/haqq:v1.10.0",
 	},
 	chainsv1alpha2.ChainHarmony: {
-		"": "harmonyone/harmony:v8.5.4",
+		"": "harmonyone/harmony:v2026.1.3",
 	},
 	chainsv1alpha2.ChainHashKey: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainHemi: {
-		"": "hemilabs/op-geth:v1.101408.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainHyperliquid: {
 		"": "",
 	},
 	chainsv1alpha2.ChainImmutableZkEVM: {
-		"": "ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0",
+		"": "ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0-beta.17",
 	},
 	chainsv1alpha2.ChainInk: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
@@ -163,7 +163,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "kava/kava:v0.28.2-goleveldb",
 	},
 	chainsv1alpha2.ChainKlaytn: {
-		"": "klaytn/klaytn:v2.2.0",
+		"": "kaiachain/kaia:v2.2.2",
 	},
 	chainsv1alpha2.ChainKroma: {
 		"": "kromanetwork/geth:v0.6.3",
@@ -187,7 +187,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "public.ecr.aws/i6b2w2n6/op-geth:7.1.0",
 	},
 	chainsv1alpha2.ChainMantle: {
-		"": "mantlenetworkio/op-geth:v1.0.3",
+		"": "",
 	},
 	chainsv1alpha2.ChainMegaETH: {
 		"": "",
@@ -199,7 +199,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "mezo/mezod:v11.0.1",
 	},
 	chainsv1alpha2.ChainMoca: {
-		"": "moca-network/moca:v0.1.0",
+		"": "ghcr.io/mocachain/mocad:v1.4.1",
 	},
 	chainsv1alpha2.ChainMode: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
@@ -226,7 +226,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainOsmosis: {
-		"": "osmolabs/osmosis:v31.0.0",
+		"": "osmolabs/osmosis:31.0.3",
 	},
 	chainsv1alpha2.ChainPlasma: {
 		"": "ghcr.io/plasmalaboratories/plasma-consensus-public:0.15.0",
@@ -295,7 +295,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "thundercore/thunder:r4.3.8",
 	},
 	chainsv1alpha2.ChainTON: {
-		"": "ghcr.io/ton-blockchain/ton:v2026.02-1",
+		"": "ghcr.io/ton-blockchain/ton:v2026.08-amd64",
 	},
 	chainsv1alpha2.ChainTRON: {
 		"": "tronprotocol/java-tron:GreatVoyage-v4.8.2",
@@ -316,7 +316,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "xrpllabsofficial/xrpld:3.3.0",
 	},
 	chainsv1alpha2.ChainZeroNetwork: {
-		"": "matterlabs/external-node:v29.17.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainZircuit: {
 		"": "",

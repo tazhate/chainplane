@@ -185,10 +185,14 @@ func (a *osmosisAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
+// VersionPolicy tracks osmolabs/osmosis, which tags releases without a "v"
+// prefix. Docker Hub also carries 31.1.0, but it has no matching git tag in
+// osmosis-labs/osmosis, so the default stays on 31.0.3 until its provenance is
+// clear; review such bumps by hand.
 func (a *osmosisAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
 		Repository: "osmolabs/osmosis",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		TagPattern: `^(?P<version>\d+\.\d+\.\d+)$`,
 	}
 }

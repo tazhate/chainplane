@@ -227,7 +227,7 @@ All OP Stack chains are configured with `--config /config/config.toml` and a `L1
 | `morph` | `ghcr.io/morphprotocol/node:v0.3.0` | 8545 |
 | `metis` | `metisprotocol/l2geth:v1.4.2` | 8545 |
 | `opbnb` | `ghcr.io/bnb-chain/op-geth:v0.5.2` | 8545 |
-| `hemi` | `hemilabs/op-geth:v1.101408.0` | 8545 |
+| `hemi` | none, set `spec.image` ([#35](https://github.com/tazhate/chainplane/issues/35)) | 8545 |
 | `plume` | `public.ecr.aws/i6b2w2n6/nitro-node:plume-v2.3.2` | 8547 |
 | `everclear` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
 | `playnance` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
@@ -255,7 +255,7 @@ probes use the healthcheck port 3081.
 | `zksync` | `matterlabs/external-node:v29.17.0` | 3060 |
 | `lens` | `matterlabs/external-node:v29.17.0` | 3060 |
 | `abstract` | `matterlabs/external-node:v29.17.0` | 3060 |
-| `zero-network` | `matterlabs/external-node:v29.17.0` | 3060 |
+| `zero-network` | none, network shut down 2026-08-12 | 3060 |
 | `cronos-zkevm` | `ghcr.io/cronos-labs/external-node:v31.3.0` | 3060 |
 
 ### EVM — Other L2 / Sidechain
@@ -266,7 +266,7 @@ probes use the healthcheck port 3081.
 | `polygon-zkevm` | `0xpolygonhermez/zkevm-node:v0.7.0` | 8545 |
 | `gnosis` | `nethermind/nethermind:1.36.1` | 8545 |
 | `gnosis-beacon` | `sigp/lighthouse:v6.0.1` | 5052 |
-| `mantle` | `mantlenetworkio/op-geth:v1.0.3` | 8545 |
+| `mantle` | none, set `spec.image` ([#35](https://github.com/tazhate/chainplane/issues/35)) | 8545 |
 | `linea` | none, set `spec.image` ([#30](https://github.com/tazhate/chainplane/issues/30)) | 8545 |
 | `scroll` | `scrolltech/l2geth:scroll-v5.9.0` | 8545 |
 | `cronos` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
@@ -274,11 +274,11 @@ probes use the healthcheck port 3081.
 | `fuse` | `fusenet/node:2.0.2` | 8545 |
 | `core` | `coredao/core-chain:v1.0.22` | 8545 |
 | `wemix` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8588 |
-| `immutable-zkevm` | `ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0` | 8545 |
+| `immutable-zkevm` | `ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0-beta.17` | 8545 |
 | `aurora` | none, set `spec.image` ([#31](https://github.com/tazhate/chainplane/issues/31)) | 8545 |
 | `telos` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `thundercore` | `thundercore/thunder:r4.1.3` | 8545 |
-| `klaytn` | `klaytn/klaytn:v2.2.0` | 8551 |
+| `klaytn` (Kaia) | `kaiachain/kaia:v2.2.2` | 8551 |
 | `viction` | `buildonviction/node:v2.5.1` | 8545 |
 | `haqq` | `alhaqq/haqq:v1.8.1` | 8545 |
 | `hashkey` | `hashkeychain/hashkey-geth:v1.0.0` | 8545 |
@@ -287,12 +287,12 @@ probes use the healthcheck port 3081.
 | `sonic` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 18545 |
 | `moonbeam` | `moonbeamfoundation/moonbeam:v0.39.1` | 9933 |
 | `moonriver` | `moonbeamfoundation/moonbeam:v0.39.1` | 9933 |
-| `berachain` | `ghcr.io/berachain/beacon-kit:v0.2.0` | 26657 |
+| `berachain` | `ghcr.io/berachain/beacon-kit:v1.4.1` | 26657 |
 | `hyperliquid` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 3001 |
 | `monad` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `megaeth` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `plasma` | `plasma-next/node:v0.1.0` | 8545 |
-| `moca` | `moca-network/moca:v0.1.0` | 8545 |
+| `moca` | `ghcr.io/mocachain/mocad:v1.4.1` | 8545 |
 
 ### Cosmos SDK
 
@@ -301,15 +301,15 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | Chain | Image | RPC Port |
 |-------|-------|----------|
 | `cosmos` | `ghcr.io/cosmos/gaia:v28.3.1` | 26657 |
-| `osmosis` | `osmolabs/osmosis:v31.0.0` | 26657 |
+| `osmosis` | `osmolabs/osmosis:31.0.3` | 26657 |
 | `sei` | `seiprotocol/seid:v6.2.0` | 26657 |
 | `axelar` | `axelarnet/axelar-core:v1.3.4` | 26657 |
 | `kava` | `kava-labs/kava:v0.26.2` | 26657 |
 | `evmos` | `tharsishq/evmos:v20.0.0` | 26657 |
 | `dymension` | `dymensionxyz/dymd:v3.1.0` | 26657 |
 | `mezo` | `mezo/mezod:v2.0.1` | 26657 |
-| `moca` | `moca-network/moca:v0.1.0` | 26657 |
-| `harmony` | `harmonyone/harmony:v8.5.4` | 9500 |
+| `moca` | `ghcr.io/mocachain/mocad:v1.4.1` | 26657 |
+| `harmony` | `harmonyone/harmony:v2026.1.3` | 9500 |
 
 ### Other chains
 
@@ -318,14 +318,14 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | `solana` | `solanalabs/agave:v2.1.0` | 8899 | |
 | `bsc` | `ghcr.io/bnb-chain/bsc:1.6.7` | 8545 | |
 | `avalanche` | `avaplatform/avalanchego:v1.14.1` | 9650 | |
-| `ton` | `ghcr.io/ton-blockchain/ton:v2026.02-1` | 30003 | custom UDP ADNL NodePort |
+| `ton` | `ghcr.io/ton-blockchain/ton:v2026.08-amd64` | 30003 | custom UDP ADNL NodePort |
 | `tron` | `tronprotocol/java-tron:GreatVoyage-v4.8.1` | 8090 | JDK 11 recommended |
 | `near` | `nearprotocol/nearcore:2.10.7` | 3030 | state sync via GCS |
 | `xrp` | `xrpllabsofficial/xrpld:3.1.2` | 5005 | |
 | `stellar` | `stellar/stellar-core:29.0.0-3589.4eb833373.noble` | 11626 | |
 | `cardano` | `ghcr.io/intersectmbo/cardano-node:11.1.3` | 12798 | |
 | `sui` | `mysten/sui-node:v1.39.2` | 9000 | |
-| `aptos` | `aptoslabs/validator:mainnet` | 8080 | |
+| `aptos` | `aptoslabs/validator:aptos-node-v1.48.7-hotfix` | 8080 | |
 | `polkadot` | `parity/polkadot:v1.16.2` | 9944 | |
 | `kusama` | `parity/polkadot:v1.15.1` | 9944 | |
 | `starknet` | `nethermindeth/juno:v0.12.5` | 6060 | uses Juno client |

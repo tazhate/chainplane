@@ -10,7 +10,7 @@ This document describes every blockchain adapter supported by the operator, incl
 | Ethereum | geth, reth, erigon, nethermind | `nethermind/nethermind:1.36.1` | 8545 | 8546 | Multi-client, archive mode |
 | Solana | solana-labs | `solanalabs/solana:v1.18.26` | 8899 | 8900 | Startup probe (1h) |
 | TRON | java-tron | `tronprotocol/java-tron:GreatVoyage-v4.8.1` | 8090 (HTTP) | - | Startup probe (6h mainnet), custom JVM command |
-| TON | validator-engine | `ghcr.io/ton-blockchain/ton:latest` | 30003 (liteserver) | - | UDP NodePort, startup probe (24h), dump restore |
+| TON | validator-engine | `ghcr.io/ton-blockchain/ton:v2026.08-amd64` | 30003 (liteserver) | - | UDP NodePort, startup probe (24h), dump restore |
 | Cosmos | gaiad | `ghcr.io/cosmos/gaia:v27.0.0` | 26657 (Tendermint) / 1317 (API) | - | CometBFT state sync, startup probe (1h) |
 | Avalanche | avalanchego | `avaplatform/avalanchego:v1.14.1` | 9650 | - | Startup probe (2h), delegates to C-Chain EVM |
 | BSC | bsc-geth | `ghcr.io/bnb-chain/bsc:1.6.7` | 8545 | 8546 | Genesis download on first run |
@@ -19,10 +19,10 @@ This document describes every blockchain adapter supported by the operator, incl
 | Litecoin | litecoind | `uphold/litecoin-core:0.21` | 9332 | - | RPC auth via env vars, custom LITECOIN_DATA env |
 | NEAR | nearcore | `nearprotocol/nearcore:2.10.7` | 3030 | - | HTTP health probe, startup probe (4h) |
 | Polygon | bor | `0xpolygon/bor:2.6.3` | 8545 | 8546 | HostPort P2P, Heimdall sidecar |
-| Stellar | stellar-core | `stellar/stellar-core:latest` | 11626 (HTTP) | - | Watcher mode, fast catchup |
+| Stellar | stellar-core | `stellar/stellar-core:29.0.0-3589.4eb833373.noble` | 11626 (HTTP) | - | Watcher mode, fast catchup |
 | Sui | sui-node | `mysten/sui-node:mainnet` | 9000 | - | Init container (formal snapshot), startup probe (1h) |
 | XRP | rippled | `xrpllabsofficial/xrpld:3.1.2` | 5005 (HTTP) | 6006 (WS) | Syncs from current ledger tip (`--net`) |
-| Aptos | aptos-node | `aptoslabs/validator:mainnet` | 8080 | - | HTTP health probe, startup probe (4h) |
+| Aptos | aptos-node | `aptoslabs/validator:aptos-node-v1.48.7-hotfix` | 8080 | - | HTTP health probe, startup probe (4h) |
 | Blast | blast-geth | `blastio/blast-geth:v1.2.0` | 8545 | 8546 | OP Stack L2, L1_RPC_URL env |
 | Mode | op-geth | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 | 8546 | OP Stack L2, L1_RPC_URL env |
 | Zora | op-geth | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 | 8546 | OP Stack L2, L1_RPC_URL env |
@@ -149,7 +149,7 @@ This document describes every blockchain adapter supported by the operator, incl
 ### TON
 
 **Supported clients:** validator-engine
-**Default image:** `ghcr.io/ton-blockchain/ton:latest`
+**Default image:** `ghcr.io/ton-blockchain/ton:v2026.08-amd64`
 **Config file:** `global-config.json` (embedded mainnet global config)
 
 **Ports:**
@@ -390,7 +390,7 @@ This document describes every blockchain adapter supported by the operator, incl
 ### Stellar
 
 **Supported clients:** stellar-core
-**Default image:** `stellar/stellar-core:latest`
+**Default image:** `stellar/stellar-core:29.0.0-3589.4eb833373.noble`
 **Config file:** `stellar-core.cfg`
 
 **Ports:**
@@ -475,7 +475,7 @@ This document describes every blockchain adapter supported by the operator, incl
 ### Aptos
 
 **Supported clients:** aptos-node
-**Default image:** `aptoslabs/validator:mainnet`
+**Default image:** `aptoslabs/validator:aptos-node-v1.48.7-hotfix`
 **Config file:** `fullnode.yaml`
 
 **Ports:**

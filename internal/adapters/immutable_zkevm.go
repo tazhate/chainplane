@@ -29,7 +29,8 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-// NOTE: immutable-geth requires 'immutable bootstrap rpc' subcommand on first run.
+// immutable-geth needs "geth immutable bootstrap rpc" once to write the zkEVM
+// genesis into the data dir; ContainerCommand runs it on an empty volume.
 
 const defaultImmutableZkEVML1URL = "http://ethereum:8545"
 
@@ -75,20 +76,28 @@ func (a *immutableZkEVMAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *immutableZkEVMAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "ghcr.io",
-		Repository: "immutable/immutable-geth/immutable-geth",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
+// No VersionPolicy: immutable-geth publishes only pre-release tags
+// (v1.0.0-beta.N), which versioncheck never treats as stable, so there is
+// nothing it could track. Bump the beta pin by hand.
 
 func (a *immutableZkEVMAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
+// ContainerCommand bootstraps the mainnet genesis on first start, then runs
+// geth with the container args.
+func (a *immutableZkEVMAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"sh", "-c",
+		`[ -d /data/geth/chaindata ] || geth immutable bootstrap rpc --zkevm mainnet --datadir /data; exec geth "$@"`,
+		"--"}
+}
+
 func (a *immutableZkEVMAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+	return []string{
+		"--config", "/config/config.toml",
+		"--zkevm", "mainnet",
+		"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060",
+	}
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by Immutable zkEVM (L2).
@@ -102,21 +111,14 @@ func (a *immutableZkEVMAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec)
 // Config
 // --------------------------------------------------------------------------
 
-const immutableZkEVMConfig = `# Immutable zkEVM node configuration
-[Eth]
-SyncMode = "snap"
-
+const immutableZkEVMConfig = `# Immutable zkEVM RPC node (geth TOML; unset fields keep the --zkevm defaults)
 [Node]
 DataDir = "/data"
-
-[Node.HTTPHost]
 HTTPHost = "0.0.0.0"
 HTTPPort = 8545
 HTTPVirtualHosts = ["*"]
-HTTPCorsDomain = ["*"]
+HTTPCors = ["*"]
 HTTPModules = ["eth", "net", "web3", "debug", "txpool"]
-
-[Node.WSHost]
 WSHost = "0.0.0.0"
 WSPort = 8546
 WSOrigins = ["*"]

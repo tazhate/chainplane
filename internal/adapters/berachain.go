@@ -34,9 +34,23 @@ import (
 // Official images:
 //
 //	CL (this adapter): ghcr.io/berachain/beacon-kit
-//	EL (companion):    ghcr.io/berachain/reth
+//	EL (companion):    ghcr.io/berachain/bera-reth
 //
 // See: https://docs.berachain.com/nodes/run-a-node
+
+// berachainNetworkFiles is where the mainnet (chain id 80094) genesis, CometBFT
+// config and KZG trusted setup are fetched from on first start. Pinned to the
+// beacon-kit release of the default image.
+const berachainNetworkFiles = "https://raw.githubusercontent.com/berachain/beacon-kit/v1.4.1/testing/networks/80094"
+
+// SHA-256 of the files under berachainNetworkFiles (v1.4.1). Genesis and the
+// KZG setup are consensus-critical: a moved tag or a tampered download must
+// stop the node instead of starting it on a different chain.
+const (
+	berachainGenesisSHA256    = "d83b50211850d5a3abcbba7e85037468add496b7605aa23bdf72523cf979ec6c"
+	berachainConfigTOMLSHA256 = "85b7b4031e4ed967691e7b09f96329e33280707a8c266abad3222991a6d11ed8"
+	berachainKZGSetupSHA256   = "0229b43f4fac9b17374809520eb621b5ee1a7f74547e7d36918e7d4b122e178d"
+)
 
 type berachainAdapter struct {
 	protocolAdapter
@@ -74,8 +88,48 @@ func (a *berachainAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []
 	}
 }
 
+// ContainerCommand follows the upstream node setup: on first start it runs
+// beacond init and fetches the mainnet genesis.json, config.toml and KZG
+// trusted setup into /data/config. Downloads land as .part files and are
+// moved in place only when their SHA-256 matches; a mismatch removes the
+// .part and exits, so the next start retries. genesis.json and the KZG setup
+// are re-checked on every start and fetched again if they differ;
+// config.toml is fetched once, so later edits on the volume survive.
+// On every start the mounted app.toml replaces the generated one; beacond
+// cannot start without a complete app.toml ("failed to unmarshal app
+// config"). The Engine API JWT is taken from /jwt.hex when mounted
+// (spec.extraVolumes), otherwise one is generated once at
+// /data/config/jwt.hex for the EL to share.
+func (a *berachainAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	const script = `set -e
+NET=` + berachainNetworkFiles + `
+C=/data/config
+fetch() {
+  curl -fsSL -o "$C/$1.part" "$NET/$1"
+  if ! echo "$2  $C/$1.part" | sha256sum -c - >/dev/null 2>&1; then
+    rm -f "$C/$1.part"
+    echo "$1 from $NET does not match pinned sha256 $2" >&2
+    exit 1
+  fi
+  mv "$C/$1.part" "$C/$1"
+}
+pinned() { [ -f "$C/$1" ] && echo "$2  $C/$1" | sha256sum -c - >/dev/null 2>&1; }
+[ -f $C/node_key.json ] || beacond init "${HOSTNAME:-chainplane}" --chain-id mainnet-beacon-80094 --beacon-kit.chain-spec mainnet --home /data >/dev/null 2>&1
+pinned genesis.json ` + berachainGenesisSHA256 + ` || fetch genesis.json ` + berachainGenesisSHA256 + `
+pinned kzg-trusted-setup.json ` + berachainKZGSetupSHA256 + ` || fetch kzg-trusted-setup.json ` + berachainKZGSetupSHA256 + `
+[ -f $C/.config-toml-fetched ] || { fetch config.toml ` + berachainConfigTOMLSHA256 + ` && touch $C/.config-toml-fetched; }
+cp /config/app.toml $C/app.toml
+JWT=/jwt.hex
+if [ ! -f "$JWT" ]; then
+  JWT=/data/config/jwt.hex
+  [ -f "$JWT" ] || beacond jwt generate -o "$JWT" --home /data
+fi
+exec beacond start --beacon-kit.engine.jwt-secret-path "$JWT" "$@"`
+	return []string{"sh", "-c", script, "--"}
+}
+
 func (a *berachainAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--home", "/data", "--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *berachainAdapter) DefaultResources() ResourceDefaults {
@@ -90,35 +144,76 @@ func (a *berachainAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "ghcr.io",
 		Repository: "berachain/beacon-kit",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		TagPattern: `^v(?P<version>\d+\.\d+\.\d+)$`,
 	}
 }
 
-const berachainConfig = `# BeaconKit consensus layer — Berachain mainnet
-# Requires co-deployed reth EL reachable at http://127.0.0.1:8551
+const berachainConfig = `# BeaconKit consensus layer, Berachain mainnet (chain-spec "mainnet", 80094).
+# Based on beacon-kit testing/networks/80094/app.toml. Copied over
+# /data/config/app.toml on every start, so ConfigMap edits apply on restart.
+# Requires a co-deployed EL (ghcr.io/berachain/bera-reth) at 127.0.0.1:8551.
 
-[beacon-kit]
-  [beacon-kit.engine]
-    # Engine API endpoint of the co-deployed reth execution layer
-    rpc-dial-url = "http://127.0.0.1:8551"
-    jwt-secret-path = "/jwt.hex"
-
-  [beacon-kit.node-api]
-    enabled = true
-    address = "0.0.0.0"
-    port = 3500
+pruning = "everything"
+pruning-keep-recent = "0"
+pruning-interval = "0"
+halt-height = 0
+halt-time = 0
+min-retain-blocks = 0
+inter-block-cache = true
+index-events = []
+iavl-cache-size = 781250
+iavl-disable-fastnode = true
+app-db-backend = "pebbledb"
 
 [telemetry]
-  enabled = true
-  prometheus-retention-time = 60
-  prometheus-addr = "0.0.0.0:26660"
+service-name = "beacond_node"
+enabled = true
+enable-hostname = true
+enable-hostname-label = true
+enable-service-label = true
+prometheus-retention-time = 60
+global-labels = []
+metrics-sink = ""
+statsd-addr = ""
+datadog-hostname = ""
 
-[comet]
-  [comet.p2p]
-    laddr = "tcp://0.0.0.0:26656"
-    max-num-inbound-peers = 40
-    max-num-outbound-peers = 10
+[beacon-kit]
+chain-spec = "mainnet"
+chain-spec-file = ""
+shutdown-timeout = "5m0s"
 
-  [comet.rpc]
-    laddr = "tcp://0.0.0.0:26657"
+[beacon-kit.engine]
+rpc-dial-url = "http://127.0.0.1:8551"
+rpc-timeout = "2s"
+rpc-retry-interval = "100ms"
+rpc-max-retry-interval = "10s"
+rpc-startup-check-interval = "3s"
+rpc-jwt-refresh-interval = "30s"
+# Overridden at start: /jwt.hex when mounted, else a secret generated once
+# at /data/config/jwt.hex.
+jwt-secret-path = "/jwt.hex"
+
+[beacon-kit.logger]
+time-format = "RFC3339"
+log-level = "info"
+style = "json"
+
+[beacon-kit.kzg]
+trusted-setup-path = "/data/config/kzg-trusted-setup.json"
+implementation = "crate-crypto/go-kzg-4844"
+
+# Full node: block building is only needed on validators.
+[beacon-kit.payload-builder]
+enabled = false
+suggested-fee-recipient = "0x0000000000000000000000000000000000000000"
+payload-timeout = "850ms"
+
+[beacon-kit.validator]
+graffiti = ""
+availability-window = "8192"
+
+[beacon-kit.node-api]
+enabled = true
+address = "0.0.0.0:3500"
+logging = false
 `

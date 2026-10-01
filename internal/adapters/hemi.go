@@ -74,13 +74,10 @@ func (a *hemiAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *hemiAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "hemilabs/op-geth",
-		TagPattern: `^v\d+\.\d+\.\d+`,
-	}
-}
+// Hemi publishes op-geth and op-node only under short commit SHA tags and
+// runs them from the hemilabs/hemi-node compose stack with genesis, rollup
+// config, JWT and TBC data the adapter does not provide. No default image
+// and no semver to track (#35).
 
 // ContainerEnv provides the L1 RPC endpoint required by OP Stack op-geth.
 func (a *hemiAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {

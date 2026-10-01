@@ -100,13 +100,10 @@ func (a *mantleAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *mantleAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "mantlenetworkio/op-geth",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
+// Mantle's EL is now mantlenetworkio/mantle-op-geth, run with command geth
+// (the image entrypoint is a devnet sequencer script) next to a mantle-op-node
+// sidecar. The adapter does not model that yet, so there is no default image
+// and nothing to track (#35).
 
 // --------------------------------------------------------------------------
 // Config (static)
