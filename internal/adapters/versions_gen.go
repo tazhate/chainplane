@@ -71,7 +71,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "",
 	},
 	chainsv1alpha2.ChainCronosZkEVM: {
-		"": "ghcr.io/cronos-labs/external-node:mainnet-v29.6.0",
+		"": "ghcr.io/cronos-labs/external-node:v31.3.0",
 	},
 	chainsv1alpha2.ChainDash: {
 		"": "dashpay/dashd:23.1.8",
