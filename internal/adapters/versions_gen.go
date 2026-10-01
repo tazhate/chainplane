@@ -274,7 +274,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "nethermindeth/juno:v0.16.7",
 	},
 	chainsv1alpha2.ChainStellar: {
-		"": "stellar/stellar-core:v19.12.0",
+		"": "stellar/stellar-core:29.0.0-3589.4eb833373.noble",
 	},
 	chainsv1alpha2.ChainSui: {
 		"": "mysten/sui-node:mainnet-v1.80.1",
