@@ -18,6 +18,7 @@ package adapters_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -243,5 +244,48 @@ func TestUTXOHealthCheckWithCredentialsSendsBasicAuth(t *testing.T) {
 
 	if _, err := rc.HealthCheckWithCredentials(t.Context(), srv.URL, adapters.RPCCredentials{User: "rpc", Password: "rpc"}); err == nil {
 		t.Error("expected failure with wrong credentials")
+	}
+}
+
+// TestUTXOExporterDoesNotCollideWithRPC guards the litecoin case: the exporter
+// defaulted to 9332, litecoind's RPC port, in the same pod.
+func TestUTXOExporterDoesNotCollideWithRPC(t *testing.T) {
+	for _, chain := range utxoChains {
+		adapter, _ := adapters.Get(chain)
+		rc := adapter.(adapters.RPCCredentialed)
+		main := map[int32]bool{}
+		for _, p := range adapter.ContainerPorts(chainsv1alpha2.ChainInstanceSpec{}) {
+			main[p.ContainerPort] = true
+		}
+		for _, c := range rc.RPCSidecars(chainsv1alpha2.ChainInstanceSpec{}, "creds") {
+			var metricsEnv string
+			for _, e := range c.Env {
+				if e.Name == "METRICS_PORT" {
+					metricsEnv = e.Value
+				}
+			}
+			for _, p := range c.Ports {
+				if main[p.ContainerPort] {
+					t.Errorf("%s: sidecar port %d collides with the node container", chain, p.ContainerPort)
+				}
+				if p.Name == "metrics" && metricsEnv != fmt.Sprint(p.ContainerPort) {
+					t.Errorf("%s: METRICS_PORT=%q does not match declared port %d", chain, metricsEnv, p.ContainerPort)
+				}
+			}
+		}
+	}
+}
+
+func TestDogecoinUsesMountedConfigAndPVC(t *testing.T) {
+	adapter, _ := adapters.Get(chainsv1alpha2.ChainDogecoin)
+	ap, ok := adapter.(adapters.ContainerArgsProvider)
+	if !ok {
+		t.Fatal("dogecoin adapter must pass container args")
+	}
+	args := strings.Join(ap.ContainerArgs(chainsv1alpha2.ChainInstanceSpec{}), " ")
+	for _, want := range []string{"-conf=/config/dogecoin.conf", "-datadir=/data"} {
+		if !strings.Contains(args, want) {
+			t.Errorf("dogecoin args %q missing %q", args, want)
+		}
 	}
 }

@@ -86,8 +86,15 @@ func (a *dogecoinAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []c
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 22555, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p", ContainerPort: 22556, Protocol: corev1.ProtocolTCP},
-		{Name: "metrics", ContainerPort: 9332, Protocol: corev1.ProtocolTCP},
 	}
+}
+
+// ContainerArgs points dogecoind at the mounted config. The
+// fiftysix/dogecoin-core image otherwise reads its bundled config and keeps
+// data under /node/dogecoin-core/data in the container filesystem, ignoring
+// both the ConfigMap and the PVC (whose datadir=/data comes from the config).
+func (a *dogecoinAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"-conf=/config/dogecoin.conf", "-datadir=/data"}
 }
 
 func (a *dogecoinAdapter) VersionPolicy() ChainVersionPolicy {
@@ -108,7 +115,7 @@ func (a *dogecoinAdapter) DefaultResources() ResourceDefaults {
 
 // RPCSidecars returns a bitcoin-prometheus-exporter sidecar for Dogecoin nodes.
 // The exporter connects to the local RPC with credentials from secretName and
-// exposes Prometheus metrics on port 9332.
+// exposes Prometheus metrics on utxoExporterMetricsPort.
 func (a *dogecoinAdapter) RPCSidecars(_ chainsv1alpha2.ChainInstanceSpec, secretName string) []corev1.Container {
 	return []corev1.Container{utxoExporterSidecar(22555, secretName)}
 }
