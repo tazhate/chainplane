@@ -204,6 +204,8 @@ func (r *ChainInstance) SetupWebhookWithManager(mgr ctrl.Manager, defaultImage D
 }
 
 // ChainInstanceValidator implements webhook.CustomValidator for ChainInstance.
+// It holds a func field, so it is excluded from deepcopy generation.
+// +kubebuilder:object:generate=false
 // +kubebuilder:webhook:path=/validate-chains-chainplane-io-v1alpha2-chaininstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=chains.chainplane.io,resources=chaininstances,verbs=create;update,versions=v1alpha2,name=vchaininstance.kb.io,admissionReviewVersions=v1
 type ChainInstanceValidator struct {
 	// DefaultImage, when set, lets the validator reject chains that ship no
