@@ -48,10 +48,12 @@ type nethermindNode struct {
 	Config      string
 	P2PPort     int32
 	MetricsPort int32
+	// Extra settings follow the shared ones, e.g. the Engine API endpoint.
+	Extra []nethermindSetting
 }
 
 func (n nethermindNode) settings() []nethermindSetting {
-	return []nethermindSetting{
+	return append([]nethermindSetting{
 		{"Init", "WebSocketsEnabled", true},
 		{"JsonRpc", "Enabled", true},
 		{"JsonRpc", "Host", "0.0.0.0"},
@@ -63,7 +65,7 @@ func (n nethermindNode) settings() []nethermindSetting {
 		{"HealthChecks", "Enabled", true},
 		{"Metrics", "Enabled", true},
 		{"Metrics", "ExposePort", n.MetricsPort},
-	}
+	}, n.Extra...)
 }
 
 // args returns the Nethermind command line: the built-in config, the data
