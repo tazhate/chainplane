@@ -11,8 +11,9 @@ spec:
   nodeType: rpc
   nodeGroup: heavy
   # Default image: see internal/adapters/versions_gen.go
-  # Metis is an L2 chain (l2geth-based) requiring an L1 Ethereum RPC endpoint.
-  # L1_RPC_URL is injected automatically (default: ethereum-mainnet-01 service).
+  # Metis is an L2 chain (l2geth-based). l2geth syncs from the Metis data
+  # transport layer (metisdao/dtl), which reads Ethereum; it is not deployed
+  # by the operator. ROLLUP_CLIENT_HTTP defaults to http://metis-dtl:7878.
   storage:
     size: 500Gi
     storageClass: fast-ssd
@@ -29,7 +30,7 @@ spec:
     wsPort: 8546
   health:
     blockLagThreshold: 30
-  # Override default L1 RPC URL if needed:
+  # Point l2geth at your DTL:
   # extraEnv:
-  # - name: L1_RPC_URL
-  #   value: "http://your-ethereum-rpc:8545"
+  # - name: ROLLUP_CLIENT_HTTP
+  #   value: "http://your-metis-dtl:7878"

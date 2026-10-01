@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -159,4 +160,12 @@ func evmPorts(p2pPort int32) []corev1.ContainerPort {
 		{Name: "p2p-tcp", ContainerPort: p2pPort, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: p2pPort, Protocol: corev1.ProtocolUDP},
 	}
+}
+
+// gethMetricsArgs returns the go-ethereum flags that serve Prometheus metrics
+// at /debug/metrics/prometheus on port. Only geth and its forks accept them:
+// Nethermind, Besu, Nitro and Bor exit or print their usage on
+// --metrics.addr/--metrics.port, so their adapters use their own settings.
+func gethMetricsArgs(port int32) []string {
+	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", strconv.Itoa(int(port))}
 }

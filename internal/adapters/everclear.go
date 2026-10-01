@@ -29,6 +29,20 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+// everclear is the Everclear hub (chain id 25327), a Gelato-hosted Orbit
+// chain on Ethereum. Its chain info is not published outside the Gelato
+// dashboard and is not built into Nitro, so it has to be passed with
+// spec.extraArgs (--chain.info-json=...); without it Nitro stops at
+// startup. Everclear wound down in May 2026 and the chain stopped producing
+// blocks, so a node can only serve the frozen history.
+var everclear = nitroChain{
+	ChainID:         25327,
+	ParentChainURL:  "http://ethereum:8545",
+	BlobsFromBeacon: true,
+	HTTPPort:        8547,
+	WSPort:          8548,
+}
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -55,8 +69,11 @@ func (a *everclearAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainEverclear, client)
 }
 
+// ConfigTemplate renders the Nitro config. The chain info (and the AnyTrust
+// DAS endpoints) must come from spec.extraArgs, see everclear.
 func (a *everclearAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "", "", nil
+	cfg, err := nitroConfig(everclear)
+	return nitroConfigFile, cfg, err
 }
 
 func (a *everclearAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -64,27 +81,17 @@ func (a *everclearAdapter) HealthCheck(ctx context.Context, rpcURL string) (Sync
 }
 
 func (a *everclearAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return []corev1.ContainerPort{
-		{Name: "rpc", ContainerPort: 8547, Protocol: corev1.ProtocolTCP},
-		{Name: "ws", ContainerPort: 8548, Protocol: corev1.ProtocolTCP},
-		{Name: "p2p-tcp", ContainerPort: 30301, Protocol: corev1.ProtocolTCP},
-		{Name: "p2p-udp", ContainerPort: 30301, Protocol: corev1.ProtocolUDP},
-		{Name: "metrics", ContainerPort: 6070, Protocol: corev1.ProtocolTCP},
-	}
+	return nitroPorts(everclear)
 }
 
 func (a *everclearAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{
-		"--parent-chain.connection.url=http://ethereum:8545",
-		"--chain.id=25327",
-		"--http.addr=0.0.0.0",
-		"--http.port=8547",
-		"--ws.addr=0.0.0.0",
-		"--ws.port=8548",
-		"--metrics",
-		"--metrics.addr=0.0.0.0",
-		"--metrics.port=6070",
-	}
+	return nitroArgs(everclear)
+}
+
+// ContainerEnv injects the Ethereum execution and beacon endpoints; override
+// L1_RPC_URL and L1_BEACON_URL via extraEnv.
+func (a *everclearAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	return nitroEnv(everclear)
 }
 
 func (a *everclearAdapter) DefaultResources() ResourceDefaults {

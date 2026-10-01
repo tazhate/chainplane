@@ -29,6 +29,22 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+// playnance is PlayBlock (chain id 1829), a Gelato-hosted AnyTrust Orbit
+// chain whose parent chain is Arbitrum Nova, so L1_RPC_URL defaults to the
+// public Nova RPC and no beacon endpoint is needed. The chain info and the
+// DAS REST aggregator are only published in the Gelato dashboard and are not
+// built into Nitro: pass them with spec.extraArgs (--chain.info-json=...,
+// --node.da.anytrust.enable, --node.da.anytrust.rest-aggregator.enable,
+// --node.da.anytrust.rest-aggregator.urls=...); without the chain info
+// Nitro stops at startup.
+var playnance = nitroChain{
+	ChainID:          1829,
+	ForwardingTarget: "https://rpc.playblock.io",
+	ParentChainURL:   "https://nova.arbitrum.io/rpc",
+	HTTPPort:         8547,
+	WSPort:           8548,
+}
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -55,8 +71,11 @@ func (a *playnanceAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainPlaynance, client)
 }
 
+// ConfigTemplate renders the Nitro config. The chain info and DAS endpoints
+// must come from spec.extraArgs, see playnance.
 func (a *playnanceAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "", "", nil
+	cfg, err := nitroConfig(playnance)
+	return nitroConfigFile, cfg, err
 }
 
 func (a *playnanceAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -64,18 +83,17 @@ func (a *playnanceAdapter) HealthCheck(ctx context.Context, rpcURL string) (Sync
 }
 
 func (a *playnanceAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return []corev1.ContainerPort{
-		{Name: "rpc", ContainerPort: 8547, Protocol: corev1.ProtocolTCP},
-		{Name: "ws", ContainerPort: 8548, Protocol: corev1.ProtocolTCP},
-		{Name: "p2p-tcp", ContainerPort: 30301, Protocol: corev1.ProtocolTCP},
-		{Name: "p2p-udp", ContainerPort: 30301, Protocol: corev1.ProtocolUDP},
-		{Name: "metrics", ContainerPort: 6070, Protocol: corev1.ProtocolTCP},
-	}
+	return nitroPorts(playnance)
 }
 
-// ContainerArgs enables Arbitrum Nitro metrics endpoint.
 func (a *playnanceAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr=0.0.0.0", "--metrics.port=6070"}
+	return nitroArgs(playnance)
+}
+
+// ContainerEnv injects the Arbitrum Nova endpoint; override L1_RPC_URL via
+// extraEnv.
+func (a *playnanceAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	return nitroEnv(playnance)
 }
 
 func (a *playnanceAdapter) DefaultResources() ResourceDefaults {

@@ -67,8 +67,20 @@ func (a *coreAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
+// ContainerCommand runs geth directly. The image entrypoint reads
+// /core/config/config.toml and genesis.json, which the image does not ship;
+// core-chain's geth has the Core genesis built in (--mainnet, chain id 1116;
+// --pigeon for the test2 network) and initialises an empty datadir from it.
+func (a *coreAdapter) ContainerCommand(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	network := "--mainnet"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		network = "--pigeon"
+	}
+	return []string{"geth", network, "--config", "/config/config.toml"}
+}
+
 func (a *coreAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+	return gethMetricsArgs(6060)
 }
 
 func (a *coreAdapter) DefaultResources() ResourceDefaults {

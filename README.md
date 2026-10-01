@@ -179,7 +179,7 @@ Chains marked "none, set `spec.image`" have no usable public container image ups
 | `dash` | `dashpay/dashd:23.1.0` | 9998 | 50+ GiB |
 | `dogecoin` | `ruimarinho/dogecoin:1-alpine` | 22555 | 100+ GiB |
 | `rootstock` | `rsksmart/rskj:ARROWHEAD-6.4.0` | 4444 | 100+ GiB |
-| `ethereum-classic` | `hyperledger/besu:24.12.0` | 8545 | 100+ GiB |
+| `ethereum-classic` | `etclabscore/core-geth:v1.12.23` | 8545 | 100+ GiB |
 
 ### Ethereum
 
@@ -228,10 +228,10 @@ All OP Stack chains are configured with `--config /config/config.toml` and a `L1
 | `metis` | `metisprotocol/l2geth:v1.4.2` | 8545 |
 | `opbnb` | `ghcr.io/bnb-chain/op-geth:v0.5.2` | 8545 |
 | `hemi` | none, set `spec.image` ([#35](https://github.com/tazhate/chainplane/issues/35)) | 8545 |
-| `plume` | `public.ecr.aws/i6b2w2n6/nitro-node:plume-v2.3.2` | 8547 |
+| `plume` | `offchainlabs/nitro-node:v3.11.4-7d5ac27` | 8547 |
 | `everclear` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
 | `playnance` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
-| `gravity-alpha` | `ghcr.io/celestiaorg/nitro:v3.6.8` | 8547 |
+| `gravity-alpha` | `offchainlabs/nitro-node:v3.11.4-7d5ac27` | 8547 |
 | `doma` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
 | `katana` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
 | `goat` | `ghcr.io/goatnetwork/goat-geth:v0.4.2` | 8545 |
@@ -271,7 +271,7 @@ probes use the healthcheck port 3081.
 | `scroll` | `scrolltech/l2geth:scroll-v5.9.0` | 8545 |
 | `cronos` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `ronin` | none, set `spec.image` ([#29](https://github.com/tazhate/chainplane/issues/29)) | 8545 |
-| `fuse` | `fusenet/node:2.0.2` | 8545 |
+| `fuse` | `fusenet/node:nethermind-v1.36.2` | 8545 |
 | `core` | `coredao/core-chain:v1.0.22` | 8545 |
 | `wemix` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8588 |
 | `immutable-zkevm` | `ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0-beta.17` | 8545 |

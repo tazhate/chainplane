@@ -27,7 +27,12 @@ spec:
     wsPort: 8546
   health:
     blockLagThreshold: 30
-  # Override default L1 RPC URL (default: http://ethereum:8545)
+  # Everclear's chain info is not built into Nitro: pass it with
+  # extraArgs (--chain.info-json=...).
+  # Override the L1 execution and beacon endpoints
+  # (defaults: http://ethereum:8545, http://ethereum-beacon:5052)
   # extraEnv:
   # - name: L1_RPC_URL
   #   value: "http://your-ethereum-rpc:8545"
+  # - name: L1_BEACON_URL
+  #   value: "http://your-beacon-node:5052"

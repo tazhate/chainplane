@@ -259,15 +259,11 @@ func TestDefaultImagesArePinned(t *testing.T) {
 // than a mounted config file. ZK Stack external nodes and Arbitrum Orbit/Nitro
 // nodes fall into this category.
 var noConfigChains = map[chainsv1alpha2.Chain]bool{
-	chainsv1alpha2.ChainZkSync:       true, // ZK Stack external node
-	chainsv1alpha2.ChainLens:         true, // ZK Stack external node
-	chainsv1alpha2.ChainAbstract:     true, // ZK Stack external node
-	chainsv1alpha2.ChainZeroNetwork:  true, // ZK Stack external node
-	chainsv1alpha2.ChainCronosZkEVM:  true, // ZK Stack external node
-	chainsv1alpha2.ChainEverclear:    true, // Arbitrum Orbit (AnyTrust)
-	chainsv1alpha2.ChainPlaynance:    true, // Arbitrum Orbit L3
-	chainsv1alpha2.ChainGravityAlpha: true, // Arbitrum Nitro + Celestia DA
-	chainsv1alpha2.ChainPlume:        true, // Arbitrum Nitro
+	chainsv1alpha2.ChainZkSync:      true, // ZK Stack external node
+	chainsv1alpha2.ChainLens:        true, // ZK Stack external node
+	chainsv1alpha2.ChainAbstract:    true, // ZK Stack external node
+	chainsv1alpha2.ChainZeroNetwork: true, // ZK Stack external node
+	chainsv1alpha2.ChainCronosZkEVM: true, // ZK Stack external node
 }
 
 func TestAllAdaptersConfigTemplate(t *testing.T) {

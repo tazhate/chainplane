@@ -29,6 +29,18 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+// fuseNode runs Fuse's Nethermind build (fusenet/node:nethermind-*) on its
+// built-in fuse (or spark testnet) config, as upstream's quickstart.sh does.
+// Fuse left OpenEthereum in 2024; the old fusenet/node:2.x images run
+// OpenEthereum and no longer follow the chain.
+func fuseNode(spec chainsv1alpha2.ChainInstanceSpec) nethermindNode {
+	n := nethermindNode{Config: "fuse", P2PPort: 30303, MetricsPort: 6060}
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		n.Config = "spark"
+	}
+	return n
+}
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -55,8 +67,9 @@ func (a *fuseAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainFuse, client)
 }
 
-func (a *fuseAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.toml", fuseConfig, nil
+func (a *fuseAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
+	cfg, err := fuseNode(spec).configFile()
+	return nethermindConfigFile, cfg, err
 }
 
 func (a *fuseAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -67,8 +80,8 @@ func (a *fuseAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
-func (a *fuseAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+func (a *fuseAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	return fuseNode(spec).args()
 }
 
 func (a *fuseAdapter) DefaultResources() ResourceDefaults {
@@ -83,32 +96,8 @@ func (a *fuseAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
 		Repository: "fusenet/node",
-		TagPattern: `^\d+\.\d+\.\d+$`,
+		// Nethermind builds are tagged nethermind-v<version>; the plain
+		// <version> tags are the retired OpenEthereum images.
+		TagPattern: `^nethermind-(?P<version>v\d+\.\d+\.\d+)$`,
 	}
 }
-
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const fuseConfig = `# Fuse Network EVM-compatible sidechain node configuration
-[Eth]
-SyncMode = "snap"
-NetworkId = 122
-
-[Node]
-DataDir = "/data"
-HTTPHost = "0.0.0.0"
-HTTPPort = 8545
-HTTPVirtualHosts = ["*"]
-HTTPCorsDomain = ["*"]
-HTTPModules = ["eth", "net", "web3", "debug", "txpool"]
-WSHost = "0.0.0.0"
-WSPort = 8546
-WSOrigins = ["*"]
-WSModules = ["eth", "net", "web3"]
-
-[Node.P2P]
-MaxPeers = 50
-ListenAddr = ":30303"
-`

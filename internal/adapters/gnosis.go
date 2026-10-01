@@ -29,6 +29,15 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+// gnosisNode runs Nethermind on its built-in gnosis (or chiado) config.
+func gnosisNode(spec chainsv1alpha2.ChainInstanceSpec) nethermindNode {
+	n := nethermindNode{Config: "gnosis", P2PPort: 30303, MetricsPort: 6060}
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		n.Config = "chiado"
+	}
+	return n
+}
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -55,8 +64,9 @@ func (a *gnosisAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainGnosis, client)
 }
 
-func (a *gnosisAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "nethermind.json", gnosisConfig, nil
+func (a *gnosisAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
+	cfg, err := gnosisNode(spec).configFile()
+	return nethermindConfigFile, cfg, err
 }
 
 func (a *gnosisAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -71,20 +81,8 @@ func (a *gnosisAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []cor
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
-func (a *gnosisAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{
-		"--config", "gnosis",
-		"--datadir", "/data",
-		"--JsonRpc.Enabled", "true",
-		"--JsonRpc.Host", "0.0.0.0",
-		"--JsonRpc.Port", "8545",
-		"--JsonRpc.WebSocketsPort", "8546",
-		"--JsonRpc.EnabledModules", "[Eth,Net,Web3,Subscribe,Health]",
-		"--Network.P2PPort", "30303",
-		"--Network.DiscoveryPort", "30303",
-		"--HealthChecks.Enabled", "true",
-		"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060",
-	}
+func (a *gnosisAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	return gnosisNode(spec).args()
 }
 
 func (a *gnosisAdapter) DefaultResources() ResourceDefaults {
@@ -102,33 +100,3 @@ func (a *gnosisAdapter) VersionPolicy() ChainVersionPolicy {
 		TagPattern: `^\d+\.\d+\.\d+$`,
 	}
 }
-
-// --------------------------------------------------------------------------
-// Config (Nethermind JSON for Gnosis network)
-// --------------------------------------------------------------------------
-
-const gnosisConfig = `{
-  "Init": {
-    "ChainSpecPath": "chainspec/gnosis.json",
-    "BaseDbPath": "/data/db",
-    "LogDirectory": "/data/logs"
-  },
-  "JsonRpc": {
-    "Enabled": true,
-    "Host": "0.0.0.0",
-    "Port": 8545,
-    "WebSocketsPort": 8546,
-    "EnabledModules": ["Eth", "Net", "Web3", "Subscribe", "Health"]
-  },
-  "Network": {
-    "P2PPort": 30303,
-    "DiscoveryPort": 30303
-  },
-  "HealthChecks": {
-    "Enabled": true
-  },
-  "Sync": {
-    "FastSync": true
-  }
-}
-`
