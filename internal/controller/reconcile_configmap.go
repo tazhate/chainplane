@@ -74,7 +74,14 @@ func (r *ChainInstanceReconciler) ensureConfigMap(ctx context.Context, node *cha
 	}
 
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
-		cm.Data = map[string]string{filename: content}
+		// Adapters without a config file (ZK Stack, some Nitro chains) return an
+		// empty filename. A ConfigMap key must be non-empty, so keep the
+		// ConfigMap empty; the /config mount then stays an empty directory.
+		if filename == "" {
+			cm.Data = nil
+		} else {
+			cm.Data = map[string]string{filename: content}
+		}
 		return controllerutil.SetControllerReference(node, cm, r.Scheme)
 	})
 	if err != nil {
