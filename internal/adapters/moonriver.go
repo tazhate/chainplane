@@ -77,8 +77,8 @@ const moonriverConfig = `{
     "cors": "all",
     "methods": "unsafe"
   },
-  "ws": {
-    "port": 9945,
+  "prometheus": {
+    "port": 9615,
     "external": true
   },
   "network": {
@@ -91,14 +91,9 @@ const moonriverConfig = `{
   }
 }`
 
-// ContainerArgs passes --base-path /data and the config file so the node uses the PVC mount.
-func (a *moonriverAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{
-		"--base-path", "/data",
-		"--config", "/config/moonriver.json",
-		"--prometheus-external",
-		"--prometheus-port", "9615",
-	}
+// ContainerArgs selects the Moonriver chain spec; see moonbeamArgs.
+func (a *moonriverAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	return moonbeamArgs("moonriver", spec)
 }
 
 func (a *moonriverAdapter) DefaultResources() ResourceDefaults {
@@ -120,7 +115,6 @@ func (a *moonriverAdapter) VersionPolicy() ChainVersionPolicy {
 func (a *moonriverAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 9944, Protocol: corev1.ProtocolTCP},
-		{Name: "ws", ContainerPort: 9945, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 30333, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 30333, Protocol: corev1.ProtocolUDP},
 		{Name: "metrics", ContainerPort: 9615, Protocol: corev1.ProtocolTCP},

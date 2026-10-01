@@ -31,6 +31,10 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+// defaultStarknetL1WSURL is the in-cluster Ethereum L1 WebSocket endpoint Juno
+// verifies L2 state against. Override via spec.extraEnv (L1_WS_URL).
+const defaultStarknetL1WSURL = "ws://ethereum:8546"
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -60,9 +64,9 @@ const starknetConfig = `{
   "http-host": "0.0.0.0",
   "db-path": "/data/juno",
   "metrics": true,
+  "metrics-host": "0.0.0.0",
   "metrics-port": 9090,
-  "p2p": true,
-  "p2p-addr": "0.0.0.0:7777",
+  "eth-node": "ws://ethereum:8546",
   "colour": false
 }`
 
@@ -134,6 +138,10 @@ func (a *starknetAdapter) StartupProbe(_ chainsv1alpha2.ChainInstanceSpec) *core
 	return tcpProbe(6060, 30, 30, 10, 360)
 }
 
+// ContainerArgs syncs from the feeder gateway. Juno's P2P sync is
+// experimental and refused on mainnet ("P2P cannot be used on mainnet"),
+// so no --p2p flags. Juno exits without an L1 node unless
+// --disable-l1-verification is set; the L1 endpoint comes from L1_WS_URL.
 func (a *starknetAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
 	network := "mainnet"
 	if spec.Network == chainsv1alpha2.NetworkTestnet {
@@ -146,17 +154,22 @@ func (a *starknetAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) [
 		"--http-host", "0.0.0.0",
 		"--db-path", "/data/juno",
 		"--metrics",
+		"--metrics-host", "0.0.0.0",
 		"--metrics-port", "9090",
-		"--p2p",
-		"--p2p-addr", "0.0.0.0:7777",
+		"--eth-node", "$(L1_WS_URL)",
 		"--colour=false",
+	}
+}
+
+func (a *starknetAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: "L1_WS_URL", Value: defaultStarknetL1WSURL},
 	}
 }
 
 func (a *starknetAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
-		{Name: "p2p", ContainerPort: 7777, Protocol: corev1.ProtocolTCP},
 		{Name: "metrics", ContainerPort: 9090, Protocol: corev1.ProtocolTCP},
 	}
 }

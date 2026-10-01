@@ -8,7 +8,7 @@ This document describes every blockchain adapter supported by the operator, incl
 |-------|---------|---------------|----------|---------|---------|
 | Bitcoin | bitcoind | `lncm/bitcoind:v28.0` | 8332 (mainnet) / 18332 (testnet) | - | RPC auth via env vars |
 | Ethereum | geth, reth, erigon, nethermind | `nethermind/nethermind:1.36.1` | 8545 | 8546 | Multi-client, archive mode |
-| Solana | solana-labs | `solanalabs/solana:v1.18.26` | 8899 | 8900 | Startup probe (1h) |
+| Solana | agave | `anzaxyz/agave:v3.1.14` | 8899 | 8900 | Non-voting RPC node, startup probe (1h) |
 | TRON | java-tron | `tronprotocol/java-tron:GreatVoyage-v4.8.1` | 8090 (HTTP) | - | Startup probe (6h mainnet), custom JVM command |
 | TON | validator-engine | `ghcr.io/ton-blockchain/ton:v2026.08-amd64` | 30003 (liteserver) | - | UDP NodePort, startup probe (24h), dump restore |
 | Cosmos | gaiad | `ghcr.io/cosmos/gaia:v27.0.0` | 26657 (Tendermint) / 1317 (API) | - | CometBFT state sync, startup probe (1h) |
@@ -96,9 +96,9 @@ This document describes every blockchain adapter supported by the operator, incl
 
 ### Solana
 
-**Supported clients:** Solana Labs validator
-**Default image:** `solanalabs/solana:v1.18.26`
-**Config file:** `validator.yml`
+**Supported clients:** Agave validator (`agave-validator`), non-voting RPC node
+**Default image:** `anzaxyz/agave:v3.1.14`
+**Config file:** `validator.yml` (reference only; agave-validator reads CLI flags)
 
 **Ports:**
 - RPC: 8899
@@ -108,12 +108,15 @@ This document describes every blockchain adapter supported by the operator, incl
 **Health check:** `getSlot` (finalized commitment) + `getEpochInfo`.
 
 **Configuration:**
-- Full RPC API enabled, no-voting mode
-- Testnet uses `entrypoint.testnet.solana.com:8001`
+- The image entrypoint `solana-run.sh` starts a private dev cluster, so the adapter replaces it: the node identity is generated once at `/data/identity.json`, then `agave-validator` runs with `--no-voting --full-rpc-api --private-rpc`
+- Joins the public cluster with the Anza entrypoints, known validators and `--expected-genesis-hash`, snapshots from known validators only (`--only-known-rpc`)
+- Testnet uses the `entrypoint*.testnet.solana.com:8001` set and the testnet genesis hash
+- `--no-port-check` and `--no-os-network-limits-test`: the UDP reachability probe fails behind pod NAT and the sysctl check needs privileges
 
 **Special features:**
 - **Startup probe:** 1h (120 x 30s) for snapshot download
 - Liveness probe: TCP on 8899
+- **Sidecar:** `ghcr.io/asymmetric-research/solana-exporter` in light mode, metrics on 8080
 
 **Storage:** 2+ TiB recommended
 
@@ -431,7 +434,7 @@ This document describes every blockchain adapter supported by the operator, incl
 
 **Configuration:**
 - Official Mysten Labs + community SSF seed peers
-- State archive from Mysten GCS bucket (`storage.googleapis.com/mysten-mainnet-checkpoints`)
+- No state archive fallback: the mainnet archive is a requester-pays S3 bucket (needs AWS credentials); the formal snapshot init container covers checkpoints peers have pruned
 - genesis.blob downloaded from MystenLabs/sui-genesis GitHub
 
 **Special features:**

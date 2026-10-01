@@ -96,13 +96,11 @@ genesis:
 
 enable-experimental-rest-api: false
 
-state-archive-read-config:
-  - object-store-config:
-      object-store: "GCS"
-      bucket: "mysten-mainnet-checkpoints"
-      no-sign-request: true
-    concurrency: 10
-    use-for-pruning-watermark: true
+# No archival fallback: state sync reads only state-archive-read-config
+# ingestion-url, rejects https://checkpoints.mainnet.sui.io, and the mainnet
+# archive (s3.us-west-2.amazonaws.com/mysten-mainnet-checkpoints) is
+# requester-pays, so it needs AWS credentials. Checkpoints peers have pruned
+# come from the formal snapshot the init container restores.
 `
 
 // --------------------------------------------------------------------------

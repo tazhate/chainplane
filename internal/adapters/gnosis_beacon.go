@@ -29,6 +29,10 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+// defaultGnosisEngineURL is the Engine API of an in-cluster Gnosis EL.
+// Override via spec.extraEnv (EXECUTION_ENDPOINT).
+const defaultGnosisEngineURL = "http://gnosis:8551"
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -57,6 +61,27 @@ func (a *gnosisBeaconAdapter) DefaultImage(client string) string {
 
 func (a *gnosisBeaconAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
 	return "lighthouse.toml", gnosisBeaconConfig, nil
+}
+
+// ContainerCommand runs the lighthouse binary; see ethereumBeaconAdapter.
+func (a *gnosisBeaconAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"lighthouse"}
+}
+
+func (a *gnosisBeaconAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	network := "gnosis"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		network = "chiado"
+	}
+	return lighthouseBeaconArgs(network)
+}
+
+func (a *gnosisBeaconAdapter) ContainerEnv(spec chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	checkpoint := "https://checkpoint.gnosischain.com"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		checkpoint = "https://checkpoint.chiadochain.net"
+	}
+	return lighthouseBeaconEnv(defaultGnosisEngineURL, checkpoint)
 }
 
 func (a *gnosisBeaconAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -91,7 +116,10 @@ func (a *gnosisBeaconAdapter) VersionPolicy() ChainVersionPolicy {
 // Config (Lighthouse TOML for Gnosis network)
 // --------------------------------------------------------------------------
 
-const gnosisBeaconConfig = `# Lighthouse beacon node config for Gnosis Chain
+// gnosisBeaconConfig documents the flags lighthouseBeaconArgs passes; it is
+// not read by lighthouse.
+const gnosisBeaconConfig = `# Lighthouse beacon node for Gnosis Chain. Reference only: lighthouse reads
+# CLI flags, set by the operator from the same values.
 network = "gnosis"
 datadir = "/data"
 http = true
@@ -102,4 +130,7 @@ metrics-address = "0.0.0.0"
 metrics-port = 5054
 port = 9000
 discovery-port = 9000
+execution-endpoint = "$EXECUTION_ENDPOINT"  # default http://gnosis:8551
+execution-jwt = "$EXECUTION_JWT"            # default /data/jwt.hex
+checkpoint-sync-url = "$CHECKPOINT_SYNC_URL"
 `

@@ -456,6 +456,8 @@ spec:
         - --checkpoint-sync-url=https://mainnet.checkpoint.sigp.io
 ```
 
+A standalone `ethereum-beacon` or `gnosis-beacon` ChainInstance runs `lighthouse bn` in its own pod. The EL Engine API comes from `EXECUTION_ENDPOINT` (default `http://ethereum:8551`, `http://gnosis:8551` for Gnosis), the JWT secret from `EXECUTION_JWT` (default `/data/jwt.hex`, generated on first start) and the checkpoint server from `CHECKPOINT_SYNC_URL`. Override them in `spec.extraEnv`; mount the EL's secret through `spec.extraVolumes` and point `EXECUTION_JWT` at it.
+
 ## Development
 
 ```sh

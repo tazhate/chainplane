@@ -75,8 +75,8 @@ const moonbeamConfig = `{
     "cors": "all",
     "methods": "unsafe"
   },
-  "ws": {
-    "port": 9945,
+  "prometheus": {
+    "port": 9615,
     "external": true
   },
   "network": {
@@ -89,13 +89,31 @@ const moonbeamConfig = `{
   }
 }`
 
-// ContainerArgs passes --base-path /data and the config file so the node uses the PVC mount.
-func (a *moonbeamAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
+// ContainerArgs selects the chain and sets the RPC, metrics and P2P ports by
+// flag: the node has no --config flag, so moonbeam.json only documents them.
+func (a *moonbeamAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	return moonbeamArgs("moonbeam", spec)
+}
+
+// moonbeamArgs returns the parachain flags shared by Moonbeam and Moonriver.
+// The embedded relay chain (Polkadot or Kusama, picked by the chain spec)
+// keeps its defaults: RPC and metrics on localhost, P2P on 30334. Relay
+// flags such as --sync go after a "--" separator in spec.extraArgs.
+func moonbeamArgs(chain string, spec chainsv1alpha2.ChainInstanceSpec) []string {
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		chain = "moonbase-alpha"
+	}
 	return []string{
 		"--base-path", "/data",
-		"--config", "/config/moonbeam.json",
-		"--prometheus-external",
+		"--chain", chain,
+		"--name", "k8s-" + chain + "-node",
+		"--rpc-port", "9944",
+		"--rpc-external",
+		"--rpc-cors", "all",
+		"--rpc-methods", "unsafe",
 		"--prometheus-port", "9615",
+		"--prometheus-external",
+		"--port", "30333",
 	}
 }
 
@@ -118,7 +136,6 @@ func (a *moonbeamAdapter) VersionPolicy() ChainVersionPolicy {
 func (a *moonbeamAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 9944, Protocol: corev1.ProtocolTCP},
-		{Name: "ws", ContainerPort: 9945, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 30333, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 30333, Protocol: corev1.ProtocolUDP},
 		{Name: "metrics", ContainerPort: 9615, Protocol: corev1.ProtocolTCP},

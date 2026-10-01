@@ -61,10 +61,6 @@ const kusamaConfig = `{
     "cors": "all",
     "methods": "unsafe"
   },
-  "ws": {
-    "port": 9945,
-    "external": true
-  },
   "prometheus": {
     "port": 9615,
     "external": true
@@ -102,6 +98,9 @@ func (a *kusamaAdapter) StartupProbe(_ chainsv1alpha2.ChainInstanceSpec) *corev1
 	return tcpProbe(9944, 30, 30, 10, 240)
 }
 
+// ContainerArgs serves JSON-RPC over HTTP and WebSocket on --rpc-port 9944.
+// polkadot-sdk dropped the separate --ws-port/--ws-external server, and
+// polkadot 1.x rejects those flags at startup.
 func (a *kusamaAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
 	chain := "kusama"
 	if spec.Network == chainsv1alpha2.NetworkTestnet {
@@ -114,8 +113,6 @@ func (a *kusamaAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []s
 		"--rpc-external",
 		"--rpc-cors", "all",
 		"--rpc-methods", "unsafe",
-		"--ws-port", "9945",
-		"--ws-external",
 		"--prometheus-port", "9615",
 		"--prometheus-external",
 		"--port", "30333",
@@ -128,7 +125,6 @@ func (a *kusamaAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []s
 func (a *kusamaAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{Name: "rpc", ContainerPort: 9944, Protocol: corev1.ProtocolTCP},
-		{Name: "ws", ContainerPort: 9945, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-tcp", ContainerPort: 30333, Protocol: corev1.ProtocolTCP},
 		{Name: "p2p-udp", ContainerPort: 30333, Protocol: corev1.ProtocolUDP},
 		{Name: "metrics", ContainerPort: 9615, Protocol: corev1.ProtocolTCP},

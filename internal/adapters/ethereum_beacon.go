@@ -34,6 +34,21 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
+const (
+	// defaultEthereumEngineURL is the Engine API of an in-cluster Ethereum EL.
+	// Override via spec.extraEnv (EXECUTION_ENDPOINT).
+	defaultEthereumEngineURL = "http://ethereum:8551"
+
+	// beaconJWTPath is where Lighthouse keeps the Engine API secret. Lighthouse
+	// generates it on first start when missing; to share a secret with the EL,
+	// mount one via spec.extraVolumes and point EXECUTION_JWT at it.
+	beaconJWTPath = "/data/jwt.hex"
+
+	// beaconCheckpointTimeout (seconds) covers the finalized state download,
+	// which outlasts Lighthouse's 180s default on slow links.
+	beaconCheckpointTimeout = "600"
+)
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -62,6 +77,28 @@ func (a *ethereumBeaconAdapter) DefaultImage(client string) string {
 
 func (a *ethereumBeaconAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
 	return "lighthouse.toml", ethereumBeaconConfig, nil
+}
+
+// ContainerCommand runs the lighthouse binary: the image has no entrypoint
+// and its default command is a bare shell that exits at once.
+func (a *ethereumBeaconAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"lighthouse"}
+}
+
+func (a *ethereumBeaconAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	network := "mainnet"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		network = "sepolia"
+	}
+	return lighthouseBeaconArgs(network)
+}
+
+func (a *ethereumBeaconAdapter) ContainerEnv(spec chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	checkpoint := "https://mainnet.checkpoint.sigp.io"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		checkpoint = "https://checkpoint-sync.sepolia.ethpandaops.io"
+	}
+	return lighthouseBeaconEnv(defaultEthereumEngineURL, checkpoint)
 }
 
 func (a *ethereumBeaconAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -157,6 +194,38 @@ func beaconHealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
 	}, nil
 }
 
+// lighthouseBeaconArgs returns the "lighthouse bn" flags shared by the beacon
+// adapters. The EL endpoint, JWT path and checkpoint URL come from the
+// environment (lighthouseBeaconEnv) so spec.extraEnv can override them;
+// Lighthouse rejects a flag given twice, so extraArgs cannot.
+func lighthouseBeaconArgs(network string) []string {
+	return []string{
+		"bn",
+		"--network", network,
+		"--datadir", "/data",
+		"--http",
+		"--http-address", "0.0.0.0",
+		"--http-port", "5052",
+		"--metrics",
+		"--metrics-address", "0.0.0.0",
+		"--metrics-port", "5054",
+		"--port", "9000",
+		"--execution-endpoint", "$(EXECUTION_ENDPOINT)",
+		"--execution-jwt", "$(EXECUTION_JWT)",
+		"--checkpoint-sync-url", "$(CHECKPOINT_SYNC_URL)",
+		"--checkpoint-sync-url-timeout", beaconCheckpointTimeout,
+	}
+}
+
+// lighthouseBeaconEnv supplies the defaults lighthouseBeaconArgs expands.
+func lighthouseBeaconEnv(engineURL, checkpointURL string) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: "EXECUTION_ENDPOINT", Value: engineURL},
+		{Name: "EXECUTION_JWT", Value: beaconJWTPath},
+		{Name: "CHECKPOINT_SYNC_URL", Value: checkpointURL},
+	}
+}
+
 // beaconPorts returns the standard Lighthouse beacon node container ports.
 func beaconPorts() []corev1.ContainerPort {
 	return []corev1.ContainerPort{
@@ -171,7 +240,10 @@ func beaconPorts() []corev1.ContainerPort {
 // Config (Lighthouse TOML for Ethereum mainnet)
 // --------------------------------------------------------------------------
 
-const ethereumBeaconConfig = `# Lighthouse beacon node config for Ethereum
+// ethereumBeaconConfig documents the flags lighthouseBeaconArgs passes.
+// Lighthouse has no config-file flag, so the mounted file is not read.
+const ethereumBeaconConfig = `# Lighthouse beacon node for Ethereum. Reference only: lighthouse reads
+# CLI flags, set by the operator from the same values.
 network = "mainnet"
 datadir = "/data"
 http = true
@@ -182,4 +254,7 @@ metrics-address = "0.0.0.0"
 metrics-port = 5054
 port = 9000
 discovery-port = 9000
+execution-endpoint = "$EXECUTION_ENDPOINT"  # default http://ethereum:8551
+execution-jwt = "$EXECUTION_JWT"            # default /data/jwt.hex
+checkpoint-sync-url = "$CHECKPOINT_SYNC_URL"
 `
