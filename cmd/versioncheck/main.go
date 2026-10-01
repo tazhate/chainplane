@@ -20,6 +20,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -46,6 +47,7 @@ func main() {
 		filterChain = flag.String("chain", "", "check only this chain (e.g. bitcoin)")
 		concurrency = flag.Int("concurrency", 10, "parallel registry requests")
 		timeout     = flag.Duration("timeout", 3*time.Minute, "per-chain timeout, incl. Docker Hub rate-limit waits")
+		allowMajor  = flag.Bool("allow-major", false, "also apply major version bumps with --update")
 	)
 	flag.Parse()
 
@@ -55,20 +57,24 @@ func main() {
 
 	printReport(results)
 
-	if !*update {
-		return
+	if *update {
+		newer := filterNewer(results, *allowMajor)
+		if len(newer) == 0 {
+			fmt.Println("\nNothing to update.")
+		} else {
+			if err := applyUpdates(newer); err != nil {
+				log.Fatalf("failed to update versions_gen.go: %v", err)
+			}
+			fmt.Printf("\nUpdated %d image(s) in versions_gen.go\n", len(newer))
+		}
 	}
 
-	newer := filterNewer(results)
-	if len(newer) == 0 {
-		fmt.Println("\nAll versions up to date.")
-		return
+	// Errors and unmatched policies mean the report cannot be trusted for
+	// those chains. Fail so a scheduled run does not look green while blind.
+	if failed := countFailures(results); failed > 0 {
+		fmt.Fprintf(os.Stderr, "\n%d chain(s) with ERROR or NO MATCH\n", failed)
+		os.Exit(1)
 	}
-
-	if err := applyUpdates(newer); err != nil {
-		log.Fatalf("failed to update versions_gen.go: %v", err)
-	}
-	fmt.Printf("\nUpdated %d image(s) in versions_gen.go\n", len(newer))
 }
 
 // versionResult holds the check result for one chain+client pair.
@@ -77,9 +83,13 @@ type versionResult struct {
 	Client     string // "" means chain default
 	CurrentRef string // full image ref
 	CurrentTag string // tag portion of CurrentRef
-	LatestTag  string // latest from registry (empty on error)
+	LatestTag  string // latest from registry (empty on error or no match)
 	IsNewer    bool
-	Err        error
+	// IsMajor marks a newer tag that bumps the major version (minor for 0.x).
+	IsMajor bool
+	// NoMatch means the registry answered but no stable tag matched the policy.
+	NoMatch bool
+	Err     error
 }
 
 func checkVersions(
@@ -144,19 +154,9 @@ func checkVersions(
 				return
 			}
 
-			// Collect all stable tags, then pick the semver-max — registries
-			// don't guarantee ordering (Docker Hub sorts by last_pushed, which
-			// can rank a stale patch above a real major release).
-			stable := make([]string, 0, len(tags))
-			for _, t := range tags {
-				if isStableTag(t.Tag, it.policy.TagPrefix) {
-					stable = append(stable, t.Tag)
-				}
-			}
-			if latest := registry.Newest(stable, it.policy.TagPrefix); latest != "" {
-				res.LatestTag = latest
-				res.IsNewer = registry.IsNewer(res.LatestTag, res.CurrentTag, it.policy.TagPrefix)
-			}
+			res.LatestTag, res.IsNewer, res.IsMajor, err = pickLatest(it.policy, res.CurrentTag, tags)
+			res.Err = err
+			res.NoMatch = err == nil && res.LatestTag == ""
 
 			mu.Lock()
 			results = append(results, res)
@@ -169,27 +169,97 @@ func checkVersions(
 	return results
 }
 
-func filterNewer(results []versionResult) []versionResult {
+// pickLatest selects the newest stable tag for policy and compares it with
+// currentTag. If TagPattern has a named group "version", stability and semver
+// checks apply to that capture, so build-suffixed tags such as stellar's
+// "29.0.0-3589.4eb833373.noble" can be tracked. An empty latest with a nil
+// error means no tag matched.
+func pickLatest(
+	policy adapters.ChainVersionPolicy, currentTag string, tags []registry.TagEntry,
+) (latest string, newer, major bool, err error) {
+	pattern, err := regexp.Compile(policy.TagPattern)
+	if err != nil {
+		return "", false, false, fmt.Errorf("compile tag pattern %q: %w", policy.TagPattern, err)
+	}
+	group := pattern.SubexpIndex("version")
+	versionOf := func(tag string) string {
+		if group < 0 {
+			return tag
+		}
+		if m := pattern.FindStringSubmatch(tag); m != nil {
+			return m[group]
+		}
+		return ""
+	}
+
+	// Collect all stable tags, then pick the semver-max — registries
+	// don't guarantee ordering (Docker Hub sorts by last_pushed, which
+	// can rank a stale patch above a real major release).
+	byVersion := make(map[string]string, len(tags))
+	stable := make([]string, 0, len(tags))
+	for _, t := range tags {
+		v := versionOf(t.Tag)
+		if v == "" || !isStableTag(v, policy.TagPrefix) {
+			continue
+		}
+		byVersion[v] = t.Tag
+		stable = append(stable, v)
+	}
+	latestVersion := registry.Newest(stable, policy.TagPrefix)
+	if latestVersion == "" {
+		return "", false, false, nil
+	}
+
+	// A pin that predates the pattern (e.g. stellar's old "v19.12.0") is
+	// compared as-is.
+	currentVersion := cmp.Or(versionOf(currentTag), currentTag)
+	newer = registry.IsNewer(latestVersion, currentVersion, policy.TagPrefix)
+	major = newer && registry.IsMajorBump(latestVersion, currentVersion, policy.TagPrefix)
+	return byVersion[latestVersion], newer, major, nil
+}
+
+// filterNewer returns the results to apply. Major bumps are held back unless
+// allowMajor is set: they need a smoke run before becoming a default.
+func filterNewer(results []versionResult, allowMajor bool) []versionResult {
 	var out []versionResult
 	for _, r := range results {
-		if r.IsNewer {
+		if r.IsNewer && (allowMajor || !r.IsMajor) {
 			out = append(out, r)
 		}
 	}
 	return out
 }
 
+func countFailures(results []versionResult) int {
+	n := 0
+	for _, r := range results {
+		if r.Err != nil || r.NoMatch {
+			n++
+		}
+	}
+	return n
+}
+
+func resultStatus(r versionResult) string {
+	switch {
+	case r.Err != nil:
+		return fmt.Sprintf("ERROR: %v", r.Err)
+	case r.NoMatch:
+		return "NO MATCH"
+	case r.IsMajor:
+		return "MAJOR AVAILABLE"
+	case r.IsNewer:
+		return "UPDATE AVAILABLE"
+	default:
+		return "up to date"
+	}
+}
+
 func printReport(results []versionResult) {
 	fmt.Printf("%-30s %-30s %-20s %s\n", "CHAIN", "CURRENT TAG", "LATEST TAG", "STATUS")
 	fmt.Println(strings.Repeat("-", 100))
 	for _, r := range results {
-		status := "up to date"
-		if r.Err != nil {
-			status = fmt.Sprintf("ERROR: %v", r.Err)
-		} else if r.IsNewer {
-			status = "UPDATE AVAILABLE"
-		}
-		fmt.Printf("%-30s %-30s %-20s %s\n", r.Chain, r.CurrentTag, r.LatestTag, status)
+		fmt.Printf("%-30s %-30s %-20s %s\n", r.Chain, r.CurrentTag, r.LatestTag, resultStatus(r))
 	}
 }
 

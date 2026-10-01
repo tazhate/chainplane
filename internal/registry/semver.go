@@ -36,6 +36,21 @@ func IsNewer(candidate, current, prefix string) bool {
 	return semver.Compare(c, cur) > 0
 }
 
+// IsMajorBump reports whether candidate is newer than current and changes the
+// major version. For 0.x versions a minor change counts as major, following
+// semver's rule that anything may break before 1.0.
+func IsMajorBump(candidate, current, prefix string) bool {
+	c := normalizeTag(candidate, prefix)
+	cur := normalizeTag(current, prefix)
+	if !semver.IsValid(c) || !semver.IsValid(cur) || semver.Compare(c, cur) <= 0 {
+		return false
+	}
+	if semver.Major(cur) == "v0" {
+		return semver.MajorMinor(c) != semver.MajorMinor(cur)
+	}
+	return semver.Major(c) != semver.Major(cur)
+}
+
 // Newest returns the tag from the slice that is greatest by semver under the
 // given prefix. Tags that fail semver parsing are skipped. Returns "" if no
 // candidate parses successfully. Callers should pre-filter pre-releases /
