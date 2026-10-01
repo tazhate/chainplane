@@ -56,7 +56,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/bnb-chain/bsc:1.7.8",
 	},
 	chainsv1alpha2.ChainCardano: {
-		"": "ghcr.io/intersectmbo/cardano-node:10.7.1",
+		"": "ghcr.io/intersectmbo/cardano-node:11.1.3",
 	},
 	chainsv1alpha2.ChainCelo: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
@@ -65,7 +65,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/coredao-org/core-chain:1.0.26",
 	},
 	chainsv1alpha2.ChainCosmos: {
-		"": "ghcr.io/cosmos/gaia:v27.6.0",
+		"": "ghcr.io/cosmos/gaia:v28.3.1",
 	},
 	chainsv1alpha2.ChainCronos: {
 		"": "",
@@ -86,17 +86,17 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/dymensionxyz/dymension:4.0.1",
 	},
 	chainsv1alpha2.ChainEthereum: {
-		"":           "nethermind/nethermind:1.39.3",
+		"":           "nethermind/nethermind:2.0.0",
 		"erigon":     "erigontech/erigon:v2.61.3",
 		"geth":       "ethereum/client-go:v1.17.7",
-		"nethermind": "nethermind/nethermind:1.39.3",
+		"nethermind": "nethermind/nethermind:2.0.0",
 		"reth":       "ghcr.io/paradigmxyz/reth:v1.11.4",
 	},
 	chainsv1alpha2.ChainEthereumArchive: {
-		"":           "nethermind/nethermind:1.39.3",
+		"":           "nethermind/nethermind:2.0.0",
 		"erigon":     "erigontech/erigon:v2.61.3",
 		"geth":       "ethereum/client-go:v1.17.7",
-		"nethermind": "nethermind/nethermind:1.39.3",
+		"nethermind": "nethermind/nethermind:2.0.0",
 		"reth":       "ghcr.io/paradigmxyz/reth:v1.11.4",
 	},
 	chainsv1alpha2.ChainEthereumBeacon: {

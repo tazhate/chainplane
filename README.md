@@ -185,7 +185,7 @@ Chains marked "none, set `spec.image`" have no usable public container image ups
 
 | Chain | Default Client | Image | RPC Port |
 |-------|---------------|-------|----------|
-| `ethereum` | nethermind | `nethermind/nethermind:1.36.1` | 8545 |
+| `ethereum` | nethermind | `nethermind/nethermind:2.0.0` | 8545 |
 | `ethereum-archive` | nethermind | `nethermind/nethermind:1.36.1` | 8545 |
 | `ethereum-beacon` | lighthouse | `sigp/lighthouse:v8.0.0` | 5052 |
 
@@ -291,7 +291,7 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 
 | Chain | Image | RPC Port |
 |-------|-------|----------|
-| `cosmos` | `ghcr.io/cosmos/gaia:v27.0.0` | 26657 |
+| `cosmos` | `ghcr.io/cosmos/gaia:v28.3.1` | 26657 |
 | `osmosis` | `osmolabs/osmosis:v31.0.0` | 26657 |
 | `sei` | `seiprotocol/seid:v6.2.0` | 26657 |
 | `axelar` | `axelarnet/axelar-core:v1.3.4` | 26657 |
@@ -314,7 +314,7 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | `near` | `nearprotocol/nearcore:2.10.7` | 3030 | state sync via GCS |
 | `xrp` | `xrpllabsofficial/xrpld:3.1.2` | 5005 | |
 | `stellar` | `stellar/stellar-core:29.0.0-3589.4eb833373.noble` | 11626 | |
-| `cardano` | `ghcr.io/intersectmbo/cardano-node:10.6.2` | 12798 | |
+| `cardano` | `ghcr.io/intersectmbo/cardano-node:11.1.3` | 12798 | |
 | `sui` | `mysten/sui-node:v1.39.2` | 9000 | |
 | `aptos` | `aptoslabs/validator:mainnet` | 8080 | |
 | `polkadot` | `parity/polkadot:v1.16.2` | 9944 | |
