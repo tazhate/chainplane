@@ -316,7 +316,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "xrpllabsofficial/xrpld:3.3.0",
 	},
 	chainsv1alpha2.ChainZeroNetwork: {
-		"": "matterlabs/external-node:v29.17.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainZircuit: {
 		"": "",

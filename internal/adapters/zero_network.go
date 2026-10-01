@@ -60,10 +60,6 @@ func (a *zeroNetworkAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *zeroNetworkAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "matterlabs/external-node",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
+// Zerion shut ZERO Network down on 2026-08-12 and its RPC is gone, so there
+// is no default image and nothing to track. The adapter stays registered for
+// existing ChainInstances that set spec.image.

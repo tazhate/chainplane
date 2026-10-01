@@ -255,7 +255,7 @@ probes use the healthcheck port 3081.
 | `zksync` | `matterlabs/external-node:v29.17.0` | 3060 |
 | `lens` | `matterlabs/external-node:v29.17.0` | 3060 |
 | `abstract` | `matterlabs/external-node:v29.17.0` | 3060 |
-| `zero-network` | `matterlabs/external-node:v29.17.0` | 3060 |
+| `zero-network` | none, network shut down 2026-08-12 | 3060 |
 | `cronos-zkevm` | `ghcr.io/cronos-labs/external-node:v31.3.0` | 3060 |
 
 ### EVM — Other L2 / Sidechain
