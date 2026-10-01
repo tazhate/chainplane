@@ -13,14 +13,18 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
           cache: true
 
+      # Upstream registry errors for individual chains must not block the PR
+      # for the chains that did resolve; the build/lint/test steps below still
+      # gate whatever was written.
       - name: Check for version updates
+        continue-on-error: true
         run: go run ./cmd/versioncheck --update
         env:
           # Optional: authenticate to lift Docker Hub's anonymous rate limit
@@ -33,7 +37,7 @@ jobs:
         run: go build ./...
 
       - name: Run linter
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@9fae48acfc02a90574d7c304a1758ef9895495fa # v7.0.1
         with:
           version: v2.11.4
 
@@ -41,8 +45,7 @@ jobs:
         run: go test ./internal/adapters/... ./internal/registry/... ./api/...
 
       - name: Create PR
-        id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           token: ${{ secrets.GH_PAT }}
           commit-message: |
@@ -57,16 +60,13 @@ jobs:
             `cmd/versioncheck` found newer stable tags in upstream registries and updated
             `internal/adapters/versions_gen.go`.
 
-            Pre-releases (alpha/beta/rc), nightly and floating tags (latest, canary)
-            are automatically skipped.
+            Only clean semver tags are proposed: pre-releases (alpha/beta/rc),
+            nightly and suffixed service builds are skipped. Defaults that are
+            already on a floating tag (e.g. `:latest`) in `versions_gen.go` are
+            not pinned by this job.
 
-            Build, lint and tests passed. Safe to auto-merge.
+            Build, lint and the adapters/registry/api tests passed. Review the
+            bumped images before merging.
           branch: chore/update-node-images
           delete-branch: true
           labels: dependencies
-
-      - name: Enable auto-merge
-        if: steps.cpr.outputs.pull-request-number
-        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

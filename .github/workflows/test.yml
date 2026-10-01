@@ -10,20 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
 
-      - name: Install setup-envtest
-        run: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+      - name: Check go.mod is tidy
+        run: go mod tidy && git diff --exit-code go.mod go.sum
 
+      - name: Check generated code and chart CRDs are up to date
+        run: make manifests generate sync-chart-crds && git diff --exit-code
+
+      # make test runs the setup-envtest target, which installs setup-envtest
+      # pinned to the controller-runtime release branch (ENVTEST_VERSION) and
+      # resolves KUBEBUILDER_ASSETS for the k8s.io/api minor in go.mod.
       - name: Running Tests
-        run: |
-          go mod tidy
-          K8S_VERSION=$(go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $3}')
-          KUBEBUILDER_ASSETS="$($(go env GOPATH)/bin/setup-envtest use ${K8S_VERSION} --bin-dir $(pwd)/bin/k8s -p path)"
-          export KUBEBUILDER_ASSETS
-          go test $(go list ./... | grep -v /e2e) -coverprofile cover.out
+        run: make test
+
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
