@@ -34,8 +34,10 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-// TODO: moca chain is Cosmos/EVMOS-based; verify correct image before deploying.
-// moca-network/moca:v0.1.0 is a placeholder until the official image is confirmed.
+// Moca Chain is Cosmos/EVMOS-based. The official image is ghcr.io/mocachain/mocad
+// (entrypoint mocad). The default tracks the latest release, which suits a node
+// restored from a snapshot; syncing from genesis may need to start at v1.2.1 and
+// apply the later upgrades through cosmovisor.
 
 // mocaBlockTime is the average Moca block interval used to estimate network tip.
 const mocaBlockTime = 2.0 // seconds
@@ -184,3 +186,11 @@ prometheus-retention-time = 60
 enable = true
 address = "0.0.0.0:8545"
 `
+
+func (a *mocaAdapter) VersionPolicy() ChainVersionPolicy {
+	return ChainVersionPolicy{
+		Registry:   "ghcr.io",
+		Repository: "mocachain/mocad",
+		TagPattern: `^v(?P<version>\d+\.\d+\.\d+)$`,
+	}
+}

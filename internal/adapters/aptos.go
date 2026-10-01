@@ -105,6 +105,10 @@ type aptosLedgerResponse struct {
 // Interface methods
 // --------------------------------------------------------------------------
 
+// DefaultImage pins a mainnet release. There is no VersionPolicy: tags look
+// like aptos-node-v1.48.7-hotfix, and the newest one often runs only on
+// devnet/testnet before it reaches mainnet, so a registry scan would pick the
+// wrong line. Take the pin from the mainnet release notes by hand.
 func (a *aptosAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainAptos, client)
 }

@@ -33,6 +33,8 @@ import (
 // Type
 // --------------------------------------------------------------------------
 
+// Klaytn rebranded to Kaia in 2024; the chain keeps the "klaytn" API name.
+// The node is ken from kaiachain/kaia (klaytn/klaytn is no longer published).
 type klaytnAdapter struct {
 	protocolAdapter
 }
@@ -56,7 +58,7 @@ func (a *klaytnAdapter) DefaultImage(client string) string {
 }
 
 func (a *klaytnAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "kaia.toml", klaytnConfig, nil
+	return "kaia.yaml", klaytnConfig, nil
 }
 
 func (a *klaytnAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -73,11 +75,22 @@ func (a *klaytnAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []cor
 	}
 }
 
+// ContainerCommand sets the entrypoint: the kaiachain/kaia image has none
+// (its Cmd is /bin/bash).
+func (a *klaytnAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"ken"}
+}
+
+// ContainerArgs loads the flag file and enables the Prometheus exporter. ken
+// has no --metrics.addr/--metrics.port; the exporter listens on all
+// interfaces at --prometheusport. The metrics flags are not picked up from
+// the YAML file, so they stay on the command line.
 func (a *klaytnAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
 	return []string{
+		"--conf", "/config/kaia.yaml",
 		"--metrics",
-		"--metrics.addr=0.0.0.0",
-		"--metrics.port=6060",
+		"--prometheus",
+		"--prometheusport=6060",
 	}
 }
 
@@ -92,8 +105,8 @@ func (a *klaytnAdapter) DefaultResources() ResourceDefaults {
 func (a *klaytnAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
 		Registry:   "docker.io",
-		Repository: "klaytn/klaytn",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
+		Repository: "kaiachain/kaia",
+		TagPattern: `^v(?P<version>\d+\.\d+\.\d+)$`,
 	}
 }
 
@@ -101,22 +114,24 @@ func (a *klaytnAdapter) VersionPolicy() ChainVersionPolicy {
 // Config
 // --------------------------------------------------------------------------
 
-const klaytnConfig = `# Kaia (Klaytn) mainnet EN (Endpoint Node) configuration
-[node]
-datadir = "/data"
-
-[rpc]
-http.addr = "0.0.0.0"
-http.port = 8551
-http.api = ["eth", "net", "web3", "kaia", "debug"]
-http.vhosts = ["*"]
-http.corsdomain = ["*"]
-ws.addr = "0.0.0.0"
-ws.port = 8552
-ws.api = ["eth", "net", "web3", "kaia"]
-ws.origins = ["*"]
-
-[p2p]
-port = 32323
-maxpeers = 25
+const klaytnConfig = `# Kaia (formerly Klaytn) mainnet EN (Endpoint Node).
+# ken --conf flag file: keys are the long flag names, grouped by prefix.
+common:
+  datadir: /data
+http-rpc:
+  enable: true
+  addr: 0.0.0.0
+  port: 8551
+  api: eth,net,web3,kaia,debug
+  vhosts: "*"
+  cors-domain: "*"
+ws-rpc:
+  enable: true
+  addr: 0.0.0.0
+  port: 8552
+  api: eth,net,web3,kaia
+  origins: "*"
+p2p:
+  port: 32323
+  max-connections: 25
 `
