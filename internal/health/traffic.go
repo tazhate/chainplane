@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -115,7 +117,7 @@ func (t *LabelBasedTrafficManager) SwitchTraffic(ctx context.Context, oldPod, ne
 
 // ValidateTraffic verifies that the pod is receiving traffic by checking:
 //  1. Pod has the ready=true label.
-//  2. Pod IP appears in matching service endpoint subsets.
+//  2. Pod IP appears in the ready endpoints of every matching service.
 func (t *LabelBasedTrafficManager) ValidateTraffic(ctx context.Context, podName, namespace string) (bool, error) {
 	log := slog.With("op", "validate", "pod", podName, "ns", namespace)
 
@@ -269,22 +271,32 @@ func labelsContain(labels, required map[string]string) bool {
 	return true
 }
 
-// podInEndpoints checks whether podIP appears in the ready addresses of the
-// named Endpoints resource.
+// podInEndpoints checks whether podIP appears among the ready endpoints of the
+// EndpointSlices backing the named Service. An endpoint with no Ready
+// condition counts as ready, as the discovery API defines. A Service without
+// any EndpointSlice yields an error so the caller can skip it, matching the
+// previous NotFound behaviour of the core/v1 Endpoints lookup.
 func (t *LabelBasedTrafficManager) podInEndpoints(
-	ctx context.Context, epName, namespace, podIP string,
+	ctx context.Context, svcName, namespace, podIP string,
 ) (bool, error) {
-	// TODO: migrate to discoveryv1.EndpointSlice (needs RBAC for discovery.k8s.io).
-	var ep corev1.Endpoints //nolint:staticcheck // Endpoints is deprecated in v1.33+ but still served.
-	if err := t.kube.Get(ctx, types.NamespacedName{
-		Name: epName, Namespace: namespace,
-	}, &ep); err != nil {
-		return false, fmt.Errorf("get endpoints %s: %w", epName, err)
+	var list discoveryv1.EndpointSliceList
+	if err := t.kube.List(ctx, &list,
+		client.InNamespace(namespace),
+		client.MatchingLabels{discoveryv1.LabelServiceName: svcName},
+	); err != nil {
+		return false, fmt.Errorf("list endpointslices for service %s: %w", svcName, err)
+	}
+	if len(list.Items) == 0 {
+		return false, fmt.Errorf("no endpointslices for service %s", svcName)
 	}
 
-	for i := range ep.Subsets {
-		for j := range ep.Subsets[i].Addresses {
-			if ep.Subsets[i].Addresses[j].IP == podIP {
+	for i := range list.Items {
+		for j := range list.Items[i].Endpoints {
+			ep := &list.Items[i].Endpoints[j]
+			if ep.Conditions.Ready != nil && !*ep.Conditions.Ready {
+				continue
+			}
+			if slices.Contains(ep.Addresses, podIP) {
 				return true, nil
 			}
 		}

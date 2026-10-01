@@ -22,6 +22,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -58,6 +59,18 @@ func trafficPod(name, ns string, labels map[string]string, ip string) *corev1.Po
 		Status: corev1.PodStatus{
 			PodIP: ip,
 		},
+	}
+}
+
+func endpointSlice(name, ns, svc string, eps ...discoveryv1.Endpoint) *discoveryv1.EndpointSlice {
+	return &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels:    map[string]string{discoveryv1.LabelServiceName: svc},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints:   eps,
 	}
 }
 
@@ -269,19 +282,9 @@ func TestValidateTraffic_WithEndpoints(t *testing.T) {
 		},
 	}
 
-	ep := &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eth-svc",
-			Namespace: "default",
-		},
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: []corev1.EndpointAddress{
-					{IP: "10.0.0.5"},
-				},
-			},
-		},
-	}
+	ep := endpointSlice("eth-svc-abcde", "default", "eth-svc",
+		discoveryv1.Endpoint{Addresses: []string{"10.0.0.5"}},
+	)
 
 	tm, _ := newTrafficManager(pod, svc, ep)
 	ok, err := tm.ValidateTraffic(context.Background(), "eth-0", "default")
@@ -311,19 +314,9 @@ func TestValidateTraffic_PodNotInEndpoints(t *testing.T) {
 		},
 	}
 
-	ep := &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eth-svc",
-			Namespace: "default",
-		},
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: []corev1.EndpointAddress{
-					{IP: "10.0.0.99"}, // different IP
-				},
-			},
-		},
-	}
+	ep := endpointSlice("eth-svc-abcde", "default", "eth-svc",
+		discoveryv1.Endpoint{Addresses: []string{"10.0.0.99"}}, // different IP
+	)
 
 	tm, _ := newTrafficManager(pod, svc, ep)
 	ok, err := tm.ValidateTraffic(context.Background(), "eth-0", "default")
@@ -391,6 +384,90 @@ func TestLabelsContain(t *testing.T) {
 			t.Parallel()
 			if got := labelsContain(tc.labels, tc.required); got != tc.want {
 				t.Errorf("labelsContain() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestPodInEndpoints(t *testing.T) {
+	t.Parallel()
+
+	const podIP = "10.0.0.5"
+
+	tests := []struct {
+		name    string
+		objs    []client.Object
+		want    bool
+		wantErr bool
+	}{
+		{
+			name:    "no slices for service",
+			wantErr: true,
+		},
+		{
+			name: "ready condition unset counts as ready",
+			objs: []client.Object{
+				endpointSlice("eth-svc-a", "default", "eth-svc",
+					discoveryv1.Endpoint{Addresses: []string{podIP}}),
+			},
+			want: true,
+		},
+		{
+			name: "explicitly ready",
+			objs: []client.Object{
+				endpointSlice("eth-svc-a", "default", "eth-svc",
+					discoveryv1.Endpoint{
+						Addresses:  []string{podIP},
+						Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
+					}),
+			},
+			want: true,
+		},
+		{
+			name: "not ready is ignored",
+			objs: []client.Object{
+				endpointSlice("eth-svc-a", "default", "eth-svc",
+					discoveryv1.Endpoint{
+						Addresses:  []string{podIP},
+						Conditions: discoveryv1.EndpointConditions{Ready: new(false)},
+					}),
+			},
+			want: false,
+		},
+		{
+			name: "found in second slice",
+			objs: []client.Object{
+				endpointSlice("eth-svc-a", "default", "eth-svc",
+					discoveryv1.Endpoint{Addresses: []string{"10.0.0.9"}}),
+				endpointSlice("eth-svc-b", "default", "eth-svc",
+					discoveryv1.Endpoint{Addresses: []string{podIP}}),
+			},
+			want: true,
+		},
+		{
+			name: "slices of other services and namespaces ignored",
+			objs: []client.Object{
+				endpointSlice("eth-svc-a", "default", "eth-svc",
+					discoveryv1.Endpoint{Addresses: []string{"10.0.0.9"}}),
+				endpointSlice("other-a", "default", "other-svc",
+					discoveryv1.Endpoint{Addresses: []string{podIP}}),
+				endpointSlice("eth-svc-x", "other-ns", "eth-svc",
+					discoveryv1.Endpoint{Addresses: []string{podIP}}),
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tm, _ := newTrafficManager(tt.objs...)
+			got, err := tm.podInEndpoints(t.Context(), "eth-svc", "default", podIP)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("podInEndpoints = %v, want %v", got, tt.want)
 			}
 		})
 	}
