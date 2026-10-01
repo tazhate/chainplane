@@ -31,6 +31,13 @@ import (
 
 const defaultBlastL1URL = "http://ethereum:8545"
 
+// Blast mainnet genesis from blast-io/deployment, pinned to the commit that
+// last changed it and checked by SHA-256 before geth init.
+const (
+	blastGenesisURL    = "https://raw.githubusercontent.com/blast-io/deployment/197a870f8d9f65d29ad3eef5566f40bb2f5c5353/mainnet/genesis.json"
+	blastGenesisSHA256 = "330379e670b42f8a2b9db30b059f6ce7400590b66c70c2d8f7294ba0efeffbae"
+)
+
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
@@ -71,9 +78,36 @@ func (a *blastAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []core
 	})
 }
 
-// ContainerArgs enables Prometheus metrics endpoint on Blast op-geth.
+// ContainerCommand follows blast-io/deployment: blast-geth has no built-in
+// Blast network, so on first start it fetches the pinned mainnet genesis.json
+// and runs geth init on /data. Without it geth falls back to the Ethereum
+// mainnet genesis and exits ("ethash is only supported as a historical
+// component of already merged networks"). A marker file records a finished
+// init; an interrupted download or init is retried on the next start, and a
+// genesis that does not match the pinned SHA-256 exits before init.
+func (a *blastAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	const script = `set -e
+G=/data/genesis.json
+if [ ! -f /data/.genesis-init ]; then
+  wget -q -O "$G.part" ` + blastGenesisURL + `
+  if ! echo "` + blastGenesisSHA256 + `  $G.part" | sha256sum -c - >/dev/null 2>&1; then
+    rm -f "$G.part"
+    echo "genesis.json does not match pinned sha256 ` + blastGenesisSHA256 + `" >&2
+    exit 1
+  fi
+  mv "$G.part" "$G"
+  geth init --datadir /data "$G"
+  rm "$G"
+  touch /data/.genesis-init
+fi
+exec geth "$@"`
+	return []string{"sh", "-c", script, "--"}
+}
+
+// ContainerArgs passes the mounted config and enables the Prometheus metrics
+// endpoint on blast-geth.
 func (a *blastAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+	return opGethArgs()
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by OP Stack L2 nodes.
@@ -104,10 +138,12 @@ func (a *blastAdapter) VersionPolicy() ChainVersionPolicy {
 // Config
 // --------------------------------------------------------------------------
 
+// SyncMode is full as in blast-io/deployment, which runs blast-geth with
+// discovery off and lets op-node feed it blocks.
 const blastConfig = `# Blast L2 (OP Stack) geth node
 [Eth]
 NetworkId = 81457
-SyncMode = "snap"
+SyncMode = "full"
 
 [Node]
 DataDir = "/data"

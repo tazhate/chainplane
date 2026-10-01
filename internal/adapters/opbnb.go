@@ -72,8 +72,11 @@ func (a *opbnbAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []core
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
+// ContainerArgs passes the mounted config to bnb-chain op-geth and selects
+// opBNB mainnet with the fork's own --opBNBMainnet flag, which loads the
+// bundled genesis; it has no --op-network entry for opBNB.
 func (a *opbnbAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+	return append(opGethArgs(), "--opBNBMainnet")
 }
 
 func (a *opbnbAdapter) DefaultResources() ResourceDefaults {
@@ -103,8 +106,11 @@ func (a *opbnbAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1
 // Config
 // --------------------------------------------------------------------------
 
+// HTTP and WS settings are plain [Node] fields in geth's node.Config; geth
+// rejects sub-tables or unknown keys such as HTTPCorsDomain at startup.
 const opbnbConfig = `# op-geth configuration for opBNB Mainnet (BNB Chain L2, OP Stack)
 [Eth]
+NetworkId = 204
 SyncMode = "snap"
 
 [Node]
@@ -112,7 +118,7 @@ DataDir = "/data"
 HTTPHost = "0.0.0.0"
 HTTPPort = 8545
 HTTPVirtualHosts = ["*"]
-HTTPCorsDomain = ["*"]
+HTTPCors = ["*"]
 HTTPModules = ["eth", "net", "web3", "debug", "txpool"]
 WSHost = "0.0.0.0"
 WSPort = 8546
