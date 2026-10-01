@@ -311,7 +311,7 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | `tron` | `tronprotocol/java-tron:GreatVoyage-v4.8.1` | 8090 | JDK 11 recommended |
 | `near` | `nearprotocol/nearcore:2.10.7` | 3030 | state sync via GCS |
 | `xrp` | `xrpllabsofficial/xrpld:3.1.2` | 5005 | |
-| `stellar` | `stellar/stellar-core:v19.12.0` | 11626 | |
+| `stellar` | `stellar/stellar-core:29.0.0-3589.4eb833373.noble` | 11626 | |
 | `cardano` | `ghcr.io/intersectmbo/cardano-node:10.6.2` | 12798 | |
 | `sui` | `mysten/sui-node:v1.39.2` | 9000 | |
 | `aptos` | `aptoslabs/validator:mainnet` | 8080 | |
