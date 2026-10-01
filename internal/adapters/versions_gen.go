@@ -235,7 +235,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
 	},
 	chainsv1alpha2.ChainPlume: {
-		"": "public.ecr.aws/i6b2w2n6/nitro-node:plume-v2.3.2",
+		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
 	},
 	chainsv1alpha2.ChainPolkadot: {
 		"": "parity/polkadot:v1.24.2",

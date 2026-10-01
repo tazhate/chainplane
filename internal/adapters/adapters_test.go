@@ -264,7 +264,6 @@ var noConfigChains = map[chainsv1alpha2.Chain]bool{
 	chainsv1alpha2.ChainAbstract:    true, // ZK Stack external node
 	chainsv1alpha2.ChainZeroNetwork: true, // ZK Stack external node
 	chainsv1alpha2.ChainCronosZkEVM: true, // ZK Stack external node
-	chainsv1alpha2.ChainPlume:       true, // Arbitrum Nitro
 }
 
 func TestAllAdaptersConfigTemplate(t *testing.T) {

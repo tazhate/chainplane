@@ -228,7 +228,7 @@ All OP Stack chains are configured with `--config /config/config.toml` and a `L1
 | `metis` | `metisprotocol/l2geth:v1.4.2` | 8545 |
 | `opbnb` | `ghcr.io/bnb-chain/op-geth:v0.5.2` | 8545 |
 | `hemi` | none, set `spec.image` ([#35](https://github.com/tazhate/chainplane/issues/35)) | 8545 |
-| `plume` | `public.ecr.aws/i6b2w2n6/nitro-node:plume-v2.3.2` | 8547 |
+| `plume` | `offchainlabs/nitro-node:v3.11.4-7d5ac27` | 8547 |
 | `everclear` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
 | `playnance` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
 | `gravity-alpha` | `offchainlabs/nitro-node:v3.11.4-7d5ac27` | 8547 |

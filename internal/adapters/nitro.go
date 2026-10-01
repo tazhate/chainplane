@@ -98,7 +98,9 @@ func nitroConfig(c nitroChain) (string, error) {
 	if c.ForwardingTarget != "" {
 		cfg["execution"] = map[string]any{"forwarding-target": c.ForwardingTarget}
 	}
-	node := map[string]any{}
+	// The operator runs RPC nodes: staker.enable defaults to true (watchtower
+	// validator), which upstream Orbit node guides switch off.
+	node := map[string]any{"staker": map[string]any{"enable": false}}
 	if c.FeedURL != "" {
 		node["feed"] = map[string]any{"input": map[string]any{"url": []string{c.FeedURL}}}
 	}
@@ -110,9 +112,7 @@ func nitroConfig(c nitroChain) (string, error) {
 			"rest-aggregator": map[string]any{"enable": true, "urls": []string{c.DASRestURL}},
 		}}
 	}
-	if len(node) > 0 {
-		cfg["node"] = node
-	}
+	cfg["node"] = node
 	out, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("nitro config: %w", err)

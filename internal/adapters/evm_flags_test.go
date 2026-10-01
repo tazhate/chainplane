@@ -57,6 +57,7 @@ func TestNonGethClientsHaveNoGethMetricsFlags(t *testing.T) {
 		chainsv1alpha2.ChainEverclear,
 		chainsv1alpha2.ChainPlaynance,
 		chainsv1alpha2.ChainGravityAlpha,
+		chainsv1alpha2.ChainPlume,
 	} {
 		t.Run(string(chain), func(t *testing.T) {
 			for _, arg := range evmFlagsCommandLine(t, chain, chainsv1alpha2.NetworkMainnet) {
@@ -81,6 +82,7 @@ func TestEVMConfigFileIsPassedToNode(t *testing.T) {
 		chainsv1alpha2.ChainEverclear,
 		chainsv1alpha2.ChainPlaynance,
 		chainsv1alpha2.ChainGravityAlpha,
+		chainsv1alpha2.ChainPlume,
 	} {
 		t.Run(string(chain), func(t *testing.T) {
 			adapter, _ := adapters.Get(chain)
@@ -159,17 +161,21 @@ func TestGethForksUseBuiltInGenesis(t *testing.T) {
 func TestNitroConfig(t *testing.T) {
 	for _, tc := range []struct {
 		chain     chainsv1alpha2.Chain
+		network   chainsv1alpha2.Network
 		chainID   float64
 		chainInfo bool
 	}{
-		{chainsv1alpha2.ChainArbitrum, 42161, false},
-		{chainsv1alpha2.ChainEverclear, 25327, false},
-		{chainsv1alpha2.ChainPlaynance, 1829, false},
-		{chainsv1alpha2.ChainGravityAlpha, 1625, true},
+		{chainsv1alpha2.ChainArbitrum, chainsv1alpha2.NetworkMainnet, 42161, false},
+		{chainsv1alpha2.ChainArbitrum, chainsv1alpha2.NetworkTestnet, 421614, false},
+		{chainsv1alpha2.ChainEverclear, chainsv1alpha2.NetworkMainnet, 25327, false},
+		{chainsv1alpha2.ChainPlaynance, chainsv1alpha2.NetworkMainnet, 1829, false},
+		{chainsv1alpha2.ChainGravityAlpha, chainsv1alpha2.NetworkMainnet, 1625, true},
+		{chainsv1alpha2.ChainPlume, chainsv1alpha2.NetworkMainnet, 98866, true},
+		{chainsv1alpha2.ChainPlume, chainsv1alpha2.NetworkTestnet, 98867, true},
 	} {
-		t.Run(string(tc.chain), func(t *testing.T) {
+		t.Run(string(tc.chain)+"/"+string(tc.network), func(t *testing.T) {
 			adapter, _ := adapters.Get(tc.chain)
-			_, content, err := adapter.ConfigTemplate(chainsv1alpha2.ChainInstanceSpec{Chain: tc.chain})
+			_, content, err := adapter.ConfigTemplate(chainsv1alpha2.ChainInstanceSpec{Chain: tc.chain, Network: tc.network})
 			if err != nil {
 				t.Fatalf("ConfigTemplate: %v", err)
 			}
@@ -181,6 +187,11 @@ func TestNitroConfig(t *testing.T) {
 				Persistent struct {
 					GlobalConfig string `json:"global-config"`
 				} `json:"persistent"`
+				Node struct {
+					Staker struct {
+						Enable *bool `json:"enable"`
+					} `json:"staker"`
+				} `json:"node"`
 				Metrics       bool `json:"metrics"`
 				MetricsServer struct {
 					Addr string `json:"addr"`
@@ -197,6 +208,9 @@ func TestNitroConfig(t *testing.T) {
 			}
 			if !cfg.Metrics || cfg.MetricsServer.Addr != "0.0.0.0" {
 				t.Errorf("metrics = %v on %q, want true on 0.0.0.0", cfg.Metrics, cfg.MetricsServer.Addr)
+			}
+			if e := cfg.Node.Staker.Enable; e == nil || *e {
+				t.Error("node.staker.enable is not false; RPC nodes must not run the watchtower validator")
 			}
 			if !tc.chainInfo {
 				return
