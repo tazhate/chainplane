@@ -52,7 +52,7 @@ func init() {
 // --------------------------------------------------------------------------
 
 func (a *hashkeyAdapter) DefaultImage(client string) string {
-	// TODO: hashkeychain/hashkey-geth image org is unverified. Verify at docs.hsk.xyz before production use.
+	// HashKey Chain is an OP Stack L2; the default is upstream op-geth (see versions_gen.go).
 	return DefaultImageFor(chainsv1alpha2.ChainHashKey, client)
 }
 

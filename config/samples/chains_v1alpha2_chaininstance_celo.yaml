@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: us-docker.pkg.dev/celo-org/celo-node/celo-node:1.8.7
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 500Gi
     storageClass: fast-ssd

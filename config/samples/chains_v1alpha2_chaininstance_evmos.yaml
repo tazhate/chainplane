@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: tharsishq/evmos:v20.0.0
+  # Default image: see internal/adapters/versions_gen.go
   # EVM RPC available on port 8545
   storage:
     size: 500Gi

@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: moonbeamfoundation/moonbeam:v0.39.1 (same binary as Moonbeam)
+  # Default image: see internal/adapters/versions_gen.go (same binary as Moonbeam)
   # Moonriver is a Kusama parachain with EVM compatibility.
   # RPC port: 9944 (Substrate / eth-compatible), P2P port: 30333
   storage:

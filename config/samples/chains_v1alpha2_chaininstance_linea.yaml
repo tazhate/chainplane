@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: consensys/linea-besu:24.12.2
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 1Ti
     storageClass: fast-ssd

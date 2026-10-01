@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: bobanetwork/op-geth:v1.101411.4
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 300Gi
     storageClass: fast-ssd

@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: dogecoin/dogecoin:1.14.8
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 100Gi
     storageClass: fast-ssd

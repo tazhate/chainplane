@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: mantlenetworkio/op-geth:v1.0.3
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 1Ti
     storageClass: fast-ssd

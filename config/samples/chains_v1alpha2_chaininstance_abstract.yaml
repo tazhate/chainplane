@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: abstractchain/op-geth:v1.101408.0
+  # Default image: see internal/adapters/versions_gen.go
   # L1_RPC_URL env var defaults to http://ethereum:8545
   # Override via extraEnv if using a different L1 endpoint.
   storage:

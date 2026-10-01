@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: tomochain/tomochain:v2.4.0 (Viction, formerly TomoChain)
+  # Default image: see internal/adapters/versions_gen.go (Viction, formerly TomoChain)
   storage:
     size: 500Gi
     storageClass: fast-ssd

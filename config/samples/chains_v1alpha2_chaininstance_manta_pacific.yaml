@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: mantanetwork/op-geth:v1.101304.3
+  # Default image: see internal/adapters/versions_gen.go
   # Manta Pacific is an OP Stack L2 requiring an L1 Ethereum RPC endpoint.
   # L1_RPC_URL is injected automatically (default: ethereum-mainnet-01 service).
   storage:

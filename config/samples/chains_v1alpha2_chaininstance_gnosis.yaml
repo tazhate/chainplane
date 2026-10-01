@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: nethermind/nethermind:1.36.1
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 500Gi
     storageClass: fast-ssd

@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: liskhq/lisk-core:v4.1.6
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 300Gi
     storageClass: fast-ssd
