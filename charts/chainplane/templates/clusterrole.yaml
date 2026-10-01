@@ -90,9 +90,9 @@ rules:
     verbs:
       - get
   - apiGroups:
-      - ""
+      - discovery.k8s.io
     resources:
-      - endpoints
+      - endpointslices
     verbs:
       - get
       - list

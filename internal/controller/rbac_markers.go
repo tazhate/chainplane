@@ -25,7 +25,7 @@ package controller
 // +kubebuilder:rbac:groups="",resources=services;configmaps;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
-// +kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete
@@ -36,6 +36,6 @@ package controller
 // +kubebuilder:rbac:groups=chains.chainplane.io,resources=chaininstances/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;delete;patch
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
