@@ -96,6 +96,16 @@ helm install chainplane ./charts/chainplane
 |-----------|-------------|---------|
 | `prometheus.url` | Prometheus URL for node health checks | `http://prometheus:9090` |
 
+### Snapshot Bootstrap
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `snapshot.enabled` | Inject MinIO and snapshot-restore settings into the operator | `false` |
+| `snapshot.restoreImage.repository` | snapshot-restore init container image | `ghcr.io/tazhate/chainplane/snapshot-restore` |
+| `snapshot.restoreImage.tag` | snapshot-restore image tag (defaults to v-prefixed appVersion) | `""` |
+| `snapshot.minio.endpoint` | MinIO API endpoint | `""` |
+| `snapshot.minio.existingSecret` | Secret with `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | `""` |
+
 ### Network Policy
 
 | Parameter | Description | Default |

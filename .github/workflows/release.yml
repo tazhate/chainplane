@@ -6,8 +6,33 @@ on:
       - "v*"
 
 jobs:
+  # Gate: nothing is pushed to GHCR unless the tagged commit passes the same
+  # envtest suite and linter that run on branches.
+  test:
+    name: Test and lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: make test
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.11.4
+
   release:
     name: Build and Release
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -48,6 +73,8 @@ jobs:
           push: true
           provenance: false
           sbom: false
+          build-args: |
+            VERSION=${{ github.ref_name }}
           tags: |
             ghcr.io/tazhate/chainplane:${{ github.ref_name }}
             ghcr.io/tazhate/chainplane:latest
@@ -57,6 +84,27 @@ jobs:
             org.opencontainers.image.documentation=https://github.com/tazhate/chainplane
             org.opencontainers.image.title=chainplane
             org.opencontainers.image.description=Kubernetes operator for blockchain full nodes
+            org.opencontainers.image.licenses=Apache-2.0
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      # The operator binary defaults to snapshot-restore:<same tag> (VERSION
+      # build-arg above), so this image must exist for every release tag.
+      - name: Build and push snapshot-restore image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: snapshot-restore.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ghcr.io/tazhate/chainplane/snapshot-restore:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/tazhate/chainplane
+            org.opencontainers.image.title=chainplane-snapshot-restore
+            org.opencontainers.image.description=Init container that restores blockchain node snapshots for chainplane
             org.opencontainers.image.licenses=Apache-2.0
             org.opencontainers.image.version=${{ github.ref_name }}
             org.opencontainers.image.revision=${{ github.sha }}
