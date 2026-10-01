@@ -55,6 +55,9 @@ const (
 
 	// dataVolumeName is the PVC-backed volume that stores chain data.
 	dataVolumeName = "data"
+	// DataVolumeName exports dataVolumeName for tools that consume
+	// RenderPodTemplate outside the controller.
+	DataVolumeName = dataVolumeName
 	// dataVolumeMountPath is where the data volume is mounted inside the container.
 	dataVolumeMountPath = "/data"
 

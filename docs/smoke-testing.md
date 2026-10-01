@@ -39,14 +39,28 @@ When the pod has native sidecars (init containers with `restartPolicy: Always`, 
 
 Ordinary init containers (snapshot restore, genesis download) are still not run and show up as a note. Sidecar output goes to `<out>/<chain>.<container>.log`.
 
+### Identity checks
+
+Staying up for 90 seconds proves little on its own. An OP Stack image that never reads the mounted config starts as Ethereum mainnet, keeps its chain under `/root/.ethereum` inside the container and runs happily for the whole window; 14 chains passed that way before these checks existed. So when the window ends and the main container is still running, chainsmoke looks at what the node did:
+
+1. **Data on the volume.** A busybox helper joins the PID namespace of the main container (`--pid container:<main> --cap-add SYS_PTRACE`, the capability is for nodes that do not run as root) and runs `du -sk /proc/1/root/data`. That sees the tmpfs of a single container and the shared volume of a pod alike, and needs nothing from the node image. Under 64 KiB is FAIL `node wrote nothing to /data (N KiB): config/datadir not applied`: every client that takes its datadir from the operator creates its database there right at start. A chain whose node legitimately writes nothing in the first minutes goes into `dataCheckExempt` in `cmd/chainsmoke/identity.go` with the reason, which then shows as a note. The list is empty; an exemption is not a way to silence a datadir that is not applied.
+2. **EVM chain id.** For chains listed in `internal/adapters/chain_identity.go`, a helper in the pod network namespace (`--network container:<main or holder>`) POSTs `eth_chainId` to `127.0.0.1` on the main container port named `evm-rpc`, else `rpc`, else `http` (avalanche adds `/ext/bc/C/rpc`). A different id is FAIL `chain id X, expected Y`. No answer after three tries two seconds apart turns a PASS into WARN `rpc not ready: ...`: plenty of nodes wait for L1 or a peer before they open RPC, and that is not an identity problem. A node that ignores its config usually has no HTTP RPC either (geth-style clients keep it off by default), so for that case the data check is the one that fires.
+3. **CometBFT network.** For the Cosmos chains in the same file, the helper GETs `/status` on port 26657 and compares `node_info.network` with the expected chain-id: FAIL `network X, expected Y` on a mismatch, WARN `cometbft rpc not ready` without an answer.
+
+The expected values cover mainnet, plus testnet for the adapters that pin `network: testnet` to one network (ethereum: sepolia, bsc: chapel, avalanche: fuji); elsewhere "testnet" is not tied to a network and there is nothing to expect. They are taken from chainlist.org for EVM ids and cosmos/chain-registry for chain-ids. A PASS row lists what was verified, e.g. `running after 1m30s; /data 51 MiB; chain id 1`. EVM chains without an expected id: sei and kava (the EVM JSON-RPC port is not exposed by the main container), berachain (the main container is the consensus client), hyperliquid (no EVM JSON-RPC in the node).
+
+### Result
+
 After `--duration` (default 90s) the result is:
 
 | Result | When |
 |---|---|
 | FAIL | the container exited before the window ended, with any exit code, or a log line matches `unknown flag`, `flag provided but not defined`, `unrecognized option`, `invalid argument`, `error parsing`, `failed to parse`, `panic:` (not Rust's `core::panic::` in backtraces), `fatal error:` or `no such file or directory ... config`. For an exit the detail shows that line, else the last `error`/`fatal` line before the exit |
+| FAIL | still running, but an identity check failed: nothing on the data volume, wrong `eth_chainId` or wrong CometBFT network. The identity failure comes first in the detail |
 | WARN | still running, but some lines contain the word `error` or `fatal` |
 | WARN | the log says the disk is full (`Low disk space`, `no space left on device`), which means `--tmpfs-size` is too small, not that the image is broken |
-| PASS | still running, clean log |
+| WARN | clean log, but the RPC needed for the chain id check did not answer |
+| PASS | still running, clean log, identity checks passed or not applicable |
 | SKIP | the chain has a default image but no sample, or the sample has no image (image-required chain without `--image`) |
 
 ```bash
@@ -91,4 +105,4 @@ docker rm -f $(docker ps -aq --filter label=chainsmoke.prefix=smoke2)
 
 ## What it does not catch
 
-A WARN or even a PASS is not proof the node syncs. Chains that need an L1 endpoint, a snapshot or a genesis file from an init container often stop early or complain loudly in this setup; read the log before treating that as a regression. The other direction matters too: an image that ignores the mounted config and quietly runs on its baked-in defaults still passes, so for a new adapter check in the log that the node reports `/config/...` as its config path.
+A WARN or even a PASS is not proof the node syncs. Chains that need an L1 endpoint, a snapshot or a genesis file from an init container often stop early or complain loudly in this setup; read the log before treating that as a regression. The other direction matters too: the identity checks catch an image that ignores the mounted config when that changes its datadir or its chain, but not a config setting that leaves both alone (ports, pruning, peers), and not a chain without an expected id. For a new adapter, still check in the log that the node reports `/config/...` as its config path.

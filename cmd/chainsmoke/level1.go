@@ -31,6 +31,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 	"github.com/tazhate/chainplane/internal/adapters"
 	"github.com/tazhate/chainplane/internal/controller"
@@ -241,6 +243,25 @@ func smokeSample(ctx context.Context, opts options, env level1Env, j smokeJob) r
 	logs, logErr := dockerLogs(cleanupCtx, name)
 	saveLog(opts.out, j.key, cmds, logs, logErr)
 	r.status, r.detail = verdict(st, ranFor, scanLog(logs))
+	if !st.Running {
+		return r
+	}
+
+	netOwner := name
+	if plan.pod != nil {
+		netOwner = plan.pod.holder
+	}
+	mc := pod.Spec.Containers[slices.IndexFunc(pod.Spec.Containers, func(c corev1.Container) bool {
+		return c.Name == controller.MainContainerName
+	})]
+	found := checkIdentity(ctx, newIdentityTarget(node.Spec, mc, name, netOwner, opts.namePrefix))
+	if ctx.Err() != nil {
+		r.status, r.detail = statusSkip, detailInterrupted
+		return r
+	}
+	var notes []string
+	r.status, r.detail, notes = applyIdentity(r.status, r.detail, found)
+	r.notes = append(r.notes, notes...)
 	return r
 }
 
