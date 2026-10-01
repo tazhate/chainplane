@@ -49,9 +49,9 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# CRDs copied into the chart without the installCRDs guard. Matches the chart
-# as shipped: only the ChainInstance CRD honours installCRDs today.
-CHART_CRDS_UNGUARDED ?= chains.chainplane.io_chainversioncatalogs.yaml
+# CRDs copied into the chart without the installCRDs guard. Empty: every chart
+# CRD honours installCRDs. Kept as a knob for CRDs that must always ship.
+CHART_CRDS_UNGUARDED ?=
 
 .PHONY: sync-chart-crds
 sync-chart-crds: ## Copy generated CRDs from config/crd/bases into the Helm chart.

@@ -33,7 +33,7 @@ jobs:
 
       - name: Install kind
         run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
           kind version
@@ -41,7 +41,7 @@ jobs:
       - name: Install yq
         run: |
           sudo curl -Lo /usr/local/bin/yq \
-            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
           yq --version
 
