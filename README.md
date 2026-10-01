@@ -239,15 +239,24 @@ All OP Stack chains are configured with `--config /config/config.toml` and a `L1
 
 ### EVM — ZK Stack L2
 
-ZK Stack external nodes are configured via environment variables (no config file needed).
+ZK Stack external nodes are configured via `EN_*` environment variables (no config file needed).
+The node keeps its state in Postgres, so each pod also runs `postgres:16` as a native sidecar
+(an init container with `restartPolicy: Always`). The database lives in the `postgres` subPath of
+the node PVC and listens on `127.0.0.1` only, with trust auth: nothing outside the pod can reach it.
+
+Every ZK Stack node also needs an Ethereum L1 RPC. `EN_ETH_CLIENT_URL` defaults to
+`http://ethereum:8545`; point it at your L1 node via `spec.extraEnv`. RPC nodes restore state from
+the chain's public snapshot bucket where one exists; `nodeType: archive` syncs from genesis.
+The JSON-RPC port stays closed until the restore finishes, which takes hours on zkSync Era, so
+probes use the healthcheck port 3081.
 
 | Chain | Image | RPC Port |
 |-------|-------|----------|
-| `zksync` | `matterlabs/external-node:v2.0.22` | 3060 |
-| `lens` | `matterlabs/external-node:v24.5.0` | 3060 |
-| `abstract` | `matterlabs/external-node:v24.5.0` | 3060 |
-| `zero-network` | `matterlabs/external-node:v24.5.0` | 3060 |
-| `cronos-zkevm` | `ghcr.io/cronos-labs/external-node:mainnet-v29.6.0` | 3060 |
+| `zksync` | `matterlabs/external-node:v29.17.0` | 3060 |
+| `lens` | `matterlabs/external-node:v29.17.0` | 3060 |
+| `abstract` | `matterlabs/external-node:v29.17.0` | 3060 |
+| `zero-network` | `matterlabs/external-node:v29.17.0` | 3060 |
+| `cronos-zkevm` | `ghcr.io/cronos-labs/external-node:v31.3.0` | 3060 |
 
 ### EVM — Other L2 / Sidechain
 

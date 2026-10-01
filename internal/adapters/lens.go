@@ -17,26 +17,19 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
-
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 )
 
 // --------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------
-
-const defaultLensL1URL = "http://ethereum:8545"
-
-// --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
 
+// lensAdapter runs the Lens Chain ZK Stack external node; env, ports, probes and the
+// Postgres sidecar come from zkStackProtocolAdapter.
 type lensAdapter struct {
-	protocolAdapter
+	zkStackProtocolAdapter
 }
 
 // --------------------------------------------------------------------------
@@ -45,7 +38,9 @@ type lensAdapter struct {
 
 func init() {
 	Register(chainsv1alpha2.ChainLens, &lensAdapter{
-		protocolAdapter: protocolAdapter{livenessPort: 3060},
+		zkStackProtocolAdapter: newZkStackProtocolAdapter(
+			"https://rpc.lens.xyz", 232, "raas-lens-mainnet-external-node-snapshots",
+		),
 	})
 }
 
@@ -55,14 +50,6 @@ func init() {
 
 func (a *lensAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainLens, client)
-}
-
-func (a *lensAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "", "", nil
-}
-
-func (a *lensAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return evmHealthCheck(ctx, rpcURL)
 }
 
 func (a *lensAdapter) DefaultResources() ResourceDefaults {
@@ -78,24 +65,5 @@ func (a *lensAdapter) VersionPolicy() ChainVersionPolicy {
 		Registry:   "docker.io",
 		Repository: "matterlabs/external-node",
 		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
-
-func (a *lensAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return []corev1.ContainerPort{
-		{Name: "rpc", ContainerPort: 3060, Protocol: corev1.ProtocolTCP},
-		{Name: "ws", ContainerPort: 3061, Protocol: corev1.ProtocolTCP},
-		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
-	}
-}
-
-func (a *lensAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
-}
-
-// ContainerEnv injects the L1 Ethereum RPC URL required by ZK Stack external node.
-func (a *lensAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{Name: "EN_L1_ETH_CLIENT_WEB3_URL", Value: defaultLensL1URL},
 	}
 }
