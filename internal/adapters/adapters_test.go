@@ -940,3 +940,29 @@ func TestContainerEnvProvidersReturnNonEmpty(t *testing.T) {
 		})
 	}
 }
+
+// TestClientVersionPoliciesMatchPinnedImages guards against a per-client
+// policy that tracks a different repository than the image actually pinned
+// for that client, which would make versioncheck write a foreign tag.
+func TestClientVersionPoliciesMatchPinnedImages(t *testing.T) {
+	for _, chain := range allChains {
+		adapter, ok := adapters.Get(chain)
+		if !ok {
+			continue
+		}
+		cp, ok := adapter.(adapters.ClientVersionProvider)
+		if !ok {
+			continue
+		}
+		for client, policy := range cp.ClientVersionPolicies() {
+			image := adapters.DefaultImageFor(chain, client)
+			repo := policy.Repository
+			if policy.Registry != "" && policy.Registry != "docker.io" {
+				repo = policy.Registry + "/" + repo
+			}
+			if !strings.HasPrefix(image, repo+":") {
+				t.Errorf("%s/%s: policy tracks %q but pinned image is %q", chain, client, repo, image)
+			}
+		}
+	}
+}

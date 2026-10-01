@@ -79,6 +79,7 @@ func TestPickLatest(t *testing.T) {
 		wantLatest string
 		wantNewer  bool
 		wantMajor  bool
+		wantSame   string
 	}{
 		{
 			name: "minor bump", policy: semverPolicy, current: "v1.4.7",
@@ -89,6 +90,11 @@ func TestPickLatest(t *testing.T) {
 			name: "major bump", policy: semverPolicy, current: "v29.17.0",
 			tags:       tagEntries("v29.17.0", "v31.1.0"),
 			wantLatest: "v31.1.0", wantNewer: true, wantMajor: true,
+		},
+		{
+			name: "major with same-line update", policy: semverPolicy, current: "v1.36.1",
+			tags:       tagEntries("v1.36.1", "v1.38.0", "v1.39.3", "v2.0.0"),
+			wantLatest: "v2.0.0", wantNewer: true, wantMajor: true, wantSame: "v1.39.3",
 		},
 		{
 			name: "zero-x minor is major", policy: semverPolicy, current: "v0.5.7",
@@ -125,13 +131,13 @@ func TestPickLatest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			latest, newer, major, err := pickLatest(tt.policy, tt.current, tt.tags)
+			got, err := pickLatest(tt.policy, tt.current, tt.tags)
 			if err != nil {
 				t.Fatalf("pickLatest: %v", err)
 			}
-			if latest != tt.wantLatest || newer != tt.wantNewer || major != tt.wantMajor {
-				t.Fatalf("got (%q, newer=%v, major=%v), want (%q, newer=%v, major=%v)",
-					latest, newer, major, tt.wantLatest, tt.wantNewer, tt.wantMajor)
+			want := pick{latest: tt.wantLatest, newer: tt.wantNewer, major: tt.wantMajor, sameMajor: tt.wantSame}
+			if got != want {
+				t.Fatalf("got %+v, want %+v", got, want)
 			}
 		})
 	}
@@ -140,14 +146,17 @@ func TestPickLatest(t *testing.T) {
 func TestFilterNewerHoldsMajors(t *testing.T) {
 	results := []versionResult{
 		{Chain: "a", IsNewer: true},
-		{Chain: "b", IsNewer: true, IsMajor: true},
+		{Chain: "b", IsNewer: true, IsMajor: true, LatestTag: "v2.0.0"},
 		{Chain: "c"},
+		{Chain: "d", IsNewer: true, IsMajor: true, LatestTag: "v2.0.0", SameMajorTag: "v1.9.0"},
 	}
-	if got := filterNewer(results, false); len(got) != 1 || got[0].Chain != "a" {
-		t.Fatalf("without allow-major got %v", got)
+	got := filterNewer(results, false)
+	if len(got) != 2 || got[0].Chain != "a" || got[1].Chain != "d" || got[1].LatestTag != "v1.9.0" {
+		t.Fatalf("without allow-major got %+v", got)
 	}
-	if got := filterNewer(results, true); len(got) != 2 {
-		t.Fatalf("with allow-major got %v", got)
+	got = filterNewer(results, true)
+	if len(got) != 3 || got[2].LatestTag != "v2.0.0" {
+		t.Fatalf("with allow-major got %+v", got)
 	}
 }
 

@@ -137,6 +137,14 @@ type DefaultResourcesProvider interface {
 	DefaultResources() ResourceDefaults
 }
 
+// ClientVersionProvider is implemented by adapters whose chain ships several
+// clients with separately pinned images (e.g. ethereum: geth, erigon,
+// nethermind, reth). Keys are the lowercase client names used as inner keys
+// of the default image map; the chain default stays on VersionProvider.
+type ClientVersionProvider interface {
+	ClientVersionPolicies() map[string]ChainVersionPolicy
+}
+
 // ChainVersionPolicy describes how to find the latest version of a chain image.
 type ChainVersionPolicy struct {
 	// Registry is "docker.io" or "ghcr.io".
