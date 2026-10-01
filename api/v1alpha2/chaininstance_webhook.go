@@ -191,6 +191,7 @@ var supportedChains = func() map[Chain]bool {
 // DefaultImageFunc returns the operator's default image for a chain and
 // client, or "" when the chain has no public image. The adapters package
 // provides it; it is injected because api/ must not import adapters.
+// +kubebuilder:object:generate=false
 type DefaultImageFunc func(chain Chain, client string) string
 
 // SetupWebhookWithManager registers the validating webhook with the controller
