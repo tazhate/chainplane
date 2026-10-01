@@ -10,7 +10,7 @@ spec:
   nodeGroup: heavy
   rpc:
     enabled: true
-    httpPort: 8545
+    port: 8545
   storage:
     size: "500Gi"
     storageClass: fast-nvme

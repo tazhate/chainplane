@@ -49,6 +49,9 @@ const (
 	// mainContainerName is the canonical name of the primary blockchain node
 	// container inside every pod.
 	mainContainerName = "node"
+	// MainContainerName exports mainContainerName for tools that consume
+	// RenderPodTemplate outside the controller.
+	MainContainerName = mainContainerName
 
 	// dataVolumeName is the PVC-backed volume that stores chain data.
 	dataVolumeName = "data"
@@ -123,26 +126,11 @@ func (r *ChainInstanceReconciler) buildStatefulSetSpec(
 		replicas = *node.Spec.Replicas
 	}
 
-	image := resolveContainerImage(node, adapter)
-	ports := adapter.ContainerPorts(node.Spec)
-	liveness := adapter.LivenessProbe(node.Spec)
-
-	var startup *corev1.Probe
-	if sp, ok := adapter.(adapters.StartupProbeProvider); ok {
-		startup = sp.StartupProbe(node.Spec)
-	}
-
-	initContainers := r.snapshotInitContainers(node)
-	if icp, ok := adapter.(adapters.InitContainerProvider); ok {
-		initContainers = append(initContainers, icp.InitContainers(node.Spec)...)
-	}
-
 	var storageClassName *string
 	if sc := node.Spec.Storage.StorageClass; sc != "" {
 		storageClassName = &sc
 	}
 	volumeMode := corev1.PersistentVolumeFilesystem
-	fsGroup := podFSGroup
 
 	return appsv1.StatefulSetSpec{
 		Replicas:    &replicas,
@@ -150,21 +138,7 @@ func (r *ChainInstanceReconciler) buildStatefulSetSpec(
 		Selector: &metav1.LabelSelector{
 			MatchLabels: selectorLabels(node),
 		},
-		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      coreLabels(node),
-				Annotations: map[string]string{configHashAnnotation: cfgHash},
-			},
-			Spec: corev1.PodSpec{
-				SecurityContext: &corev1.PodSecurityContext{
-					FSGroup: &fsGroup,
-				},
-				NodeSelector:   adapter.NodeSelector(node.Spec.NodeGroup),
-				InitContainers: initContainers,
-				Containers:     r.podContainers(node, image, ports, liveness, startup, adapter),
-				Volumes:        r.podVolumes(node),
-			},
-		},
+		Template: RenderPodTemplate(node, adapter, cfgHash),
 		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{Name: dataVolumeName},
@@ -183,9 +157,52 @@ func (r *ChainInstanceReconciler) buildStatefulSetSpec(
 	}
 }
 
+// RenderPodTemplate builds the node pod template from the CR and adapter
+// alone, without touching the API server: init containers (snapshot restore +
+// adapter-specific), the main node container, sidecars, volumes and probes.
+// The reconciler embeds it into the StatefulSet; cmd/chainsmoke converts it
+// into a local `docker run` to smoke-test images and flags.
+func RenderPodTemplate(
+	node *chainsv1alpha2.ChainInstance,
+	adapter adapters.ChainAdapter,
+	cfgHash string,
+) corev1.PodTemplateSpec {
+	image := resolveContainerImage(node, adapter)
+	ports := adapter.ContainerPorts(node.Spec)
+	liveness := adapter.LivenessProbe(node.Spec)
+
+	var startup *corev1.Probe
+	if sp, ok := adapter.(adapters.StartupProbeProvider); ok {
+		startup = sp.StartupProbe(node.Spec)
+	}
+
+	initContainers := snapshotInitContainers(node)
+	if icp, ok := adapter.(adapters.InitContainerProvider); ok {
+		initContainers = append(initContainers, icp.InitContainers(node.Spec)...)
+	}
+
+	fsGroup := podFSGroup
+
+	return corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      coreLabels(node),
+			Annotations: map[string]string{configHashAnnotation: cfgHash},
+		},
+		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup: &fsGroup,
+			},
+			NodeSelector:   adapter.NodeSelector(node.Spec.NodeGroup),
+			InitContainers: initContainers,
+			Containers:     podContainers(node, image, ports, liveness, startup, adapter),
+			Volumes:        podVolumes(node),
+		},
+	}
+}
+
 // podContainers returns the ordered slice of containers: the main node
 // container followed by any user-defined sidecars.
-func (r *ChainInstanceReconciler) podContainers(
+func podContainers(
 	node *chainsv1alpha2.ChainInstance,
 	image string,
 	ports []corev1.ContainerPort,
@@ -225,7 +242,7 @@ func (r *ChainInstanceReconciler) podContainers(
 // podVolumes returns the ordered slice of pod volumes: the config ConfigMap
 // volume followed by any user-defined extra volumes. The "data" volume is
 // provided by VolumeClaimTemplates and must not appear here.
-func (r *ChainInstanceReconciler) podVolumes(node *chainsv1alpha2.ChainInstance) []corev1.Volume {
+func podVolumes(node *chainsv1alpha2.ChainInstance) []corev1.Volume {
 	vols := make([]corev1.Volume, 0, 1+len(node.Spec.ExtraVolumes))
 	vols = append(vols, corev1.Volume{
 		Name: configVolumeName,

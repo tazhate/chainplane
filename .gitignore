@@ -42,6 +42,10 @@ testbin/
 
 # Compiled binaries (use bin/ for build artifacts)
 /versioncheck
+/chainsmoke
+
+# chainsmoke reports and container logs
+smoke-out/
 
 # Logo lives in assets/, not in repo root
 /logo.png
