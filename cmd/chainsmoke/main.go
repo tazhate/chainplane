@@ -19,8 +19,9 @@ limitations under the License.
 // Level 0 checks that every default image in internal/adapters/versions_gen.go
 // exists in its registry and ships a linux/amd64 variant. Level 1 renders the
 // pod template of every config/samples ChainInstance exactly as the operator
-// would, starts the main node container under docker for a short while and
-// scans its logs for flag and config errors.
+// would, starts the node container (with its native and regular sidecars)
+// under docker for a short while and scans its logs for flag and config
+// errors.
 package main
 
 import (
@@ -56,8 +57,14 @@ type options struct {
 	samples      string
 	keepImages   bool
 	tmpfsSize    string
+	nofile       int
+	namePrefix   string
 	repoRoot     string
 }
+
+// namePrefixRe is what docker accepts at the start of container and volume
+// names.
+var namePrefixRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
 
 func main() {
 	log.SetFlags(0)
@@ -113,7 +120,12 @@ func parseFlags(args []string, stderr io.Writer) (options, error) {
 	fs.StringVar(&opts.samples, "samples", "", "ChainInstance samples directory (default <repo>/config/samples)")
 	fs.BoolVar(&opts.keepImages, "keep-images", false,
 		"level 1: keep pulled images instead of removing them after each run")
-	fs.StringVar(&opts.tmpfsSize, "tmpfs-size", "4g", "level 1: size cap of the tmpfs that stands in for the data PVC")
+	fs.StringVar(&opts.tmpfsSize, "tmpfs-size", "4g",
+		"level 1: size cap of the tmpfs that stands in for the data PVC (below 4g geth-family nodes stop on low disk space)")
+	fs.IntVar(&opts.nofile, "nofile", 1048576,
+		"level 1: open files limit (ulimit nofile) of every container, 0 = docker default")
+	fs.StringVar(&opts.namePrefix, "name-prefix", "chainsmoke",
+		"level 1: prefix of container and volume names, so concurrent runs do not collide")
 	if err := fs.Parse(args); err != nil {
 		return opts, err
 	}
@@ -140,6 +152,12 @@ func parseFlags(args []string, stderr io.Writer) (options, error) {
 	}
 	if opts.duration <= 0 {
 		return opts, fmt.Errorf("--duration must be positive")
+	}
+	if opts.nofile < 0 {
+		return opts, fmt.Errorf("--nofile must not be negative")
+	}
+	if !namePrefixRe.MatchString(opts.namePrefix) {
+		return opts, fmt.Errorf("--name-prefix %q is not a valid docker name", opts.namePrefix)
 	}
 
 	opts.repoRoot = repoRoot()

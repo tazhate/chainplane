@@ -117,7 +117,9 @@ func TestDashSampleRunPlan(t *testing.T) {
 	joined := strings.Join(plan.args, " ")
 	for _, want := range []string{
 		"--env DASH_RPC_USER=smoke",
-		"--tmpfs /data:rw,exec,mode=1777,size=4g",
+		// The UTXO exporter sidecar turns the plan into a pod.
+		"--network container:chainsmoke-dash-pod",
+		"--mount type=volume,src=chainsmoke-dash-data,dst=/data",
 		"--mount type=bind,src=" + filepath.Join(work, "config") + ",dst=/config,readonly",
 		plan.image + " dashd -conf=/config/dash.conf",
 	} {
@@ -127,6 +129,9 @@ func TestDashSampleRunPlan(t *testing.T) {
 	}
 	if slices.Contains(plan.args, "--entrypoint") {
 		t.Error("dash keeps the image entrypoint")
+	}
+	if plan.pod == nil || len(plan.pod.others) != 1 {
+		t.Fatalf("dash pod plan = %+v, want the exporter sidecar", plan.pod)
 	}
 	if !strings.Contains(plan.files[filepath.Join(work, "config", "dash.conf")], "datadir=/data") {
 		t.Errorf("dash.conf not planned: %v", plan.files)

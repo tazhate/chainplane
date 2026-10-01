@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"maps"
@@ -66,8 +67,9 @@ func runLevel1(ctx context.Context, opts options, samples []sample, selected fun
 	if err := os.MkdirAll(opts.out, 0o755); err != nil {
 		return []result{{chain: "-", status: statusFail, level: 1, detail: err.Error()}}
 	}
+	env := level1Env{images: newImageSet(opts.keepImages), volumeSubpath: volumeSubpathSupported(ctx)}
 	results := forEach(ctx, opts.parallel, jobs, func(ctx context.Context, j smokeJob) result {
-		return smokeSample(ctx, opts, j)
+		return smokeSample(ctx, opts, env, j)
 	})
 
 	for _, chain := range slices.Sorted(maps.Keys(adapters.DefaultImages())) {
@@ -78,12 +80,22 @@ func runLevel1(ctx context.Context, opts options, samples []sample, selected fun
 	return results
 }
 
-// smokeSample renders the sample, runs its main container for opts.duration
-// and classifies the outcome. The container is always removed.
-func smokeSample(ctx context.Context, opts options, j smokeJob) result {
+// level1Env is the state level 1 jobs share.
+type level1Env struct {
+	images        *imageSet
+	volumeSubpath bool
+}
+
+// sidecarReadyTimeout bounds the wait for a native sidecar's probe.
+const sidecarReadyTimeout = 60 * time.Second
+
+// smokeSample renders the sample, runs its pod for opts.duration and
+// classifies the outcome by the main container. Containers and volumes are
+// always removed.
+func smokeSample(ctx context.Context, opts options, env level1Env, j smokeJob) result {
 	r := result{chain: j.sample.chain, level: 1}
 	if ctx.Err() != nil {
-		r.status, r.detail = statusSkip, "interrupted"
+		r.status, r.detail = statusSkip, detailInterrupted
 		return r
 	}
 	if j.sample.err != nil {
@@ -112,14 +124,14 @@ func smokeSample(ctx context.Context, opts options, j smokeJob) result {
 		}
 	}
 
-	workDir, err := os.MkdirTemp("", "chainsmoke-"+j.key+"-")
+	workDir, err := os.MkdirTemp("", opts.namePrefix+"-"+j.key+"-")
 	if err != nil {
 		r.status, r.detail = statusFail, err.Error()
 		return r
 	}
 	defer func() { _ = os.RemoveAll(workDir) }()
 
-	name := "chainsmoke-" + j.key
+	name := opts.namePrefix + "-" + j.key
 	plan, err := buildRunPlan(planInput{
 		name:          name,
 		pod:           pod,
@@ -128,9 +140,17 @@ func smokeSample(ctx context.Context, opts options, j smokeJob) result {
 		configContent: cfgContent,
 		workDir:       workDir,
 		tmpfsSize:     opts.tmpfsSize,
+		nofile:        opts.nofile,
+		prefix:        opts.namePrefix,
+		volumeSubpath: env.volumeSubpath,
 	})
 	if err != nil {
 		r.status, r.detail = statusFail, err.Error()
+		return r
+	}
+	if plan.image == "" {
+		// Image-required chains have no default; level 0 skips them too.
+		r.status, r.detail = statusSkip, "no default image (spec.image required)"
 		return r
 	}
 	r.image, r.notes = plan.image, plan.notes
@@ -139,27 +159,65 @@ func smokeSample(ctx context.Context, opts options, j smokeJob) result {
 		return r
 	}
 
-	if _, err := dockerRetry(ctx, "pull", "--quiet", "--platform", smokePlatform, plan.image); err != nil {
-		r.status, r.detail = statusFail, firstLine(err.Error())
-		return r
-	}
-
 	// Cleanup must survive Ctrl-C, so it runs on a context detached from ctx.
+	// Images are released after the containers using them are gone.
 	cleanupCtx := context.WithoutCancel(ctx)
-	_, _ = docker(cleanupCtx, "rm", "-f", "-v", name)
+	var acquired []string
 	defer func() {
-		_, _ = docker(cleanupCtx, "rm", "-f", "-v", name)
-		if !opts.keepImages {
-			// Fails harmlessly while another run still uses the image.
-			_, _ = docker(cleanupCtx, "rmi", plan.image)
+		for _, ref := range acquired {
+			env.images.release(cleanupCtx, ref)
 		}
 	}()
+	for _, ref := range plan.images() {
+		acquired = append(acquired, ref)
+		if err := env.images.acquire(ctx, ref); err != nil {
+			r.status, r.detail = statusFail, firstLine(err.Error())
+			return r
+		}
+	}
+
+	containers := plan.containers(name)
+	removePod := func() {
+		_, _ = docker(cleanupCtx, append([]string{"rm", "-f", "-v"}, containers...)...)
+		if plan.pod != nil && len(plan.pod.volumes) > 0 {
+			_, _ = docker(cleanupCtx, append([]string{"volume", "rm", "-f"}, plan.pod.volumes...)...)
+		}
+	}
+	removePod()
+	defer removePod()
+
+	// cmds is every docker command run so far, the header of the log.
+	var cmds [][]string
+	run := func(args []string) error {
+		cmds = append(cmds, args)
+		_, err := docker(ctx, args...)
+		return err
+	}
+
+	if plan.pod != nil {
+		if err := startPod(ctx, cleanupCtx, opts.out, j.key, plan.pod, run); err != nil {
+			if ctx.Err() != nil {
+				r.status, r.detail = statusSkip, detailInterrupted
+				return r
+			}
+			r.status, r.detail = statusFail, err.Error()
+			saveLog(opts.out, j.key, cmds, "", err)
+			return r
+		}
+	}
 
 	start := time.Now()
-	if _, err := docker(ctx, plan.args...); err != nil {
+	if err := run(plan.args); err != nil {
 		r.status, r.detail = statusFail, runErrorSummary(err.Error())
-		saveLog(opts.out, j.key, plan.args, "", err)
+		saveLog(opts.out, j.key, cmds, "", err)
 		return r
+	}
+	if plan.pod != nil {
+		for _, c := range plan.pod.others {
+			if err := run(c.args); err != nil {
+				r.notes = append(r.notes, "sidecar "+c.container+" not started: "+runErrorSummary(err.Error()))
+			}
+		}
 	}
 
 	waitCtx, cancel := context.WithTimeout(ctx, opts.duration)
@@ -167,25 +225,109 @@ func smokeSample(ctx context.Context, opts options, j smokeJob) result {
 	cancel()
 	ranFor := time.Since(start)
 	if ctx.Err() != nil {
-		r.status, r.detail = statusSkip, "interrupted"
+		r.status, r.detail = statusSkip, detailInterrupted
 		return r
 	}
 
-	stateJSON, err := docker(cleanupCtx, "inspect", "--format", "{{json .State}}", name)
+	st, err := inspectState(cleanupCtx, name)
 	if err != nil {
-		r.status, r.detail = statusFail, firstLine(err.Error())
+		r.status, r.detail = statusFail, err.Error()
 		return r
 	}
-	var st containerState
-	if err := json.Unmarshal([]byte(stateJSON), &st); err != nil {
-		r.status, r.detail = statusFail, "parsing container state: "+err.Error()
-		return r
+	if plan.pod != nil {
+		r.notes = append(r.notes, collectSidecars(cleanupCtx, opts.out, j.key, plan.pod)...)
 	}
 
 	logs, logErr := dockerLogs(cleanupCtx, name)
-	saveLog(opts.out, j.key, plan.args, logs, logErr)
+	saveLog(opts.out, j.key, cmds, logs, logErr)
 	r.status, r.detail = verdict(st, ranFor, scanLog(logs))
 	return r
+}
+
+// startPod runs the pod setup commands and starts the native sidecars in
+// order, each one ready before the next. The log of a sidecar that fails is
+// saved right away.
+func startPod(ctx, cleanupCtx context.Context, out, key string, p *podPlan, run func([]string) error) error {
+	for _, args := range p.setup {
+		if err := run(args); err != nil {
+			return errors.New("pod setup: " + runErrorSummary(err.Error()))
+		}
+	}
+	for _, c := range p.sidecars {
+		err := run(c.args)
+		if err == nil {
+			err = waitReady(ctx, c)
+		}
+		if err != nil {
+			saveSidecarLog(cleanupCtx, out, key, c)
+			return errors.New("sidecar " + c.container + ": " + runErrorSummary(err.Error()))
+		}
+	}
+	return nil
+}
+
+// collectSidecars saves the sidecar logs and returns a note for each
+// sidecar that is no longer running.
+func collectSidecars(ctx context.Context, out, key string, p *podPlan) []string {
+	var notes []string
+	for _, c := range slices.Concat(p.sidecars, p.others) {
+		saveSidecarLog(ctx, out, key, c)
+		if st, err := inspectState(ctx, c.name); err == nil && !st.Running {
+			notes = append(notes, fmt.Sprintf("sidecar %s exited with code %d", c.container, st.ExitCode))
+		}
+	}
+	return notes
+}
+
+// waitReady runs the exec probe of a native sidecar until it succeeds, the
+// container exits or sidecarReadyTimeout passes. Kubernetes holds the next
+// container back the same way.
+func waitReady(ctx context.Context, c containerRun) error {
+	if len(c.probe) == 0 {
+		return nil
+	}
+	deadline := time.Now().Add(sidecarReadyTimeout)
+	for {
+		probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		_, err := docker(probeCtx, append([]string{"exec", c.name}, c.probe...)...)
+		cancel()
+		switch {
+		case err == nil:
+			return nil
+		case ctx.Err() != nil:
+			return ctx.Err()
+		}
+		if st, err := inspectState(ctx, c.name); err == nil && !st.Running {
+			return fmt.Errorf("exited with code %d", st.ExitCode)
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("not ready after %s: %s", sidecarReadyTimeout, firstLine(err.Error()))
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+		}
+	}
+}
+
+// inspectState returns the docker state of a container.
+func inspectState(ctx context.Context, name string) (containerState, error) {
+	var st containerState
+	stateJSON, err := docker(ctx, "inspect", "--format", "{{json .State}}", name)
+	if err != nil {
+		return st, errors.New(firstLine(err.Error()))
+	}
+	if err := json.Unmarshal([]byte(stateJSON), &st); err != nil {
+		return st, fmt.Errorf("parsing container state: %w", err)
+	}
+	return st, nil
+}
+
+// saveSidecarLog writes the output of a sidecar to <out>/<key>.<container>.log.
+func saveSidecarLog(ctx context.Context, out, key string, c containerRun) {
+	logs, err := dockerLogs(ctx, c.name)
+	saveLog(out, key+"."+c.container, [][]string{c.args}, logs, err)
 }
 
 // runErrorSummary keeps the actionable tail of a failed docker run, e.g.
@@ -225,11 +367,13 @@ func dockerLogs(ctx context.Context, name string) (string, error) {
 	return string(out), nil
 }
 
-// saveLog writes the docker run command and container output to
-// <out>/<key>.log for post-mortem.
-func saveLog(out, key string, args []string, logs string, runErr error) {
+// saveLog writes the docker commands that built the container and its
+// output to <out>/<key>.log for post-mortem.
+func saveLog(out, key string, cmds [][]string, logs string, runErr error) {
 	var b strings.Builder
-	b.WriteString("# docker " + shellJoin(args) + "\n")
+	for _, args := range cmds {
+		b.WriteString("# docker " + shellJoin(args) + "\n")
+	}
 	if runErr != nil {
 		b.WriteString("# error: " + runErr.Error() + "\n")
 	}

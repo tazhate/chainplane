@@ -24,6 +24,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -93,4 +94,67 @@ func forEach[T any](ctx context.Context, n int, items []T, fn func(context.Conte
 	}
 	wg.Wait()
 	return out
+}
+
+// imageSet tracks the images a level 1 run pulls. An image is removed once
+// its last concurrent user is done, and never when it was on the host before
+// the run first needed it, so images of other runs and of the user survive.
+type imageSet struct {
+	keep bool // --keep-images
+
+	mu          sync.Mutex
+	users       map[string]int
+	preexisting map[string]bool
+}
+
+func newImageSet(keep bool) *imageSet {
+	return &imageSet{keep: keep, users: map[string]int{}, preexisting: map[string]bool{}}
+}
+
+// acquire registers a user of ref and pulls it. Every acquire needs a
+// release, also when the pull fails.
+func (s *imageSet) acquire(ctx context.Context, ref string) error {
+	s.mu.Lock()
+	if _, seen := s.preexisting[ref]; !seen {
+		_, err := docker(ctx, "image", "inspect", "--format", "{{.Id}}", ref)
+		s.preexisting[ref] = err == nil
+	}
+	s.users[ref]++
+	s.mu.Unlock()
+
+	_, err := dockerRetry(ctx, "pull", "--quiet", "--platform", smokePlatform, ref)
+	return err
+}
+
+// release drops a user of ref and removes the image when it was the last
+// one. Removal runs under the lock so a concurrent acquire cannot lose its
+// freshly pulled image; it fails harmlessly while a container of another
+// process still uses the image.
+func (s *imageSet) release(ctx context.Context, ref string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.users[ref]--
+	if s.users[ref] > 0 || s.keep || s.preexisting[ref] {
+		return
+	}
+	_, _ = docker(ctx, "rmi", ref)
+}
+
+// volumeSubpathSupported reports whether the docker engine accepts
+// --mount ...,volume-subpath=, added in Docker Engine 26.
+func volumeSubpathSupported(ctx context.Context) bool {
+	out, err := docker(ctx, "version", "--format", "{{.Server.Version}}")
+	if err != nil {
+		log.Printf("docker engine version unknown, not using volume-subpath: %v", err)
+		return false
+	}
+	return engineAtLeast(strings.TrimSpace(out), 26)
+}
+
+// engineAtLeast compares the major number of a docker engine version such
+// as "29.8.1" or "26.0.0-rc1".
+func engineAtLeast(version string, major int) bool {
+	head, _, _ := strings.Cut(version, ".")
+	n, err := strconv.Atoi(head)
+	return err == nil && n >= major
 }
