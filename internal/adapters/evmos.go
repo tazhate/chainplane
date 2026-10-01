@@ -210,10 +210,7 @@ func (a *evmosAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *evmosAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "tharsishq/evmos",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
+// Evmos halted for good on 2026-05-18 at height 37,318,000 after the
+// shutdown proposal #331, so there is no default image and nothing to
+// track. The adapter stays registered for existing ChainInstances that set
+// spec.image.

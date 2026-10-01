@@ -109,7 +109,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
 	},
 	chainsv1alpha2.ChainEvmos: {
-		"": "tharsishq/evmos:v20.0.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainFantom: {
 		"": "",

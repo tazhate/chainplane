@@ -174,7 +174,8 @@ func TestGetUnknownChainReturnsNil(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // imageRequiredChains have no default image: upstream publishes no public
-// container image, the network is shut down (fantom, zero-network), or the
+// container image, the network is shut down (fantom, zero-network, evmos
+// halted 2026-05-18 after proposal #331), or the
 // network moved to a stack the adapter does not model yet (ronin, zircuit,
 // linea, aurora, mantle, hemi).
 // Keep this list explicit so a default is never blanked by accident.
@@ -182,6 +183,7 @@ var imageRequiredChains = map[chainsv1alpha2.Chain]bool{
 	chainsv1alpha2.ChainAurora:      true,
 	chainsv1alpha2.ChainBitTorrent:  true,
 	chainsv1alpha2.ChainCronos:      true,
+	chainsv1alpha2.ChainEvmos:       true,
 	chainsv1alpha2.ChainFantom:      true,
 	chainsv1alpha2.ChainHemi:        true,
 	chainsv1alpha2.ChainHyperliquid: true,
