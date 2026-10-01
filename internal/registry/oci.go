@@ -45,7 +45,9 @@ const garHost = "us-docker.pkg.dev"
 
 func (c *ociClient) httpClient() *http.Client {
 	if c.http == nil {
-		c.http = &http.Client{Timeout: 15 * time.Second}
+		// Artifact Registry returns every tag in one response, over 20 MB for
+		// op-node, which takes longer than the other registries' pages.
+		c.http = &http.Client{Timeout: 2 * time.Minute}
 	}
 	return c.http
 }

@@ -127,10 +127,6 @@ MaxPeers = 50
 ListenAddr = ":30303"
 `
 
-func (a *celoAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
-	}
-}
+// Celo runs its own op-reth fork from a datadir migrated off Celo L1; the
+// upstream op-reth chain spec does not cover Celo transaction types. No
+// default image until the adapter moves to Celo's images, so nothing to track.

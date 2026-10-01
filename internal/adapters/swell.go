@@ -115,10 +115,7 @@ WSOrigins = ["*"]
 MaxPeers = 50
 `
 
-func (a *swellAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
-	}
-}
+// Swell is not in the superchain registry bundled with op-reth and op-node
+// (no --chain or --network for it), and op-geth stops at Karst. No default
+// image until the adapter gets a pinned genesis and rollup config, so
+// nothing to track.

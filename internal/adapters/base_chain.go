@@ -17,7 +17,7 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -29,14 +29,23 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-const defaultBaseChainL1URL = "http://ethereum:8545"
+const (
+	baseSequencerURL = "https://mainnet-sequencer.base.org"
+	// baseConsensusDataDir holds base-consensus' P2P key and bootstore.
+	baseConsensusDataDir = "/data/base-consensus"
+)
 
 // --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
 
+// baseChainAdapter runs Base the way base/node does: base-reth-node as the
+// main container and base-consensus as a sidecar, both from the ghcr.io/base/node
+// image. Base left the superchain registry, so op-reth and op-node have no
+// built-in Base config; both Base binaries ship it. Ports, the reth flags and
+// the engine API wiring are shared with opRethProtocolAdapter.
 type baseChainAdapter struct {
-	protocolAdapter
+	opRethProtocolAdapter
 }
 
 // --------------------------------------------------------------------------
@@ -45,7 +54,7 @@ type baseChainAdapter struct {
 
 func init() {
 	Register(chainsv1alpha2.ChainBase, &baseChainAdapter{
-		protocolAdapter: protocolAdapter{livenessPort: 8545},
+		opRethProtocolAdapter: newOpRethProtocolAdapter(chainsv1alpha2.ChainBase, "base", "", baseSequencerURL),
 	})
 }
 
@@ -53,32 +62,54 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *baseChainAdapter) DefaultImage(client string) string {
-	return DefaultImageFor(chainsv1alpha2.ChainBase, client)
+// ContainerCommand selects base-reth-node; the image itself starts supervisord.
+func (a *baseChainAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"/app/base-reth-node"}
 }
 
-func (a *baseChainAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.toml", baseChainConfig, nil
+// ContainerArgs runs base-reth-node on its built-in Base chain spec. It has
+// no --rollup.disable-tx-pool-gossip flag.
+func (a *baseChainAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	return rethNodeArgs(a.rethChain, a.sequencerURL, spec)
 }
 
-func (a *baseChainAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return evmHealthCheck(ctx, rpcURL)
+// Sidecars adds base-consensus, Base's consensus client, which has the Base
+// rollup config built in (chain 8453). L1 endpoints come from L1_RPC_URL and
+// L1_BEACON_URL in spec.extraEnv, and BASE_NODE_* entries there pass through.
+func (a *baseChainAdapter) Sidecars(spec chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
+	return []corev1.Container{{
+		Name:    "base-consensus",
+		Image:   a.mainImage(spec),
+		Command: waitForEngineSecret("/app/base-consensus", baseConsensusDataDir),
+		Args: []string{
+			"node",
+			"--chain", "8453",
+			"--l2-engine-rpc", "http://127.0.0.1:" + strconv.Itoa(opRethAuthPort),
+			"--l2-engine-jwt-secret", opRethJWTPath,
+			"--rpc.addr", "0.0.0.0", "--port", strconv.Itoa(opNodeRPCPort),
+			"--metrics.enabled", "--metrics.addr", "0.0.0.0", "--metrics.port", strconv.Itoa(opNodeMetricsPort),
+			"--p2p.listen.tcp", strconv.Itoa(opNodeP2PPort), "--p2p.listen.udp", strconv.Itoa(opNodeP2PPort),
+			"--p2p.priv.path", baseConsensusDataDir + "/p2p_priv.txt",
+			"--p2p.bootstore", baseConsensusDataDir + "/bootstore",
+		},
+		Env: l1Env(spec.ExtraEnv, "BASE_NODE_L1_ETH_RPC", "BASE_NODE_L1_BEACON", "BASE_NODE_"),
+		Ports: []corev1.ContainerPort{
+			{Name: "cl-rpc", ContainerPort: opNodeRPCPort, Protocol: corev1.ProtocolTCP},
+			{Name: "cl-p2p-tcp", ContainerPort: opNodeP2PPort, Protocol: corev1.ProtocolTCP},
+			{Name: "cl-p2p-udp", ContainerPort: opNodeP2PPort, Protocol: corev1.ProtocolUDP},
+			{Name: "cl-metrics", ContainerPort: opNodeMetricsPort, Protocol: corev1.ProtocolTCP},
+		},
+		VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
+	}}
 }
 
-func (a *baseChainAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return evmPorts(30303)
-}
-
-// ContainerArgs passes the config file path to op-geth.
-func (a *baseChainAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--config", "/config/config.toml"}
-}
-
-// ContainerEnv injects the OP_NODE_L1_ETH_RPC environment variable required by op-geth (Base).
-func (a *baseChainAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{Name: "OP_NODE_L1_ETH_RPC", Value: defaultBaseChainL1URL},
+// mainImage is the image of the main container, which the sidecar shares so
+// both binaries always come from the same release.
+func (a *baseChainAdapter) mainImage(spec chainsv1alpha2.ChainInstanceSpec) string {
+	if spec.Image != nil && spec.Image.Repository != "" {
+		return spec.Image.Repository + ":" + spec.Image.Tag
 	}
+	return a.DefaultImage(spec.Client)
 }
 
 func (a *baseChainAdapter) DefaultResources() ResourceDefaults {
@@ -89,40 +120,16 @@ func (a *baseChainAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const baseChainConfig = `# op-geth configuration for Base Mainnet
-[Eth]
-NetworkId = 8453
-SyncMode = "snap"
-
-[Node]
-DataDir = "/data"
-
-[Node.HTTPHost]
-HTTPHost = "0.0.0.0"
-HTTPPort = 8545
-HTTPVirtualHosts = ["*"]
-HTTPCorsDomain = ["*"]
-HTTPModules = ["eth", "net", "web3", "debug", "txpool"]
-
-[Node.WSHost]
-WSHost = "0.0.0.0"
-WSPort = 8546
-WSOrigins = ["*"]
-WSModules = ["eth", "net", "web3"]
-
-[Node.P2P]
-MaxPeers = 50
-ListenAddr = ":30303"
-`
-
+// VersionPolicy tracks ghcr.io/base/node, which carries both binaries.
 func (a *baseChainAdapter) VersionPolicy() ChainVersionPolicy {
 	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
+		Registry:   "ghcr.io",
+		Repository: "base/node",
+		TagPattern: `^v\d+\.\d+\.\d+$`,
 	}
+}
+
+// ClientVersionPolicies is empty: the sidecar runs the main image.
+func (a *baseChainAdapter) ClientVersionPolicies() map[string]ChainVersionPolicy {
+	return nil
 }

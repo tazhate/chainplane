@@ -177,27 +177,36 @@ func TestGetUnknownChainReturnsNil(t *testing.T) {
 // container image, the network is shut down (fantom, zero-network, evmos
 // halted 2026-05-18 after proposal #331), or the
 // network moved to a stack the adapter does not model yet (ronin, zircuit,
-// linea, aurora, mantle, hemi).
+// linea, aurora, mantle, hemi; and celo, boba-eth, doma, katana,
+// manta-pacific and swell, which op-reth with its bundled superchain
+// registry does not cover). kroma is shut down as well.
 // Keep this list explicit so a default is never blanked by accident.
 var imageRequiredChains = map[chainsv1alpha2.Chain]bool{
-	chainsv1alpha2.ChainAurora:      true,
-	chainsv1alpha2.ChainBitTorrent:  true,
-	chainsv1alpha2.ChainCronos:      true,
-	chainsv1alpha2.ChainEvmos:       true,
-	chainsv1alpha2.ChainFantom:      true,
-	chainsv1alpha2.ChainHemi:        true,
-	chainsv1alpha2.ChainHyperliquid: true,
-	chainsv1alpha2.ChainLinea:       true,
-	chainsv1alpha2.ChainMantle:      true,
-	chainsv1alpha2.ChainMegaETH:     true,
-	chainsv1alpha2.ChainMonad:       true,
-	chainsv1alpha2.ChainRonin:       true,
-	chainsv1alpha2.ChainShibarium:   true,
-	chainsv1alpha2.ChainSonic:       true,
-	chainsv1alpha2.ChainTelos:       true,
-	chainsv1alpha2.ChainWemix:       true,
-	chainsv1alpha2.ChainZeroNetwork: true,
-	chainsv1alpha2.ChainZircuit:     true,
+	chainsv1alpha2.ChainAurora:       true,
+	chainsv1alpha2.ChainBitTorrent:   true,
+	chainsv1alpha2.ChainBobaEth:      true,
+	chainsv1alpha2.ChainCelo:         true,
+	chainsv1alpha2.ChainCronos:       true,
+	chainsv1alpha2.ChainDoma:         true,
+	chainsv1alpha2.ChainEvmos:        true,
+	chainsv1alpha2.ChainFantom:       true,
+	chainsv1alpha2.ChainHemi:         true,
+	chainsv1alpha2.ChainHyperliquid:  true,
+	chainsv1alpha2.ChainKatana:       true,
+	chainsv1alpha2.ChainKroma:        true,
+	chainsv1alpha2.ChainLinea:        true,
+	chainsv1alpha2.ChainMantaPacific: true,
+	chainsv1alpha2.ChainMantle:       true,
+	chainsv1alpha2.ChainMegaETH:      true,
+	chainsv1alpha2.ChainMonad:        true,
+	chainsv1alpha2.ChainRonin:        true,
+	chainsv1alpha2.ChainShibarium:    true,
+	chainsv1alpha2.ChainSonic:        true,
+	chainsv1alpha2.ChainSwell:        true,
+	chainsv1alpha2.ChainTelos:        true,
+	chainsv1alpha2.ChainWemix:        true,
+	chainsv1alpha2.ChainZeroNetwork:  true,
+	chainsv1alpha2.ChainZircuit:      true,
 }
 
 func TestAllAdaptersDefaultImage(t *testing.T) {
@@ -266,6 +275,19 @@ var noConfigChains = map[chainsv1alpha2.Chain]bool{
 	chainsv1alpha2.ChainAbstract:    true, // ZK Stack external node
 	chainsv1alpha2.ChainZeroNetwork: true, // ZK Stack external node
 	chainsv1alpha2.ChainCronosZkEVM: true, // ZK Stack external node
+	chainsv1alpha2.ChainOptimism:    true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainUnichain:    true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainWorldchain:  true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainInk:         true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainLisk:        true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainMode:        true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainSoneium:     true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainZora:        true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainBob:         true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainFraxtal:     true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainHashKey:     true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainSuperseed:   true, // op-reth + op-node, flags only
+	chainsv1alpha2.ChainBase:        true, // base-reth-node + base-consensus, flags only
 }
 
 func TestAllAdaptersConfigTemplate(t *testing.T) {

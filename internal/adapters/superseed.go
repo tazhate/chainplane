@@ -17,26 +17,19 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
-
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 )
 
 // --------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------
-
-const defaultSuperseedL1URL = "http://ethereum:8545"
-
-// --------------------------------------------------------------------------
 // Type
 // --------------------------------------------------------------------------
 
+// superseedAdapter runs Superseed on op-reth with an op-node sidecar; flags,
+// ports and the sidecar come from opRethProtocolAdapter.
 type superseedAdapter struct {
-	protocolAdapter
+	opRethProtocolAdapter
 }
 
 // --------------------------------------------------------------------------
@@ -45,7 +38,9 @@ type superseedAdapter struct {
 
 func init() {
 	Register(chainsv1alpha2.ChainSuperseed, &superseedAdapter{
-		protocolAdapter: protocolAdapter{livenessPort: 8545},
+		opRethProtocolAdapter: newOpRethProtocolAdapter(
+			chainsv1alpha2.ChainSuperseed, "sseed", "sseed-mainnet", "https://mainnet.superseed.xyz",
+		),
 	})
 }
 
@@ -53,69 +48,10 @@ func init() {
 // Interface methods
 // --------------------------------------------------------------------------
 
-func (a *superseedAdapter) DefaultImage(client string) string {
-	return DefaultImageFor(chainsv1alpha2.ChainSuperseed, client)
-}
-
-func (a *superseedAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.toml", superseedConfig, nil
-}
-
-func (a *superseedAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return evmHealthCheck(ctx, rpcURL)
-}
-
-func (a *superseedAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
-}
-
-func (a *superseedAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
-}
-
-// ContainerEnv injects the L1_RPC_URL environment variable required by OP Stack L2 nodes.
-func (a *superseedAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{Name: "L1_RPC_URL", Value: defaultSuperseedL1URL},
-	}
-}
-
 func (a *superseedAdapter) DefaultResources() ResourceDefaults {
 	return ResourceDefaults{
 		CPURequest:    resource.MustParse("2"),
 		MemoryRequest: resource.MustParse("4Gi"),
 		Storage:       resource.MustParse("100Gi"),
-	}
-}
-
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const superseedConfig = `# Superseed L2 (OP Stack) op-geth node
-[Eth]
-SyncMode = "snap"
-
-[Node]
-DataDir = "/data"
-HTTPHost = "0.0.0.0"
-HTTPPort = 8545
-HTTPModules = ["eth", "net", "web3", "txpool"]
-HTTPVirtualHosts = ["*"]
-HTTPCors = ["*"]
-WSHost = "0.0.0.0"
-WSPort = 8546
-WSModules = ["eth", "net", "web3"]
-WSOrigins = ["*"]
-
-[Node.P2P]
-MaxPeers = 50
-`
-
-func (a *superseedAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
 	}
 }

@@ -117,10 +117,6 @@ MaxPeers = 50
 ListenAddr = ":30303"
 `
 
-func (a *katanaAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "us-docker.pkg.dev",
-		Repository: "oplabs-tools-artifacts/images/op-geth",
-		TagPattern: `^v\d+\.\d+`,
-	}
-}
+// Katana runs conduit-op-reth and is not in the superchain registry; it needs
+// its pinned genesis and in practice a snapshot. No default image until the
+// adapter models that, so nothing to track.

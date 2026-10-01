@@ -91,13 +91,8 @@ func (a *kromaAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *kromaAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "kromanetwork/geth",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
+// Kroma L2 shut down on 2025-06-30; there is no sequencer or peer left to
+// sync from. No default image, so nothing to track.
 
 // --------------------------------------------------------------------------
 // Config

@@ -200,30 +200,43 @@ Ethereum supports multiple clients via `spec.client`:
 
 ### EVM — OP Stack L2
 
-All OP Stack chains are configured with `--config /config/config.toml` and a `L1_RPC_URL` env var pointing to Ethereum.
+Chains from the superchain registry run `op-reth` as the node container with `op-node`
+(`us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:v1.19.8`) as a sidecar. op-reth
+keeps its data in `/data/reth` and writes the engine API secret there; op-node reads it,
+drives op-reth over `127.0.0.1:8551` and syncs it from L2 peers (`--syncmode execution-layer`).
+op-node needs an L1 execution and beacon endpoint: `L1_RPC_URL` (default `http://ethereum:8545`)
+and `L1_BEACON_URL` (default `http://ethereum-beacon:5052`) in `spec.extraEnv`, plain or from a
+Secret; other `OP_NODE_*` entries there are passed to op-node as well. Base runs
+`base-reth-node` with `base-consensus` from one `ghcr.io/base/node` image the same way, with
+`BASE_NODE_*` passthrough.
+
+OP Mainnet requires `spec.snapshot`: op-reth cannot sync it from genesis and exits on an empty
+datadir with "launched without importing the pre-Bedrock state". The restored archive (default
+bucket `snapshots-optimism`) has to contain the op-reth datadir as `reth/`. blast and opbnb run
+their own geth forks with `--config /config/config.toml`.
 
 | Chain | Image | RPC Port |
 |-------|-------|----------|
-| `optimism` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 |
-| `base` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 |
+| `optimism` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` + datadir from `spec.snapshot` (see above) | 8545 |
+| `base` | `ghcr.io/base/node:v1.4.2` | 8545 |
 | `arbitrum` | `offchainlabs/nitro-node:v3.9.7` | 8547 |
 | `blast` | `blastio/blast-geth:mainnet-v1.7.0` | 8545 |
-| `mode` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 |
-| `zora` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.2` | 8545 |
+| `mode` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `zora` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
 | `taiko` | `taikoxyz/taiko-geth:v1.8.0` | 8545 |
-| `worldchain` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5` | 8545 |
-| `unichain` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101608.0` | 8545 |
-| `soneium` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `swell` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `superseed` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `ink` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `bob` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `boba-eth` | `bobanetwork/op-geth:v1.101411.4` | 8545 |
-| `kroma` | `kromanetwork/geth:v0.5.0` | 8545 |
-| `lisk` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5` | 8545 |
-| `fraxtal` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `celo` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.5` | 8545 |
-| `manta-pacific` | `mantanetwork/op-geth:v1.101304.3` | 8545 |
+| `worldchain` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `unichain` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `soneium` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `swell` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
+| `superseed` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `ink` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `bob` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `boba-eth` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
+| `kroma` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
+| `lisk` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `fraxtal` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
+| `celo` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
+| `manta-pacific` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
 | `morph` | `ghcr.io/morphprotocol/node:v0.3.0` | 8545 |
 | `metis` | `metisprotocol/l2geth:v1.4.2` | 8545 |
 | `opbnb` | `ghcr.io/bnb-chain/op-geth:v0.5.2` | 8545 |
@@ -232,8 +245,8 @@ All OP Stack chains are configured with `--config /config/config.toml` and a `L1
 | `everclear` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
 | `playnance` | `offchainlabs/nitro-node:v3.6.0` | 8547 |
 | `gravity-alpha` | `offchainlabs/nitro-node:v3.11.4-7d5ac27` | 8547 |
-| `doma` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
-| `katana` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
+| `doma` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
+| `katana` | none, set `spec.image` ([#42](https://github.com/tazhate/chainplane/issues/42)) | 8545 |
 | `goat` | `ghcr.io/goatnetwork/goat-geth:v0.4.2` | 8545 |
 | `zircuit` | none, set `spec.image` ([#29](https://github.com/tazhate/chainplane/issues/29)) | 8545 |
 
@@ -281,7 +294,7 @@ probes use the healthcheck port 3081.
 | `klaytn` (Kaia) | `kaiachain/kaia:v2.2.2` | 8551 |
 | `viction` | `buildonviction/node:v2.5.1` | 8545 |
 | `haqq` | `alhaqq/haqq:v1.8.1` | 8545 |
-| `hashkey` | `hashkeychain/hashkey-geth:v1.0.0` | 8545 |
+| `hashkey` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v2.5.0` | 8545 |
 | `shibarium` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `bittorrent` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `sonic` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 18545 |

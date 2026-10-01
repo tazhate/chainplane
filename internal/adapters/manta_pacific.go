@@ -98,13 +98,10 @@ func (a *mantaPacificAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *mantaPacificAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "public.ecr.aws",
-		Repository: "i6b2w2n6/op-geth",
-		TagPattern: `^\d+\.\d+\.\d+$`,
-	}
-}
+// Manta Pacific now runs a reth-based node (its RPC reports reth/v2.2.0) with
+// Celestia DA, and is in neither op-reth's nor op-node's superchain registry;
+// the old op-geth fork image only replays the network from a snapshot. No
+// default image until the adapter models that (#42), so nothing to track.
 
 func (a *mantaPacificAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return append(evmPorts(30303), corev1.ContainerPort{
