@@ -40,6 +40,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -59,6 +60,10 @@ const (
 	// reconcileInterval governs how often the controller re-evaluates
 	// a node after a successful reconciliation pass.
 	reconcileInterval = 30 * time.Second
+
+	// ReasonImageRequired is the Degraded reason set when a chain has no
+	// public default image and spec.image is empty.
+	ReasonImageRequired = "ImageRequired"
 )
 
 // ---------------------------------------------------------------------------
@@ -116,6 +121,12 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
+	// Chains without a public image need spec.image. The webhook rejects such
+	// objects, but it is skipped when TLS certs are missing, so check here too.
+	if resolveContainerImage(node, adapter) == "" {
+		return r.markImageRequired(ctx, node)
+	}
+
 	// Reconcile owned resources in dependency order.
 	rpcCreds, err := r.ensureRPCSecret(ctx, node, adapter)
 	if err != nil {
@@ -161,6 +172,18 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // ---------------------------------------------------------------------------
 
 // patchPhase is a convenience wrapper that patches only the status phase.
+// markImageRequired fails the node with a Degraded condition explaining that
+// spec.image must be set. No workload is created until it is.
+func (r *ChainInstanceReconciler) markImageRequired(ctx context.Context, node *chainsv1alpha2.ChainInstance) (ctrl.Result, error) {
+	log.FromContext(ctx).Info("no image to run: chain has no public default image and spec.image is empty",
+		"chain", node.Spec.Chain)
+	base := client.MergeFrom(node.DeepCopy())
+	node.Status.Phase = chainsv1alpha2.NodePhaseFailed
+	setCondition(node, chainsv1alpha2.ConditionDegraded, metav1.ConditionTrue, ReasonImageRequired,
+		fmt.Sprintf("chain %s has no public default image; set spec.image", node.Spec.Chain), metav1.Now())
+	return ctrl.Result{}, r.Status().Patch(ctx, node, base)
+}
+
 func (r *ChainInstanceReconciler) patchPhase(ctx context.Context, node *chainsv1alpha2.ChainInstance, phase chainsv1alpha2.NodePhase) (ctrl.Result, error) {
 	base := client.MergeFrom(node.DeepCopy())
 	node.Status.Phase = phase

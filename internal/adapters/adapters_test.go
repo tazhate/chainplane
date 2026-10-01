@@ -169,20 +169,44 @@ func TestGetUnknownChainReturnsNil(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// DefaultImage: every adapter returns non-empty image for default client
+// DefaultImage: every adapter returns a usable image for the default client,
+// except chains that ship no public image and require spec.image
 // ---------------------------------------------------------------------------
+
+// imageRequiredChains have no default image: upstream publishes no public
+// container image, the network is shut down (fantom), or the network moved to
+// a stack the adapter does not model yet (ronin, zircuit, linea, aurora).
+// Keep this list explicit so a default is never blanked by accident.
+var imageRequiredChains = map[chainsv1alpha2.Chain]bool{
+	chainsv1alpha2.ChainAurora:      true,
+	chainsv1alpha2.ChainBitTorrent:  true,
+	chainsv1alpha2.ChainCronos:      true,
+	chainsv1alpha2.ChainFantom:      true,
+	chainsv1alpha2.ChainHyperliquid: true,
+	chainsv1alpha2.ChainLinea:       true,
+	chainsv1alpha2.ChainMegaETH:     true,
+	chainsv1alpha2.ChainMonad:       true,
+	chainsv1alpha2.ChainRonin:       true,
+	chainsv1alpha2.ChainShibarium:   true,
+	chainsv1alpha2.ChainSonic:       true,
+	chainsv1alpha2.ChainTelos:       true,
+	chainsv1alpha2.ChainWemix:       true,
+	chainsv1alpha2.ChainZircuit:     true,
+}
 
 func TestAllAdaptersDefaultImage(t *testing.T) {
 	for _, chain := range allChains {
-		chain := chain
 		t.Run(string(chain), func(t *testing.T) {
 			adapter, ok := adapters.Get(chain)
 			if !ok {
 				t.Fatalf("adapter not registered for chain: %s", chain)
 			}
 			img := adapter.DefaultImage("")
-			if img == "" {
-				t.Errorf("chain %s: DefaultImage returned empty string", chain)
+			if imageRequiredChains[chain] {
+				if img != "" {
+					t.Errorf("chain %s is image-required but has default %q", chain, img)
+				}
+				return
 			}
 			// Image should contain a slash (registry/image format)
 			if !strings.Contains(img, "/") {

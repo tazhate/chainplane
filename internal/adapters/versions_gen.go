@@ -23,7 +23,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
 	},
 	chainsv1alpha2.ChainAurora: {
-		"": "nearaurora/srpc2-relayer:latest",
+		"": "",
 	},
 	chainsv1alpha2.ChainAvalanche: {
 		"": "avaplatform/avalanchego:v1.15.0",
@@ -41,7 +41,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "lncm/bitcoind:v28.0",
 	},
 	chainsv1alpha2.ChainBitTorrent: {
-		"": "bttcprotocol/bttc:v1.0.3",
+		"": "",
 	},
 	chainsv1alpha2.ChainBlast: {
 		"": "blastio/blast-geth:mainnet-v1.8.0",
@@ -68,7 +68,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/cosmos/gaia:v27.6.0",
 	},
 	chainsv1alpha2.ChainCronos: {
-		"": "crypto-org-chain/cronos:v1.4.4",
+		"": "",
 	},
 	chainsv1alpha2.ChainCronosZkEVM: {
 		"": "ghcr.io/cronos-labs/external-node:mainnet-v29.6.0",
@@ -112,7 +112,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "tharsishq/evmos:v20.0.0",
 	},
 	chainsv1alpha2.ChainFantom: {
-		"": "fantomfoundation/go-opera:v1.1.3-txtracing",
+		"": "",
 	},
 	chainsv1alpha2.ChainFilecoin: {
 		"": "filecoin/lotus:v1.36.3",
@@ -148,7 +148,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "hemilabs/op-geth:v1.101408.0",
 	},
 	chainsv1alpha2.ChainHyperliquid: {
-		"": "hyperliquid/hl-node:latest",
+		"": "",
 	},
 	chainsv1alpha2.ChainImmutableZkEVM: {
 		"": "ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0",
@@ -175,7 +175,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainLinea: {
-		"": "consensys/linea-besu:24.12.2",
+		"": "",
 	},
 	chainsv1alpha2.ChainLisk: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
@@ -190,7 +190,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "mantlenetworkio/op-geth:v1.0.3",
 	},
 	chainsv1alpha2.ChainMegaETH: {
-		"": "megaeth-labs/node:latest",
+		"": "",
 	},
 	chainsv1alpha2.ChainMetis: {
 		"": "metisdao/l2geth:v0.3.9",
@@ -205,7 +205,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainMonad: {
-		"": "monadlabs/monad-node:latest",
+		"": "",
 	},
 	chainsv1alpha2.ChainMoonbeam: {
 		"": "moonbeamfoundation/moonbeam:v0.52.3",
@@ -247,7 +247,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/0xpolygon/cdk-erigon:v2.64.2",
 	},
 	chainsv1alpha2.ChainRonin: {
-		"": "ghcr.io/ronin-chain/ronin:v2.8.3",
+		"": "",
 	},
 	chainsv1alpha2.ChainRootstock: {
 		"": "rsksmart/rskj:ARROWHEAD-6.5.1",
@@ -259,7 +259,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/sei-protocol/sei:v6.6.3",
 	},
 	chainsv1alpha2.ChainShibarium: {
-		"": "shibaone/bor:v1.3.7-bone",
+		"": "",
 	},
 	chainsv1alpha2.ChainSolana: {
 		"": "anzaxyz/agave:v3.1.14",
@@ -268,7 +268,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainSonic: {
-		"": "ghcr.io/0xsoniclabs/sonic:v2.1.6",
+		"": "",
 	},
 	chainsv1alpha2.ChainStarknet: {
 		"": "nethermindeth/juno:v0.16.7",
@@ -289,7 +289,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/evmchain/images/taiko-geth:v2.7.0",
 	},
 	chainsv1alpha2.ChainTelos: {
-		"": "telosnetwork/telos-evm-rpc:v2.0.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainThundercore: {
 		"": "thundercore/thunder:r4.3.8",
@@ -307,7 +307,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "buildonviction/node:v2.6.1",
 	},
 	chainsv1alpha2.ChainWemix: {
-		"": "wemixnetwork/wemix:v1.2.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainWorldchain: {
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
@@ -319,7 +319,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "matterlabs/external-node:v29.17.0",
 	},
 	chainsv1alpha2.ChainZircuit: {
-		"": "ghcr.io/zircuit-labs/l2-geth-public:v1.0.0",
+		"": "",
 	},
 	chainsv1alpha2.ChainZkSync: {
 		"": "matterlabs/external-node:v29.17.0",

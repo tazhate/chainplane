@@ -116,13 +116,9 @@ func (a *lineaAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *lineaAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "docker.io",
-		Repository: "consensys/linea-besu",
-		TagPattern: `^\d+\.\d+\.\d+$`,
-	}
-}
+// Linea nodes now pair Maru (consensus) with linea-besu-package; the
+// consensys/linea-besu image is frozen since 2025-03. No default image until the
+// adapter is reworked, so there is nothing to track.
 
 func (a *lineaAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
 	return append(evmPorts(30303), corev1.ContainerPort{

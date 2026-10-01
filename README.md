@@ -168,6 +168,8 @@ Node lifecycle: `Pending` → `Syncing` → `Healthy` → `Degraded` → (auto-r
 
 ## Supported Chains
 
+Chains marked "none, set `spec.image`" have no usable public container image upstream, or moved to a node stack the adapter does not model yet. The webhook rejects them without `spec.image`. If the webhook is disabled, the controller marks them `Failed` with a `Degraded` condition, reason `ImageRequired`.
+
 ### Bitcoin family (UTXO)
 
 | Chain | Image | RPC Port | Storage |
@@ -233,7 +235,7 @@ All OP Stack chains are configured with `--config /config/config.toml` and a `L1
 | `doma` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
 | `katana` | `us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101408.0` | 8545 |
 | `goat` | `ghcr.io/goatnetwork/goat-geth:v0.4.2` | 8545 |
-| `zircuit` | `ghcr.io/zircuit-labs/l2-geth-public:v1.0.0` | 8545 |
+| `zircuit` | none, set `spec.image` ([#29](https://github.com/tazhate/chainplane/issues/29)) | 8545 |
 
 ### EVM — ZK Stack L2
 
@@ -256,30 +258,30 @@ ZK Stack external nodes are configured via environment variables (no config file
 | `gnosis` | `nethermind/nethermind:1.36.1` | 8545 |
 | `gnosis-beacon` | `sigp/lighthouse:v6.0.1` | 5052 |
 | `mantle` | `mantlenetworkio/op-geth:v1.0.3` | 8545 |
-| `linea` | `consensys/linea-besu:24.12.2` | 8545 |
+| `linea` | none, set `spec.image` ([#30](https://github.com/tazhate/chainplane/issues/30)) | 8545 |
 | `scroll` | `scrolltech/l2geth:scroll-v5.9.0` | 8545 |
-| `cronos` | `crypto-org-chain/cronos:v1.4.4` | 8545 |
-| `ronin` | `ghcr.io/ronin-chain/ronin:v2.8.3` | 8545 |
+| `cronos` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
+| `ronin` | none, set `spec.image` ([#29](https://github.com/tazhate/chainplane/issues/29)) | 8545 |
 | `fuse` | `fusenet/node:2.0.2` | 8545 |
 | `core` | `coredao/core-chain:v1.0.22` | 8545 |
-| `wemix` | `wemixnetwork/wemix:v1.2.0` | 8588 |
+| `wemix` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8588 |
 | `immutable-zkevm` | `ghcr.io/immutable/immutable-geth/immutable-geth:v1.0.0` | 8545 |
-| `aurora` | `nearaurora/srpc2-relayer:latest` | 8545 |
-| `telos` | `telosnetwork/telos-evm-rpc:v2.0.0` | 8545 |
+| `aurora` | none, set `spec.image` ([#31](https://github.com/tazhate/chainplane/issues/31)) | 8545 |
+| `telos` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `thundercore` | `thundercore/thunder:r4.1.3` | 8545 |
 | `klaytn` | `klaytn/klaytn:v2.2.0` | 8551 |
 | `viction` | `buildonviction/node:v2.5.1` | 8545 |
 | `haqq` | `alhaqq/haqq:v1.8.1` | 8545 |
 | `hashkey` | `hashkeychain/hashkey-geth:v1.0.0` | 8545 |
-| `shibarium` | `shibaone/bor:v1.3.7-bone` | 8545 |
-| `bittorrent` | `bttcprotocol/bttc:v1.0.3` | 8545 |
-| `sonic` | `ghcr.io/0xsoniclabs/sonic:v2.1.6` | 18545 |
+| `shibarium` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
+| `bittorrent` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
+| `sonic` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 18545 |
 | `moonbeam` | `moonbeamfoundation/moonbeam:v0.39.1` | 9933 |
 | `moonriver` | `moonbeamfoundation/moonbeam:v0.39.1` | 9933 |
 | `berachain` | `ghcr.io/berachain/beacon-kit:v0.2.0` | 26657 |
-| `hyperliquid` | `hyperliquid/hl-node:latest` | 3001 |
-| `monad` | `monadlabs/monad-node:latest` | 8545 |
-| `megaeth` | `megaeth-labs/node:latest` | 8545 |
+| `hyperliquid` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 3001 |
+| `monad` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
+| `megaeth` | none, set `spec.image` ([#32](https://github.com/tazhate/chainplane/issues/32)) | 8545 |
 | `plasma` | `plasma-next/node:v0.1.0` | 8545 |
 | `moca` | `moca-network/moca:v0.1.0` | 8545 |
 
@@ -319,7 +321,7 @@ All Cosmos chains use `--home /data` for snapshot compatibility.
 | `kusama` | `parity/polkadot:v1.15.1` | 9944 | |
 | `starknet` | `nethermindeth/juno:v0.12.5` | 6060 | uses Juno client |
 | `filecoin` | `filecoin/lotus:v1.35.0` | 1234 | |
-| `fantom` | `fantomfoundation/go-opera:v1.1.3-txtracing` | 18545 | |
+| `fantom` | none, Opera shut down 2026-06-30 | 18545 | |
 
 ## CRD Reference
 

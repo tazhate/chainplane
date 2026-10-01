@@ -79,13 +79,9 @@ func (a *roninAdapter) DefaultResources() ResourceDefaults {
 	}
 }
 
-func (a *roninAdapter) VersionPolicy() ChainVersionPolicy {
-	return ChainVersionPolicy{
-		Registry:   "ghcr.io",
-		Repository: "ronin-chain/ronin",
-		TagPattern: `^v\d+\.\d+\.\d+$`,
-	}
-}
+// Ronin moved to an OP Stack L2 run by Conduit (May 2026); the old
+// ronin-chain/ronin image is gone. No default image until the adapter is
+// reworked, so there is nothing to track.
 
 // --------------------------------------------------------------------------
 // Config
