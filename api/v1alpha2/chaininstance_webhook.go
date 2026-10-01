@@ -188,17 +188,27 @@ var supportedChains = func() map[Chain]bool {
 // Webhook setup
 // ---------------------------------------------------------------------------
 
-// SetupWebhookWithManager registers the validating webhook with the controller manager.
-func (r *ChainInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// DefaultImageFunc returns the operator's default image for a chain and
+// client, or "" when the chain has no public image. The adapters package
+// provides it; it is injected because api/ must not import adapters.
+type DefaultImageFunc func(chain Chain, client string) string
+
+// SetupWebhookWithManager registers the validating webhook with the controller
+// manager. defaultImage may be nil, which skips the image-required check.
+func (r *ChainInstance) SetupWebhookWithManager(mgr ctrl.Manager, defaultImage DefaultImageFunc) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
-		WithValidator(&ChainInstanceValidator{}).
+		WithValidator(&ChainInstanceValidator{DefaultImage: defaultImage}).
 		Complete()
 }
 
 // ChainInstanceValidator implements webhook.CustomValidator for ChainInstance.
 // +kubebuilder:webhook:path=/validate-chains-chainplane-io-v1alpha2-chaininstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=chains.chainplane.io,resources=chaininstances,verbs=create;update,versions=v1alpha2,name=vchaininstance.kb.io,admissionReviewVersions=v1
-type ChainInstanceValidator struct{}
+type ChainInstanceValidator struct {
+	// DefaultImage, when set, lets the validator reject chains that ship no
+	// public image unless spec.image is given.
+	DefaultImage DefaultImageFunc
+}
 
 var _ webhook.CustomValidator = &ChainInstanceValidator{}
 
@@ -210,7 +220,13 @@ func (v *ChainInstanceValidator) ValidateCreate(_ context.Context, obj runtime.O
 	}
 	webhookLog.Info("validate create", "name", node.Name)
 	warnings, err := validateChainInstanceSpec(node)
-	return warnings, err
+	if err != nil {
+		return warnings, err
+	}
+	if imgErr := v.validateImage(node); imgErr != nil {
+		return warnings, field.ErrorList{imgErr}.ToAggregate()
+	}
+	return warnings, nil
 }
 
 // ValidateUpdate validates an update to an existing ChainInstance resource.
@@ -250,11 +266,30 @@ func (v *ChainInstanceValidator) ValidateUpdate(_ context.Context, oldObj, newOb
 	if specErr != nil {
 		return warnings, specErr
 	}
+	if err := v.validateImage(newNode); err != nil {
+		allErrs = append(allErrs, err)
+	}
 
 	if len(allErrs) > 0 {
 		return warnings, allErrs.ToAggregate()
 	}
 	return warnings, nil
+}
+
+// validateImage rejects a ChainInstance that would run without an image: the
+// chain has no public default image and spec.image is not set.
+func (v *ChainInstanceValidator) validateImage(node *ChainInstance) *field.Error {
+	if v.DefaultImage == nil {
+		return nil
+	}
+	if node.Spec.Image != nil && node.Spec.Image.Repository != "" {
+		return nil
+	}
+	if v.DefaultImage(node.Spec.Chain, node.Spec.Client) != "" {
+		return nil
+	}
+	return field.Required(field.NewPath("spec", "image"),
+		fmt.Sprintf("chain %q has no public default image; set spec.image", node.Spec.Chain))
 }
 
 // ValidateDelete validates deletion of a ChainInstance (always permitted).

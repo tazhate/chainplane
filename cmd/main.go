@@ -61,7 +61,7 @@ import (
 	"github.com/tazhate/chainplane/internal/health"
 
 	// Register all chain adapters via init().
-	_ "github.com/tazhate/chainplane/internal/adapters"
+	"github.com/tazhate/chainplane/internal/adapters"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -395,7 +395,7 @@ func main() {
 		webhookCertDir = "/tmp/k8s-webhook-server/serving-certs"
 	}
 	if _, err := os.Stat(filepath.Join(webhookCertDir, cfg.WebhookCertName)); err == nil {
-		if err := (&chainsv1alpha2.ChainInstance{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&chainsv1alpha2.ChainInstance{}).SetupWebhookWithManager(mgr, adapters.DefaultImageFor); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ChainInstance")
 			os.Exit(1)
 		}

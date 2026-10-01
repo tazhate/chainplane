@@ -34,6 +34,7 @@ package v1alpha2
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -265,4 +266,51 @@ func TestValidateCreate_Cardano(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error for Cardano node, got: %v", err)
 	}
+}
+
+func TestValidateImageRequired(t *testing.T) {
+	defaults := func(chain Chain, _ string) string {
+		if chain == ChainEthereum {
+			return "nethermind/nethermind:1.39.3"
+		}
+		return ""
+	}
+	v := &ChainInstanceValidator{DefaultImage: defaults}
+
+	t.Run("default image present", func(t *testing.T) {
+		if _, err := v.ValidateCreate(t.Context(), newValidNode()); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	imageless := newValidNode()
+	imageless.Spec.Chain = ChainBitcoin
+
+	t.Run("no default and no spec.image", func(t *testing.T) {
+		_, err := v.ValidateCreate(t.Context(), imageless)
+		if err == nil || !strings.Contains(err.Error(), "set spec.image") {
+			t.Fatalf("expected image-required error, got %v", err)
+		}
+	})
+
+	t.Run("update keeps the check", func(t *testing.T) {
+		_, err := v.ValidateUpdate(t.Context(), imageless, imageless)
+		if err == nil || !strings.Contains(err.Error(), "set spec.image") {
+			t.Fatalf("expected image-required error on update, got %v", err)
+		}
+	})
+
+	t.Run("explicit spec.image", func(t *testing.T) {
+		withImage := imageless.DeepCopy()
+		withImage.Spec.Image = &ImageSpec{Repository: "example/node", Tag: "v1"}
+		if _, err := v.ValidateCreate(t.Context(), withImage); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("nil resolver skips the check", func(t *testing.T) {
+		if _, err := (&ChainInstanceValidator{}).ValidateCreate(t.Context(), imageless); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
