@@ -70,9 +70,26 @@ func (a *kavaAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string
 	return "app.toml", kavaConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// kavaNode bootstraps kava_2222-10. The image has no ENTRYPOINT, so the
+// command must name the binary. Genesis: chain-registry codebase.genesis.
+var kavaNode = cosmosNode{
+	Binary:        "kava",
+	ChainID:       "kava_2222-10",
+	GenesisURL:    "https://kava-genesis-files.s3.us-east-1.amazonaws.com/kava_2222-10/genesis.json",
+	GenesisSHA256: "c3ce6e98ac9bb68966352b8574f5c16f6f0e4c855c14807e201b163c4f798004",
+	Seeds:         "ade4d8bc8cbe014af6ebdf3cb7b1e9ad36f412c0@seeds.polkachu.com:13956,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656",
+	StateSyncRPC:  []string{"https://kava-rpc.polkachu.com:443", "https://kava-rpc.publicnode.com:443"},
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *kavaAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return kavaNode.Command()
+}
+
+// ContainerArgs are `kava start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *kavaAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *kavaAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

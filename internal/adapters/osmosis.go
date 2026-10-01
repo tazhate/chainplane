@@ -70,9 +70,34 @@ func (a *osmosisAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (str
 	return "app.toml", osmosisConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// osmosisNode bootstraps osmosis-1. The image is distroless (ENTRYPOINT
+// osmosisd, no shell), so the script runs on the busybox toolbox. Genesis
+// is the Git LFS object of osmosis-labs/networks, pinned to a commit.
+var osmosisNode = cosmosNode{
+	Binary:          "osmosisd",
+	ChainID:         "osmosis-1",
+	GenesisURL:      "https://media.githubusercontent.com/media/osmosis-labs/networks/0e53c816e0fab7bc78a5f14f618fc5c8185e101e/osmosis-1/genesis.json",
+	GenesisSHA256:   "1cdb76087fabcca7709fc563b44b5de98aaf297eedc8805aa2884999e6bab06d",
+	Seeds:           "ade4d8bc8cbe014af6ebdf3cb7b1e9ad36f412c0@seeds.polkachu.com:12556,e891d42c31064fb7e0d99839536164473c4905c2@seed-osmosis.freshstaking.com:31656,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656,b85358e035343a3b15e77e1102857dcdaf70053b@seeds.bluestake.net:24856",
+	PersistentPeers: "e891d42c31064fb7e0d99839536164473c4905c2@seed-osmosis.freshstaking.com:31656",
+	StateSyncRPC:    []string{"https://osmosis-rpc.polkachu.com:443", "https://osmosis-rpc.publicnode.com:443"},
+	Toolbox:         true,
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *osmosisAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return osmosisNode.Command()
+}
+
+// InitContainers adds the busybox toolbox sidecar the start script runs on.
+func (a *osmosisAdapter) InitContainers(_ chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
+	return osmosisNode.InitContainers()
+}
+
+// ContainerArgs are `osmosisd start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *osmosisAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *osmosisAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

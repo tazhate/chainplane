@@ -136,7 +136,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
 	},
 	chainsv1alpha2.ChainHaqq: {
-		"": "alhaqq/haqq:v1.10.0",
+		"": "alhaqq/haqq:v1.9.5",
 	},
 	chainsv1alpha2.ChainHarmony: {
 		"": "harmonyone/harmony:v2026.1.3",
@@ -196,7 +196,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "metisdao/l2geth:v0.3.9",
 	},
 	chainsv1alpha2.ChainMezo: {
-		"": "mezo/mezod:v11.0.1",
+		"": "mezo/mezod:v13.0.0",
 	},
 	chainsv1alpha2.ChainMoca: {
 		"": "ghcr.io/mocachain/mocad:v1.4.1",

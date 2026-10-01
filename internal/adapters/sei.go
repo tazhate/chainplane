@@ -70,9 +70,34 @@ func (a *seiAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string,
 	return "app.toml", seiConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// seiNode bootstraps pacific-1. The image ENTRYPOINT is seid with no
+// shell tools to download genesis (no curl or wget), so the script runs
+// on the busybox toolbox.
+var seiNode = cosmosNode{
+	Binary:          "seid",
+	ChainID:         "pacific-1",
+	GenesisURL:      "https://raw.githubusercontent.com/sei-protocol/testnet/17352e74b9be263d7fd9f894ea4cf6755e7d93f4/pacific-1/genesis.json",
+	GenesisSHA256:   "4304cf1c7f46d153b79f1195b2d334f7f7cf02f26e02a3bb77c544a4987c1432",
+	Seeds:           "400f3d9e30b69e78a7fb891f60d76fa3c73f0ecc@sei.rpc.kjnodes.com:16859,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656,babc3f3f7804933265ec9c40ad94f4da8e9e0017@seed.rhinostake.com:11956",
+	PersistentPeers: "d9bfa29e0cf9c4ce0cc9c26d98e5d97228f93b0b@sei.rpc.kjnodes.com:16856",
+	StateSyncRPC:    []string{"https://sei-rpc.polkachu.com:443", "https://sei-rpc.publicnode.com:443"},
+	Toolbox:         true,
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *seiAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return seiNode.Command()
+}
+
+// InitContainers adds the busybox toolbox sidecar the start script runs on.
+func (a *seiAdapter) InitContainers(_ chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
+	return seiNode.InitContainers()
+}
+
+// ContainerArgs are `seid start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *seiAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *seiAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

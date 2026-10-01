@@ -167,15 +167,30 @@ func (a *filecoinAdapter) StartupProbe(_ chainsv1alpha2.ChainInstanceSpec) *core
 	return tcpProbe(1234, 60, 30, 10, 720)
 }
 
+// ContainerCommand names the lotus binary: the image has no ENTRYPOINT
+// (CMD is bash), so args alone were exec'd as a command.
+func (a *filecoinAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"lotus"}
+}
+
+// ContainerArgs: --repo is a global lotus flag and must precede the
+// daemon subcommand; --config points lotus at the mounted config.toml.
 func (a *filecoinAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
 	args := []string{
-		"daemon",
 		"--repo=/data",
+		"daemon",
+		"--config=/config/config.toml",
 	}
 	if spec.Network == chainsv1alpha2.NetworkTestnet {
 		args = append(args, "--chain=calibnet")
 	}
 	return args
+}
+
+// ContainerEnv keeps the proof parameters lotus fetches on start on the data
+// volume instead of the container filesystem, so restarts reuse them.
+func (a *filecoinAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	return []corev1.EnvVar{{Name: "FIL_PROOFS_PARAMETER_CACHE", Value: "/data/filecoin-proof-parameters"}}
 }
 
 func (a *filecoinAdapter) DefaultResources() ResourceDefaults {
