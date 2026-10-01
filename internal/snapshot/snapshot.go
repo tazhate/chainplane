@@ -31,6 +31,7 @@ Logic:
 package snapshot
 
 import (
+	"cmp"
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +40,22 @@ import (
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
 )
 
-const defaultSnapshotRestoreImage = "ghcr.io/tazhate/chainplane/snapshot-restore:latest"
+// snapshotRestoreRepository is the image published by .github/workflows/release.yml
+// from snapshot-restore.Dockerfile, tagged with the same version as the operator.
+const snapshotRestoreRepository = "ghcr.io/tazhate/chainplane/snapshot-restore"
+
+// RestoreImageTag is the snapshot-restore image tag used when SNAPSHOT_RESTORE_IMAGE
+// is unset. Release builds set it to the operator version via
+// -ldflags "-X github.com/tazhate/chainplane/internal/snapshot.RestoreImageTag=<tag>"
+// (see Dockerfile); local and test builds keep "latest".
+var RestoreImageTag = "latest"
+
+// restoreImage returns the snapshot-restore init container image: the
+// SNAPSHOT_RESTORE_IMAGE env override (set by the Helm chart) or the
+// version-pinned default.
+func restoreImage() string {
+	return cmp.Or(os.Getenv("SNAPSHOT_RESTORE_IMAGE"), snapshotRestoreRepository+":"+RestoreImageTag)
+}
 
 // Config holds the MinIO connection and bucket/key settings for snapshot injection.
 type Config struct {
@@ -1021,14 +1037,9 @@ PYEOF
 		{Name: "SNAPSHOT_TYPE", Value: cfg.SnapshotType},
 	}
 
-	snapshotImage := os.Getenv("SNAPSHOT_RESTORE_IMAGE")
-	if snapshotImage == "" {
-		snapshotImage = defaultSnapshotRestoreImage
-	}
-
 	return corev1.Container{
 		Name:            "snapshot-restore",
-		Image:           snapshotImage,
+		Image:           restoreImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c", shellCmd},
 		Env:             env,

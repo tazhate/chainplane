@@ -70,6 +70,22 @@ Operator image
 {{- end }}
 
 {{/*
+Snapshot-restore init container image. Release tags are v-prefixed
+(ghcr.io/tazhate/chainplane/snapshot-restore:vX.Y.Z), so a bare appVersion
+gets a "v" added; an explicit tag is used as is.
+*/}}
+{{- define "chainplane.snapshotRestoreImage" -}}
+{{- $tag := .Values.snapshot.restoreImage.tag -}}
+{{- if not $tag -}}
+{{- $tag = .Chart.AppVersion -}}
+{{- if not (hasPrefix "v" $tag) -}}
+{{- $tag = printf "v%s" $tag -}}
+{{- end -}}
+{{- end -}}
+{{- printf "%s:%s" .Values.snapshot.restoreImage.repository $tag }}
+{{- end }}
+
+{{/*
 Leader election role name
 */}}
 {{- define "chainplane.leaderElectionRoleName" -}}

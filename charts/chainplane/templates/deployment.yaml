@@ -101,6 +101,8 @@ spec:
           {{- if or .Values.extraEnv .Values.snapshot.enabled }}
           env:
             {{- if .Values.snapshot.enabled }}
+            - name: SNAPSHOT_RESTORE_IMAGE
+              value: {{ include "chainplane.snapshotRestoreImage" . | quote }}
             - name: MINIO_ENDPOINT
               value: {{ .Values.snapshot.minio.endpoint | quote }}
             {{- if .Values.snapshot.minio.existingSecret }}

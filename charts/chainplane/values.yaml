@@ -142,6 +142,11 @@ snapshot:
   # into the operator pod. ChainInstances will skip genesis sync and restore from
   # the MinIO bucket unless spec.snapshot.disabled=true.
   enabled: false
+  restoreImage:
+    # -- Image for the snapshot-restore init container (built from snapshot-restore.Dockerfile)
+    repository: ghcr.io/tazhate/chainplane/snapshot-restore
+    # -- Overrides the image tag (default is the chart appVersion, v-prefixed)
+    tag: ""
   minio:
     # -- MinIO API endpoint (e.g. "http://minio:9000")
     endpoint: ""
