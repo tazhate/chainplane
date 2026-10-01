@@ -69,8 +69,16 @@ func (a *goatAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
+// ContainerArgs selects the GOAT mainnet genesis built into goat-geth
+// (--goat mainnet, chain id 2345) and passes the mounted config, which keeps
+// the data on /data. Without --goat the image boots on the Ethereum mainnet
+// genesis under /root/.ethereum. goat-geth has no working testnet genesis
+// (its testnet3 preset is commented out upstream), so every network runs
+// mainnet. Block production comes from the goat consensus client over the
+// Engine API, which this adapter does not run; on its own geth serves the
+// genesis state.
 func (a *goatAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+	return append([]string{"--goat", "mainnet"}, opGethArgs()...)
 }
 
 func (a *goatAdapter) DefaultResources() ResourceDefaults {
@@ -104,18 +112,14 @@ func (a *goatAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.
 const goatConfig = `# Goat Network (Bitcoin L2 with EVM) node configuration
 [Node]
 DataDir = "/data"
-
-[Node.HTTP]
-Host = "0.0.0.0"
-Port = 8545
-VirtualHosts = ["*"]
-Modules = ["eth", "net", "web3", "debug"]
-
-[Node.WS]
-Host = "0.0.0.0"
-Port = 8546
-Origins = ["*"]
-Modules = ["eth", "net", "web3"]
+HTTPHost = "0.0.0.0"
+HTTPPort = 8545
+HTTPVirtualHosts = ["*"]
+HTTPModules = ["eth", "net", "web3", "debug"]
+WSHost = "0.0.0.0"
+WSPort = 8546
+WSOrigins = ["*"]
+WSModules = ["eth", "net", "web3"]
 
 [Node.P2P]
 MaxPeers = 50

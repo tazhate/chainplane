@@ -29,7 +29,8 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-// defaultVictionImage uses the official Viction (formerly TomoChain) image.
+// victionConfigPath is where the rendered config.toml is mounted.
+const victionConfigPath = "/config/config.toml"
 
 // --------------------------------------------------------------------------
 // Type
@@ -69,8 +70,35 @@ func (a *victionAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []co
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
-func (a *victionAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+// ContainerCommand replaces the image entrypoint, which hardcodes the
+// relative --datadir data (so chain data landed in /tomochain/data, off the
+// volume) and never reads a config file. Like the entrypoint, it writes the
+// genesis shipped in /tomochain on first start; a marker file records a
+// finished init, so an interrupted one is retried on the next start.
+func (a *victionAdapter) ContainerCommand(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	genesis := "/tomochain/mainnet.json"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		genesis = "/tomochain/testnet.json"
+	}
+	script := `set -e
+if [ ! -f /data/.genesis-init ]; then
+  tomo init --datadir /data ` + genesis + `
+  touch /data/.genesis-init
+fi
+exec tomo "$@"`
+	return []string{"sh", "-c", script, "--"}
+}
+
+// ContainerArgs passes the mounted config plus the flags the image
+// entrypoint sets for a mainnet (88) or testnet (89) RPC node. Node.DataDir
+// in the config moves the chain, TomoX and keystore data to /data.
+func (a *victionAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	args := []string{"--config", victionConfigPath, "--networkid", "88"}
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		args = []string{"--config", victionConfigPath, "--networkid", "89", "--tomo-testnet"}
+	}
+	args = append(args, "--gasprice", "250000000", "--targetgaslimit", "30000000")
+	return append(args, "--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060")
 }
 
 func (a *victionAdapter) DefaultResources() ResourceDefaults {
@@ -95,15 +123,14 @@ func (a *victionAdapter) VersionPolicy() ChainVersionPolicy {
 
 const victionConfig = `# Viction (formerly TomoChain) EVM-compatible chain node configuration
 [Eth]
-SyncMode = "snap"
-NetworkId = 88
+SyncMode = "full"
 
 [Node]
 DataDir = "/data"
 HTTPHost = "0.0.0.0"
 HTTPPort = 8545
 HTTPVirtualHosts = ["*"]
-HTTPCorsDomain = ["*"]
+HTTPCors = ["*"]
 HTTPModules = ["eth", "net", "web3", "debug", "txpool"]
 WSHost = "0.0.0.0"
 WSPort = 8546

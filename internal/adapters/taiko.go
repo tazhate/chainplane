@@ -87,9 +87,19 @@ func (a *taikoAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []core
 	})
 }
 
-// ContainerArgs enables Prometheus metrics endpoint on Taiko geth.
-func (a *taikoAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+// ContainerArgs selects the Taiko genesis built into taiko-geth and passes
+// the mounted config, which keeps the data on /data. --taiko picks the
+// genesis by network id: 167000 for mainnet, 167013 for the Hoodi testnet.
+// Without it the image boots on the Ethereum mainnet genesis under
+// /root/.ethereum. The chain advances only when a taiko-client driver feeds
+// it blocks derived from L1 over the Engine API, which this adapter does not
+// run; on its own geth serves the genesis state.
+func (a *taikoAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	networkID := "167000"
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		networkID = "167013"
+	}
+	return append([]string{"--taiko", "--networkid", networkID}, opGethArgs()...)
 }
 
 // ContainerEnv injects the L1_RPC_URL environment variable required by Taiko L2 nodes.
@@ -105,7 +115,6 @@ func (a *taikoAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1
 
 const taikoConfig = `# Taiko L2 geth node
 [Eth]
-NetworkId = 167000
 SyncMode = "snap"
 
 [Node]

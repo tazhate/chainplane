@@ -25,17 +25,19 @@ import (
 	"github.com/tazhate/chainplane/internal/adapters"
 )
 
-// opGethChains run op-geth (or a fork of it) with the mounted config.toml,
+// opGethChains run op-geth (or another geth fork) with the mounted config.toml,
 // mapped to the network flags that select their genesis. "" means the
 // adapter runs geth init from a pinned genesis instead.
 var opGethChains = map[chainsv1alpha2.Chain]string{
 	chainsv1alpha2.ChainOpBNB: "--opBNBMainnet",
 	chainsv1alpha2.ChainBlast: "",
+	chainsv1alpha2.ChainGoat:  "--goat mainnet",
+	chainsv1alpha2.ChainTaiko: "--taiko --networkid 167000",
 }
 
 // opGethFlags are the flags these adapters may pass; geth exits on unknown ones.
 var opGethFlags = []string{
-	"--config", "--opBNBMainnet",
+	"--config", "--opBNBMainnet", "--goat", "--taiko", "--networkid",
 	"--metrics", "--metrics.addr", "--metrics.port",
 }
 
