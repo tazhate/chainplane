@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+// cometRecoveredPanic is CometBFT dropping a slow peer during blocksync.
+const cometRecoveredPanic = `E[2026-10-01] Stopping peer for error ` +
+	`err="recovered from panic: rejected msg on chID 0x40: unsolicited BlockResponse"`
+
 func TestScanLog(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -27,6 +31,7 @@ func TestScanLog(t *testing.T) {
 		{"panic", "panic: runtime error: index out of range", "panic: runtime error: index out of range", 0},
 		{"bare panic", "panic:", "panic:", 0},
 		{"rust backtrace", "WARN rpc timed out\\n  22: std::panic::catch_unwind", "", 0},
+		{"cometbft recovered peer panic", cometRecoveredPanic, "", 1},
 		{"fatal error", "fatal error: concurrent map writes", "fatal error: concurrent map writes", 0},
 		{"missing config", "stat /x: no such file or directory (config)", "stat /x: no such file or directory (config)", 0},
 		{"missing other file", "open /data/peers.dat: no such file or directory", "", 0},
