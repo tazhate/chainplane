@@ -340,6 +340,16 @@ func (a *ethereumAdapter) VersionPolicy() ChainVersionPolicy {
 	}
 }
 
+func (a *ethereumAdapter) ClientVersionPolicies() map[string]ChainVersionPolicy {
+	semverTag := `^v\d+\.\d+\.\d+$`
+	return map[string]ChainVersionPolicy{
+		"erigon":     {Registry: "docker.io", Repository: "erigontech/erigon", TagPattern: semverTag},
+		"geth":       {Registry: "docker.io", Repository: "ethereum/client-go", TagPattern: semverTag},
+		"nethermind": a.VersionPolicy(),
+		"reth":       {Registry: "ghcr.io", Repository: "paradigmxyz/reth", TagPattern: semverTag},
+	}
+}
+
 func (a *ethereumAdapter) DefaultResources() ResourceDefaults {
 	return ResourceDefaults{
 		CPURequest:    resource.MustParse("8"),

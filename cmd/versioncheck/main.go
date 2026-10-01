@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -87,6 +88,10 @@ type versionResult struct {
 	IsNewer    bool
 	// IsMajor marks a newer tag that bumps the major version (minor for 0.x).
 	IsMajor bool
+	// SameMajorTag is the newest tag that is newer than CurrentTag without a
+	// major bump. Set only when IsMajor, so a held-back major still lets
+	// patch/minor releases of the current line through.
+	SameMajorTag string
 	// NoMatch means the registry answered but no stable tag matched the policy.
 	NoMatch bool
 	Err     error
@@ -99,6 +104,7 @@ func checkVersions(
 
 	type workItem struct {
 		chain  chainsv1alpha2.Chain
+		client string
 		policy adapters.ChainVersionPolicy
 	}
 
@@ -112,8 +118,12 @@ func checkVersions(
 			continue
 		}
 		items = append(items, workItem{chain: chain, policy: vp.VersionPolicy()})
+		if cp, ok := adapter.(adapters.ClientVersionProvider); ok {
+			for client, policy := range cp.ClientVersionPolicies() {
+				items = append(items, workItem{chain: chain, client: client, policy: policy})
+			}
+		}
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].chain < items[j].chain })
 
 	sem := make(chan struct{}, concurrency)
 	var mu sync.Mutex
@@ -130,9 +140,9 @@ func checkVersions(
 			reqCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 
-			res := versionResult{Chain: it.chain}
+			res := versionResult{Chain: it.chain, Client: it.client}
 
-			currentRef := adapters.DefaultImageFor(it.chain, "")
+			currentRef := adapters.DefaultImageFor(it.chain, it.client)
 			res.CurrentRef = currentRef
 			res.CurrentTag = parseTag(currentRef)
 
@@ -154,7 +164,8 @@ func checkVersions(
 				return
 			}
 
-			res.LatestTag, res.IsNewer, res.IsMajor, err = pickLatest(it.policy, res.CurrentTag, tags)
+			pick, err := pickLatest(it.policy, res.CurrentTag, tags)
+			res.LatestTag, res.IsNewer, res.IsMajor, res.SameMajorTag = pick.latest, pick.newer, pick.major, pick.sameMajor
 			res.Err = err
 			res.NoMatch = err == nil && res.LatestTag == ""
 
@@ -165,8 +176,18 @@ func checkVersions(
 	}
 
 	wg.Wait()
-	sort.Slice(results, func(i, j int) bool { return results[i].Chain < results[j].Chain })
+	slices.SortFunc(results, func(a, b versionResult) int {
+		return cmp.Or(cmp.Compare(a.Chain, b.Chain), cmp.Compare(a.Client, b.Client))
+	})
 	return results
+}
+
+// pick is the outcome of comparing registry tags with the pinned tag.
+type pick struct {
+	latest    string // newest stable tag, "" if none matched
+	newer     bool   // latest is newer than the pin
+	major     bool   // latest is a major bump over the pin
+	sameMajor string // newest non-major update when major, else ""
 }
 
 // pickLatest selects the newest stable tag for policy and compares it with
@@ -174,12 +195,10 @@ func checkVersions(
 // checks apply to that capture, so build-suffixed tags such as stellar's
 // "29.0.0-3589.4eb833373.noble" can be tracked. An empty latest with a nil
 // error means no tag matched.
-func pickLatest(
-	policy adapters.ChainVersionPolicy, currentTag string, tags []registry.TagEntry,
-) (latest string, newer, major bool, err error) {
+func pickLatest(policy adapters.ChainVersionPolicy, currentTag string, tags []registry.TagEntry) (pick, error) {
 	pattern, err := regexp.Compile(policy.TagPattern)
 	if err != nil {
-		return "", false, false, fmt.Errorf("compile tag pattern %q: %w", policy.TagPattern, err)
+		return pick{}, fmt.Errorf("compile tag pattern %q: %w", policy.TagPattern, err)
 	}
 	group := pattern.SubexpIndex("version")
 	versionOf := func(tag string) string {
@@ -207,23 +226,41 @@ func pickLatest(
 	}
 	latestVersion := registry.Newest(stable, policy.TagPrefix)
 	if latestVersion == "" {
-		return "", false, false, nil
+		return pick{}, nil
 	}
 
 	// A pin that predates the pattern (e.g. stellar's old "v19.12.0") is
 	// compared as-is.
 	currentVersion := cmp.Or(versionOf(currentTag), currentTag)
-	newer = registry.IsNewer(latestVersion, currentVersion, policy.TagPrefix)
-	major = newer && registry.IsMajorBump(latestVersion, currentVersion, policy.TagPrefix)
-	return byVersion[latestVersion], newer, major, nil
+	p := pick{
+		latest: byVersion[latestVersion],
+		newer:  registry.IsNewer(latestVersion, currentVersion, policy.TagPrefix),
+	}
+	p.major = p.newer && registry.IsMajorBump(latestVersion, currentVersion, policy.TagPrefix)
+	if p.major {
+		sameLine := slices.DeleteFunc(slices.Clone(stable), func(v string) bool {
+			return !registry.IsNewer(v, currentVersion, policy.TagPrefix) ||
+				registry.IsMajorBump(v, currentVersion, policy.TagPrefix)
+		})
+		if v := registry.Newest(sameLine, policy.TagPrefix); v != "" {
+			p.sameMajor = byVersion[v]
+		}
+	}
+	return p, nil
 }
 
 // filterNewer returns the results to apply. Major bumps are held back unless
 // allowMajor is set: they need a smoke run before becoming a default.
+// A held major still applies SameMajorTag when there is one.
 func filterNewer(results []versionResult, allowMajor bool) []versionResult {
 	var out []versionResult
 	for _, r := range results {
-		if r.IsNewer && (allowMajor || !r.IsMajor) {
+		switch {
+		case !r.IsNewer:
+		case !r.IsMajor || allowMajor:
+			out = append(out, r)
+		case r.SameMajorTag != "":
+			r.LatestTag = r.SameMajorTag
 			out = append(out, r)
 		}
 	}
@@ -246,6 +283,8 @@ func resultStatus(r versionResult) string {
 		return fmt.Sprintf("ERROR: %v", r.Err)
 	case r.NoMatch:
 		return "NO MATCH"
+	case r.IsMajor && r.SameMajorTag != "":
+		return "MAJOR AVAILABLE (same line: " + r.SameMajorTag + ")"
 	case r.IsMajor:
 		return "MAJOR AVAILABLE"
 	case r.IsNewer:
@@ -259,7 +298,11 @@ func printReport(results []versionResult) {
 	fmt.Printf("%-30s %-30s %-20s %s\n", "CHAIN", "CURRENT TAG", "LATEST TAG", "STATUS")
 	fmt.Println(strings.Repeat("-", 100))
 	for _, r := range results {
-		fmt.Printf("%-30s %-30s %-20s %s\n", r.Chain, r.CurrentTag, r.LatestTag, resultStatus(r))
+		name := string(r.Chain)
+		if r.Client != "" {
+			name += "/" + r.Client
+		}
+		fmt.Printf("%-30s %-30s %-20s %s\n", name, r.CurrentTag, r.LatestTag, resultStatus(r))
 	}
 }
 
