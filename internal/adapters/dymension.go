@@ -89,9 +89,28 @@ func (a *dymensionAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (s
 	return "app.toml", dymensionConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// dymensionNode bootstraps dymension_1100-1. The image has no ENTRYPOINT
+// (CMD is /bin/sh), so the command must name dymd. Genesis is the Git LFS
+// object of dymensionxyz/networks, pinned to a commit.
+var dymensionNode = cosmosNode{
+	Binary:          "dymd",
+	ChainID:         "dymension_1100-1",
+	GenesisURL:      "https://media.githubusercontent.com/media/dymensionxyz/networks/b721f0cc13da95f8a832e51f3ee886ded4e8676b/mainnet/dymension/genesis.json",
+	GenesisSHA256:   "c25f362084db5c1480aaee93bfcb97c5328cabeda94f11ddcc74a8e183838491",
+	Seeds:           "45bffa41836302b06310af67f012500cc0d1da31@rpc.dymension.nodestake.org:666,193262e32a9d7d3fffe14073160cabc4cdfef26b@dymension-rpc.stakeandrelax.net:20556,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656",
+	PersistentPeers: "e0d84deab2d0fd85f447c5c417fecbbdba584be0@dymension-m.peer.stavr.tech:17086,c600039ef70040740ae130d455768c509d173b12@peer.dymension.node75.org:23836,e3522d6de016578ac0935c4c55e13e4aac6f0693@peer.dymension.mainnet.dteam.tech:29656",
+	StateSyncRPC:    []string{"https://dymension-rpc.polkachu.com:443", "https://rpc.lavenderfive.com:443/dymension"},
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *dymensionAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return dymensionNode.Command()
+}
+
+// ContainerArgs are `dymd start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *dymensionAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *dymensionAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

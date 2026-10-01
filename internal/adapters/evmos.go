@@ -70,9 +70,29 @@ func (a *evmosAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (strin
 	return "app.toml", evmosConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// evmosNode bootstraps evmos_9001-2. The image has no ENTRYPOINT, so the
+// command must name evmosd. The chain halted at height 37,318,000 on
+// 2026-05-18 after the shutdown proposal #331: archive.evmos.org is gone,
+// so genesis comes from the Polkachu mirror, and with no live RPC left
+// there is no state sync.
+var evmosNode = cosmosNode{
+	Binary:          "evmosd",
+	ChainID:         "evmos_9001-2",
+	GenesisURL:      "https://snapshots.polkachu.com/genesis/evmos/genesis.json",
+	GenesisSHA256:   "4aa13da5eb4b9705ae8a7c3e09d1c36b92d08247dad2a6ed1844d031fcfe296c",
+	Seeds:           "5740e4a36e646e80cc5648daf5e983e5b5d8f265@54.39.18.27:26656,40f4fac63da8b1ce8f850b0fa0f79b2699d2ce72@seed.evmos.jerrychong.com:26656,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656",
+	PersistentPeers: "5740e4a36e646e80cc5648daf5e983e5b5d8f265@54.39.18.27:26656",
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *evmosAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return evmosNode.Command()
+}
+
+// ContainerArgs are `evmosd start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *evmosAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *evmosAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

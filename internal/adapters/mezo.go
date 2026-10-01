@@ -61,9 +61,35 @@ func (a *mezoAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string
 	return "app.toml", mezoConfig, nil
 }
 
-// ContainerArgs passes --home /data so mezod reads from the PVC mount.
+// mezoNode bootstraps mezo_31612-1. The image ENTRYPOINT is a validator
+// setup script (needs a keyring mnemonic, rewrites the configs on every
+// start), and the image has no download tools, so the script runs mezod
+// directly on the busybox toolbox. Mezo serves no snapshots itself;
+// Lavender.Five advertises state sync and is the only public RPC.
+var mezoNode = cosmosNode{
+	Binary:        "mezod",
+	ChainID:       "mezo_31612-1",
+	GenesisURL:    "https://raw.githubusercontent.com/mezo-org/mezod/v11.0.1/chain/mainnet/mezo_31612-1/genesis.json",
+	GenesisSHA256: "c1b9b2736bc0c1e6390dafa80c43fdc9870490d481ebaa71d932a98df3c531f7",
+	Seeds:         "a44ea22836e79c2e8e2e64547243ce6925746e91@35.208.223.127:26656,3248ba5a691a6422c6bda443a43cfdf48e43cc85@mezo-mainnet-seed.validator.validationcloud.io:30232",
+	StateSyncRPC:  []string{"https://rpc.lavenderfive.com:443/mezo", "https://rpc.lavenderfive.com:443/mezo"},
+	Toolbox:       true,
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *mezoAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return mezoNode.Command()
+}
+
+// InitContainers adds the busybox toolbox sidecar the start script runs on.
+func (a *mezoAdapter) InitContainers(_ chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
+	return mezoNode.InitContainers()
+}
+
+// ContainerArgs are `mezod start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *mezoAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
 }
 
 func (a *mezoAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

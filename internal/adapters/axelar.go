@@ -54,9 +54,12 @@ enabled-unsafe-cors = true
 enable = true
 address = "0.0.0.0:9090"
 
+# SDK telemetry stays off: with a Prometheus retention time axelard v1.5.5
+# exits with "duplicate metrics collector registration attempted".
+# CometBFT metrics are served on :26660.
 [telemetry]
-enabled = true
-prometheus-retention-time = 60
+enabled = false
+prometheus-retention-time = 0
 `
 
 // --------------------------------------------------------------------------
@@ -89,9 +92,34 @@ func (a *axelarAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (stri
 	return "app.toml", axelarConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// axelarNode bootstraps axelar-dojo-1. The image ENTRYPOINT is a
+// validator setup script that runs its args as a command, so the command
+// must name axelard.
+var axelarNode = cosmosNode{
+	Binary:        "axelard",
+	ChainID:       "axelar-dojo-1",
+	GenesisURL:    "https://raw.githubusercontent.com/axelarnetwork/axelarate-community/9f42864064a98796c4d120e836e39c6900d0edd2/resources/mainnet/genesis.json",
+	GenesisSHA256: "fc5f25a2d4b4aadd60257f30ee99b439aa922a98f765baf64fd9061701c71afc",
+	Seeds:         "2551bf072d23835e42a32921beacbf3425fe376f@k8s-mainnet-axelarco-3ab48adcdb-974f2bc59e735192.elb.us-east-2.amazonaws.com:26656,ade4d8bc8cbe014af6ebdf3cb7b1e9ad36f412c0@seeds.polkachu.com:15156,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656,10ed1e176d874c8bb3c7c065685d2da6a4b86475@seed-axelar.ibs.team:16671",
+	StateSyncRPC:  []string{"https://axelar-rpc.polkachu.com:443", "https://axelar-rpc.publicnode.com:443"},
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *axelarAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return axelarNode.Command()
+}
+
+// ContainerArgs are `axelard start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck.
 func (a *axelarAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657"}
+}
+
+// ContainerEnv overrides AXELARD_CHAIN_ID=axelar-testnet-lisbon-3 baked
+// into the image: axelard reads AXELARD_* as flag values, so the testnet
+// chain ID would reject the mainnet genesis.
+func (a *axelarAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	return []corev1.EnvVar{{Name: "AXELARD_CHAIN_ID", Value: axelarNode.ChainID}}
 }
 
 func (a *axelarAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {

@@ -72,9 +72,31 @@ func (a *mocaAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string
 	return "app.toml", mocaConfig, nil
 }
 
-// ContainerArgs passes --home /data so the node reads from the PVC mount.
+// mocaNode bootstraps moca_2288-1. Moca publishes no static genesis file
+// (asset/configs/mainnet_config in mocachain/moca is the moca_5151-1
+// devnet), so genesis is the /genesis response of the official RPC, pinned
+// by its SHA-256. Seeds are empty upstream; the official sentry is the
+// persistent peer, and both RPC hostnames reach the same node.
+var mocaNode = cosmosNode{
+	Binary:          "mocad",
+	ChainID:         "moca_2288-1",
+	GenesisURL:      "https://tm-rpc.mocachain.org/genesis",
+	GenesisSHA256:   "22b93c2ec892c47f12516c1f7bbbcea457c0a1e601d5a40c279ec0825184e37f",
+	GenesisFormat:   genesisRPC,
+	PersistentPeers: "015fda7c14ddd2e74a29a3118e5c28c069219257@p2p.sentry-node-1.mocachain.dev:26656,d3e1ea4ad789bfc6c259019ae3ca13f05205f364@p2p.sentry-node-0.mocachain.dev:26656",
+	StateSyncRPC:    []string{"https://tm-rpc.mocachain.org:443", "https://tm-rpc.mocachain.dev:443"},
+}
+
+// ContainerCommand initializes /data on first start; see cosmosNode.Command.
+func (a *mocaAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return mocaNode.Command()
+}
+
+// ContainerArgs are `mocad start` flags: RPC must listen beyond localhost
+// for the probes and HealthCheck, and mocad reads the chain ID from
+// --chain-id or client.toml.
 func (a *mocaAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"start", "--home", "/data"}
+	return []string{"--rpc.laddr", "tcp://0.0.0.0:26657", "--chain-id", "moca_2288-1"}
 }
 
 func (a *mocaAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
