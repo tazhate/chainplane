@@ -27,7 +27,9 @@ spec:
     wsPort: 8546
   health:
     blockLagThreshold: 30
-  # Override default L1 RPC URL (default: http://ethereum:8545)
+  # The parent chain is Arbitrum Nova (default: https://nova.arbitrum.io/rpc).
+  # The chain info and DAS URLs are not built into Nitro: pass them with
+  # extraArgs (--chain.info-json=..., --node.da.anytrust.*).
   # extraEnv:
-  # - name: OP_NODE_L1_ETH_RPC
-  #   value: "http://your-ethereum-rpc:8545"
+  # - name: L1_RPC_URL
+  #   value: "http://your-nova-rpc:8547"

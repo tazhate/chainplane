@@ -103,7 +103,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "sigp/lighthouse:v8.2.3",
 	},
 	chainsv1alpha2.ChainEthereumClassic: {
-		"": "hyperledger/besu:26.9.0",
+		"": "etclabscore/core-geth:v1.12.23",
 	},
 	chainsv1alpha2.ChainEverclear: {
 		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
@@ -121,7 +121,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101702.2",
 	},
 	chainsv1alpha2.ChainFuse: {
-		"": "fusenet/node:2.0.2",
+		"": "fusenet/node:nethermind-v1.36.2",
 	},
 	chainsv1alpha2.ChainGnosis: {
 		"": "nethermind/nethermind:1.39.3",
@@ -133,7 +133,7 @@ var chainDefaultImages = map[chainsv1alpha2.Chain]map[string]string{
 		"": "ghcr.io/goatnetwork/goat-geth:v0.4.2",
 	},
 	chainsv1alpha2.ChainGravityAlpha: {
-		"": "ghcr.io/celestiaorg/nitro:v3.6.8",
+		"": "offchainlabs/nitro-node:v3.11.4-7d5ac27",
 	},
 	chainsv1alpha2.ChainHaqq: {
 		"": "alhaqq/haqq:v1.10.0",

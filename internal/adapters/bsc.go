@@ -67,6 +67,7 @@ WSOrigins = ["*"]
 
 [Node.P2P]
 MaxPeers = 50
+ListenAddr = ":30311"
 
 [Eth]
 NetworkId = {{ .NetworkID }}
@@ -96,28 +97,32 @@ func (a *bscAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (stri
 	return "config.toml", buf.String(), nil
 }
 
-// ContainerCommand downloads BSC genesis.json on first run (not bundled in image),
-// then starts geth. Uses set -e with explicit error checks so a failed or partial
-// genesis download causes an exit 1 (pod restart) rather than silent proceeding.
+// ContainerCommand starts geth on the BSC genesis built into the binary
+// (--mainnet, chain id 56; --chapel for testnet, 97): an empty datadir is
+// initialised from it, an existing one is checked against it. Earlier
+// versions downloaded genesis.json from the bsc repo, a path that no longer
+// exists (HTTP 404).
 func (a *bscAdapter) ContainerCommand(spec chainsv1alpha2.ChainInstanceSpec) []string {
-	genesisURL := "https://raw.githubusercontent.com/bnb-chain/bsc/master/core/genesis/genesis.json"
+	network := "--mainnet"
 	if spec.Network == chainsv1alpha2.NetworkTestnet {
-		genesisURL = "https://raw.githubusercontent.com/bnb-chain/bsc/master/core/genesis/testnet.json"
+		network = "--chapel"
 	}
-	script := `set -e
-if [ ! -d /data/geth ]; then
-  echo "[bsc] Downloading genesis.json..."
-  wget -q -O /tmp/genesis.json '` + genesisURL + `' || {
-    rm -f /tmp/genesis.json
-    echo "[bsc] genesis.json download FAILED — exiting for retry"
-    exit 1
-  }
-  [ -s /tmp/genesis.json ] || { rm -f /tmp/genesis.json; echo "[bsc] genesis.json empty — exiting for retry"; exit 1; }
-  geth --datadir /data init /tmp/genesis.json || { echo "[bsc] geth init FAILED"; exit 1; }
-  rm -f /tmp/genesis.json
-fi
-exec geth --config /config/config.toml --datadir /data --datadir.ancient /data/geth/chaindata/ancient --syncmode full --tries-verify-mode none --state.scheme=path --db.engine=pebble --cache 8000 --history.transactions 0 --http --http.addr 0.0.0.0 --http.port 8545 --http.api eth,net,web3,txpool --http.vhosts '*' --http.corsdomain '*' --ws --ws.addr 0.0.0.0 --ws.port 8546 --ws.api eth,net,web3`
-	return []string{"sh", "-c", script}
+	return []string{
+		"geth", network,
+		"--config", "/config/config.toml",
+		"--datadir", "/data",
+		"--datadir.ancient", "/data/geth/chaindata/ancient",
+		"--syncmode", "full",
+		"--tries-verify-mode", "none",
+		"--state.scheme=path",
+		"--db.engine=pebble",
+		"--cache", "8000",
+		"--history.transactions", "0",
+		"--http", "--http.addr", "0.0.0.0", "--http.port", "8545",
+		"--http.api", "eth,net,web3,txpool",
+		"--http.vhosts", "*", "--http.corsdomain", "*",
+		"--ws", "--ws.addr", "0.0.0.0", "--ws.port", "8546", "--ws.api", "eth,net,web3",
+	}
 }
 
 func (a *bscAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
@@ -140,7 +145,7 @@ func (a *bscAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1
 }
 
 func (a *bscAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+	return gethMetricsArgs(6060)
 }
 
 func (a *bscAdapter) VersionPolicy() ChainVersionPolicy {

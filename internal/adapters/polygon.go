@@ -86,6 +86,10 @@ gcmode = "archive"
 
 [log]
   verbosity = 3
+
+[telemetry]
+  metrics = true
+  prometheus-addr = "0.0.0.0:6060"
 `
 
 // --------------------------------------------------------------------------
@@ -101,6 +105,8 @@ func (a *polygonAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (str
 }
 
 // ContainerCommand overrides entrypoint to use Bor 2.x server subcommand.
+// Metrics are enabled in [telemetry] of the config: bor server has no
+// --metrics.addr/--metrics.port and exits on them.
 func (a *polygonAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
 	return []string{"bor", "server", "--config", "/config/config.toml"}
 }
@@ -121,10 +127,6 @@ func (a *polygonAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []co
 		{Name: "p2p-udp", ContainerPort: 30303, HostPort: 30303, Protocol: corev1.ProtocolUDP},
 		{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP},
 	}
-}
-
-func (a *polygonAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
 }
 
 func (a *polygonAdapter) DefaultResources() ResourceDefaults {

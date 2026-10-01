@@ -49,6 +49,23 @@ func init() {
 	})
 }
 
+// arbitrumChain returns Arbitrum One, or Arbitrum Sepolia for testnet. Both
+// are built into Nitro, which takes the sequencer feed and forwarding target
+// from its own chain info.
+func arbitrumChain(spec chainsv1alpha2.ChainInstanceSpec) nitroChain {
+	c := nitroChain{
+		ChainID:         42161,
+		ParentChainURL:  defaultArbitrumL1URL,
+		BlobsFromBeacon: true,
+		HTTPPort:        8545,
+		WSPort:          8546,
+	}
+	if spec.Network == chainsv1alpha2.NetworkTestnet {
+		c.ChainID = 421614
+	}
+	return c
+}
+
 // --------------------------------------------------------------------------
 // Interface methods
 // --------------------------------------------------------------------------
@@ -57,31 +74,29 @@ func (a *arbitrumAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainArbitrum, client)
 }
 
-func (a *arbitrumAdapter) ConfigTemplate(_ chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	return "config.json", arbitrumConfig, nil
+func (a *arbitrumAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
+	cfg, err := nitroConfig(arbitrumChain(spec))
+	return nitroConfigFile, cfg, err
 }
 
 func (a *arbitrumAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
 	return evmHealthCheck(ctx, rpcURL)
 }
 
-func (a *arbitrumAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return append(evmPorts(8547), corev1.ContainerPort{
-		Name: "metrics", ContainerPort: 6070, Protocol: corev1.ProtocolTCP,
-	})
+func (a *arbitrumAdapter) ContainerPorts(spec chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
+	return nitroPorts(arbitrumChain(spec))
 }
 
-// ContainerArgs injects the --l1.url flag pointing to the L1 Ethereum RPC and enables metrics.
-// The L1_RPC_URL env var is set by ContainerEnv and can be overridden via extraEnv.
-func (a *arbitrumAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--l1.url=$(L1_RPC_URL)", "--metrics"}
+// ContainerArgs points Nitro at the rendered config and the L1 execution and
+// beacon endpoints. L1_RPC_URL and L1_BEACON_URL are set by ContainerEnv and
+// can be overridden via extraEnv.
+func (a *arbitrumAdapter) ContainerArgs(spec chainsv1alpha2.ChainInstanceSpec) []string {
+	return nitroArgs(arbitrumChain(spec))
 }
 
-// ContainerEnv injects the L1_RPC_URL environment variable required by Arbitrum Nitro.
-func (a *arbitrumAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{Name: "L1_RPC_URL", Value: defaultArbitrumL1URL},
-	}
+// ContainerEnv injects the L1 endpoints required by Arbitrum Nitro.
+func (a *arbitrumAdapter) ContainerEnv(spec chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
+	return nitroEnv(arbitrumChain(spec))
 }
 
 func (a *arbitrumAdapter) DefaultResources() ResourceDefaults {
@@ -101,32 +116,3 @@ func (a *arbitrumAdapter) VersionPolicy() ChainVersionPolicy {
 		TagPattern: `^(?P<version>v\d+\.\d+\.\d+)-[0-9a-f]{7}$`,
 	}
 }
-
-// --------------------------------------------------------------------------
-// Config
-// --------------------------------------------------------------------------
-
-const arbitrumConfig = `{
-  "http": {
-    "addr": "0.0.0.0",
-    "port": 8545,
-    "vhosts": ["*"],
-    "corsdomain": ["*"],
-    "api": ["eth", "net", "web3", "arb", "debug"]
-  },
-  "ws": {
-    "addr": "0.0.0.0",
-    "port": 8546,
-    "origins": ["*"],
-    "api": ["eth", "net", "web3", "arb"]
-  },
-  "node": {
-    "forwarding-target": "https://arb1.arbitrum.io/rpc",
-    "data-dir": "/data"
-  },
-  "persistent": {
-    "chain": "arb1"
-  },
-  "metrics": true
-}
-`
