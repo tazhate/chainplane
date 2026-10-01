@@ -43,6 +43,10 @@ var (
 	// that is the --tmpfs-size cap rather than the image: geth's free-space
 	// guard shuts the node down on a 1g tmpfs.
 	diskFullLogRe = regexp.MustCompile(`(?i)low disk space|no space left on device`)
+	// recoveredPanicRe matches panics a node caught and survived, such as
+	// CometBFT dropping a misbehaving peer ("recovered from panic: rejected
+	// msg ..."). They are peer noise, not a crash.
+	recoveredPanicRe = regexp.MustCompile(`(?i)recovered from panic`)
 	// warnLogRe matches the remaining error noise worth a look.
 	warnLogRe = regexp.MustCompile(`(?i)\b(fatal|error)\b`)
 )
@@ -66,7 +70,7 @@ func scanLog(logs string) logScan {
 			if s.diskFull == "" {
 				s.diskFull = line
 			}
-		case failLogRe.MatchString(line):
+		case failLogRe.MatchString(line) && !recoveredPanicRe.MatchString(line):
 			if s.failLine == "" {
 				s.failLine = line
 			}
