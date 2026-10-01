@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -135,9 +136,20 @@ func selectorLabelsUnstructured(node *chainsv1alpha2.ChainInstance) map[string]i
 }
 
 // adapterMetricsPort returns the port number of the "metrics" named port from
-// the adapter's ContainerPorts, or (0, false) if none is defined.
+// the adapter's main container or its sidecars (UTXO chains export metrics
+// from an exporter sidecar), or (0, false) if none is defined.
 func adapterMetricsPort(adapter adapters.ChainAdapter, spec chainsv1alpha2.ChainInstanceSpec) (int32, bool) {
-	for _, p := range adapter.ContainerPorts(spec) {
+	ports := adapter.ContainerPorts(spec)
+	var sidecars []corev1.Container
+	if rc, ok := adapter.(adapters.RPCCredentialed); ok {
+		sidecars = rc.RPCSidecars(spec, "")
+	} else if sp, ok := adapter.(adapters.SidecarProvider); ok {
+		sidecars = sp.Sidecars(spec)
+	}
+	for _, c := range sidecars {
+		ports = append(ports, c.Ports...)
+	}
+	for _, p := range ports {
 		if p.Name == "metrics" {
 			return p.ContainerPort, true
 		}

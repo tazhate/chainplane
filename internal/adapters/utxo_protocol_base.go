@@ -190,6 +190,11 @@ func authenticatedURL(rpcURL string, creds RPCCredentials) (string, error) {
 	return parsed.String(), nil
 }
 
+// utxoExporterMetricsPort is where the exporter sidecar serves metrics. The
+// exporter defaults to 9332, which is litecoind's RPC port, so both processes
+// fought over the same port in one pod. 9339 is free on every UTXO chain here.
+const utxoExporterMetricsPort = 9339
+
 // utxoExporterSidecar returns a bitcoin-prometheus-exporter container that
 // reads the node RPC credentials from secretName via SecretKeyRef, so no
 // password appears in the pod spec.
@@ -206,9 +211,10 @@ func utxoExporterSidecar(rpcPort int32, secretName string) corev1.Container {
 		Name:  "metrics-exporter",
 		Image: utxoExporterImage,
 		Ports: []corev1.ContainerPort{
-			{Name: "metrics", ContainerPort: 9332, Protocol: corev1.ProtocolTCP},
+			{Name: "metrics", ContainerPort: utxoExporterMetricsPort, Protocol: corev1.ProtocolTCP},
 		},
 		Env: []corev1.EnvVar{
+			{Name: "METRICS_PORT", Value: strconv.Itoa(utxoExporterMetricsPort)},
 			{Name: "BITCOIN_RPC_HOST", Value: "localhost"},
 			{Name: "BITCOIN_RPC_PORT", Value: strconv.Itoa(int(rpcPort))},
 			{Name: "BITCOIN_RPC_USER", ValueFrom: secretRef(RPCSecretUserKey)},
