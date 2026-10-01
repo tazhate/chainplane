@@ -33,6 +33,9 @@ const (
 	statusSkip = "SKIP"
 )
 
+// detailInterrupted is the detail of rows skipped because of Ctrl-C.
+const detailInterrupted = "interrupted"
+
 // detailWidth caps the detail column so the table stays readable.
 const detailWidth = 160
 

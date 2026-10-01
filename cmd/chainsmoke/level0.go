@@ -66,7 +66,7 @@ func runLevel0(ctx context.Context, targets []target, parallel int) []result {
 // inspectManifest checks that ref exists and has a linux/amd64 image.
 func inspectManifest(ctx context.Context, ref string) manifestCheck {
 	if ctx.Err() != nil {
-		return manifestCheck{statusSkip, "interrupted"}
+		return manifestCheck{statusSkip, detailInterrupted}
 	}
 	raw, err := dockerRetry(ctx, "buildx", "imagetools", "inspect", "--raw", ref)
 	if err != nil {

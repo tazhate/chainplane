@@ -34,19 +34,27 @@ var (
 		`invalid (argument|option|flag)`,
 		`error parsing`,
 		`failed to parse`,
-		`panic:`,
+		// Not panic:: — Rust backtraces print core::panic::unwind_safe.
+		`panic:([^:]|$)`,
 		`fatal error:`,
 		`no such file or directory.*config`,
 	}, "|") + `)`)
+	// diskFullLogRe matches a node stopping on a full volume. Under chainsmoke
+	// that is the --tmpfs-size cap rather than the image: geth's free-space
+	// guard shuts the node down on a 1g tmpfs.
+	diskFullLogRe = regexp.MustCompile(`(?i)low disk space|no space left on device`)
 	// warnLogRe matches the remaining error noise worth a look.
 	warnLogRe = regexp.MustCompile(`(?i)\b(fatal|error)\b`)
 )
 
-// logScan summarises a container log against failLogRe and warnLogRe.
+// logScan summarises a container log against diskFullLogRe, failLogRe and
+// warnLogRe.
 type logScan struct {
-	failLine  string // first failLogRe line
+	diskFull  string // first diskFullLogRe line
+	failLine  string // first failLogRe line that is not a diskFullLogRe line
 	warnCount int    // warnLogRe lines that are not failLogRe lines
 	firstWarn string
+	lastWarn  string // usually the reason when the node exits
 }
 
 func scanLog(logs string) logScan {
@@ -54,6 +62,10 @@ func scanLog(logs string) logScan {
 	for line := range strings.Lines(logs) {
 		line = strings.TrimSpace(line)
 		switch {
+		case diskFullLogRe.MatchString(line):
+			if s.diskFull == "" {
+				s.diskFull = line
+			}
 		case failLogRe.MatchString(line):
 			if s.failLine == "" {
 				s.failLine = line
@@ -63,6 +75,7 @@ func scanLog(logs string) logScan {
 			if s.firstWarn == "" {
 				s.firstWarn = line
 			}
+			s.lastWarn = line
 		}
 	}
 	return s
@@ -78,8 +91,12 @@ type containerState struct {
 
 // verdict turns the container state after the run window and its log scan
 // into a status and detail. Any exit before the window ends is a FAIL, a
-// clean exit included: a node is supposed to keep running.
+// clean exit included: a node is supposed to keep running. A node that ran
+// out of tmpfs is a WARN unless a flag or config error shows up as well.
 func verdict(st containerState, ranFor time.Duration, s logScan) (status, detail string) {
+	if s.diskFull != "" && s.failLine == "" {
+		return statusWarn, "tmpfs too small, raise --tmpfs-size: " + s.diskFull
+	}
 	if !st.Running {
 		detail = fmt.Sprintf("exited with code %d after %s", st.ExitCode, ranFor.Round(time.Second))
 		if st.OOMKilled {
@@ -90,8 +107,8 @@ func verdict(st containerState, ranFor time.Duration, s logScan) (status, detail
 		}
 		if s.failLine != "" {
 			detail += "; " + s.failLine
-		} else if s.firstWarn != "" {
-			detail += "; " + s.firstWarn
+		} else if s.lastWarn != "" {
+			detail += "; " + s.lastWarn
 		}
 		return statusFail, detail
 	}
