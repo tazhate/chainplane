@@ -51,7 +51,7 @@ const (
 // container(s) for the node pod. Returns nil when:
 //   - the MINIO_ENDPOINT env var is not set on the controller pod, or
 //   - spec.snapshot.disabled is true.
-func (r *ChainInstanceReconciler) snapshotInitContainers(node *chainsv1alpha2.ChainInstance) []corev1.Container {
+func snapshotInitContainers(node *chainsv1alpha2.ChainInstance) []corev1.Container {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	if endpoint == "" {
 		return nil

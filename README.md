@@ -470,6 +470,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add support for a new chain ad
 | [docs/registry-support.md](docs/registry-support.md) | Supported image registries (docker.io, ghcr.io, GAR, ECR Public) |
 | [docs/fleet-dashboard.md](docs/fleet-dashboard.md) | Web UI for fleet-wide node status |
 | [docs/release-process.md](docs/release-process.md) | Release workflow (for maintainers) |
+| [docs/smoke-testing.md](docs/smoke-testing.md) | Local image smoke tests with `cmd/chainsmoke` |
 | [docs/health-monitoring.md](docs/health-monitoring.md) | Health trigger system deep-dive |
 | [docs/chain-verification.md](docs/chain-verification.md) | Adapter verification report |
 
