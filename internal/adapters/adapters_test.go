@@ -219,6 +219,35 @@ func TestAllAdaptersDefaultImage(t *testing.T) {
 	}
 }
 
+// floatingTags move without notice, so a default pinned to one is not
+// reproducible and versioncheck cannot track it.
+var floatingTags = map[string]bool{
+	"latest": true, "mainnet": true, "testnet": true, "stable": true, "main": true,
+	"master": true, "nightly": true, "develop": true, "edge": true,
+}
+
+func TestDefaultImagesArePinned(t *testing.T) {
+	for chain, clients := range adapters.DefaultImages() {
+		for client, ref := range clients {
+			if ref == "" {
+				continue // image-required chain
+			}
+			if strings.Contains(ref, "@") {
+				continue // pinned by digest
+			}
+			// The tag follows the last ":" after the last "/"; a ":" before
+			// that is a registry port. No tag at all means "latest".
+			tag := "latest"
+			if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
+				tag = ref[i+1:]
+			}
+			if floatingTags[strings.ToLower(tag)] {
+				t.Errorf("chain %s client %q: default %q uses floating tag %q", chain, client, ref, tag)
+			}
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // ConfigTemplate: every adapter returns non-empty filename and content,
 // unless the chain is configured via env vars / CLI flags (no config file).
