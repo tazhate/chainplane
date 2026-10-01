@@ -103,6 +103,7 @@ func (r *ChainInstanceReconciler) refreshStatus(
 	ctx context.Context,
 	node *chainsv1alpha2.ChainInstance,
 	adapter adapters.ChainAdapter,
+	creds adapters.RPCCredentials,
 ) error {
 	logger := log.FromContext(ctx)
 
@@ -115,7 +116,15 @@ func (r *ChainInstanceReconciler) refreshStatus(
 	hctx, cancel := context.WithTimeout(ctx, healthCheckTimeout)
 	defer cancel()
 
-	status, err := adapter.HealthCheck(hctx, rpcURL)
+	var (
+		status adapters.SyncStatus
+		err    error
+	)
+	if rc, ok := adapter.(adapters.RPCCredentialed); ok {
+		status, err = rc.HealthCheckWithCredentials(hctx, rpcURL, creds)
+	} else {
+		status, err = adapter.HealthCheck(hctx, rpcURL)
+	}
 	logger.Info("health-check result",
 		"node", node.Name,
 		"err", err,

@@ -117,7 +117,13 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Reconcile owned resources in dependency order.
-	cfgHash, err := r.ensureConfigMap(ctx, node, adapter)
+	rpcCreds, err := r.ensureRPCSecret(ctx, node, adapter)
+	if err != nil {
+		logger.Error(err, "reconciling RPC credentials Secret")
+		return ctrl.Result{}, err
+	}
+
+	cfgHash, err := r.ensureConfigMap(ctx, node, adapter, rpcCreds)
 	if err != nil {
 		logger.Error(err, "reconciling ConfigMap")
 		return ctrl.Result{}, err
@@ -143,7 +149,7 @@ func (r *ChainInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	if err := r.refreshStatus(ctx, node, adapter); err != nil {
+	if err := r.refreshStatus(ctx, node, adapter, rpcCreds); err != nil {
 		logger.Error(err, "refreshing status")
 	}
 

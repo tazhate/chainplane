@@ -76,20 +76,26 @@ func (a *mychainAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []co
 ```go
 func init() {
     Register(chainsv1alpha2.ChainMyUTXO, &myutxoAdapter{
-        utxoAdapter: utxoAdapter{
-            baseAdapter:    baseAdapter{livenessPort: 8332},
-            rpcUserEnv:     "MYUTXO_RPC_USER",
-            rpcPasswordEnv: "MYUTXO_RPC_PASS",
-            defaultUser:    "rpc",
-            defaultPass:    "rpc",
+        utxoProtocolAdapter: utxoProtocolAdapter{
+            protocolAdapter: protocolAdapter{livenessPort: 8332},
+            rpcUserEnv:      "MYUTXO_RPC_USER",
+            rpcPasswordEnv:  "MYUTXO_RPC_PASSWORD",
+            configFile:      "myutxo.conf",
+            configTpl:       myutxoConfigTpl, // must render {{ .RPCAuth }} as an rpcauth= line
+            stallPolicy:     "synced-exempt",
         },
     })
 }
 
-func (a *myutxoAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-    return utxoHealthCheck(ctx, rpcURL, &a.utxoAdapter, "synced-exempt")
+func (a *myutxoAdapter) RPCSidecars(_ chainsv1alpha2.ChainInstanceSpec, secretName string) []corev1.Container {
+    return []corev1.Container{utxoExporterSidecar(8332, secretName)}
 }
 ```
+
+The base implements `ConfigTemplate`, `HealthCheck` and the `RPCCredentialed`
+interface. Credentials come from the per-node `<name>-rpc-credentials` Secret,
+which the controller generates when missing and passes in explicitly. Never
+read them from the operator environment.
 
 ### Custom Chain
 

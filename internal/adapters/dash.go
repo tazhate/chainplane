@@ -17,9 +17,6 @@ limitations under the License.
 package adapters
 
 import (
-	"bytes"
-	"context"
-	"strconv"
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
@@ -52,8 +49,9 @@ func init() {
 			protocolAdapter: protocolAdapter{livenessPort: 9998},
 			rpcUserEnv:      "DASH_RPC_USER",
 			rpcPasswordEnv:  "DASH_RPC_PASSWORD",
-			defaultUser:     "rpc",
-			defaultPass:     "rpc",
+			configFile:      "dash.conf",
+			configTpl:       dashConfigTpl,
+			stallPolicy:     "synced-exempt",
 			useRetry:        false,
 		},
 	})
@@ -67,8 +65,9 @@ var dashConfigTpl = template.Must(template.New("dash.conf").Parse(`server=1
 rpcallowip=0.0.0.0/0
 rpcbind=0.0.0.0
 rpcport=9998
-rpcuser={{ .RPCUser }}
-rpcpassword={{ .RPCPassword }}
+{{- if .RPCAuth }}
+rpcauth={{ .RPCAuth }}
+{{- end }}
 testnet={{ .Testnet }}
 datadir=/data
 txindex=1
@@ -82,28 +81,6 @@ maxconnections=125
 
 func (a *dashAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainDash, client)
-}
-
-func (a *dashAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	testnet, user, pass := utxoConfigValues(spec, &a.utxoProtocolAdapter)
-	var buf bytes.Buffer
-	err := dashConfigTpl.Execute(&buf, struct {
-		Testnet     string
-		RPCUser     string
-		RPCPassword string
-	}{
-		Testnet:     testnet,
-		RPCUser:     user,
-		RPCPassword: pass,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	return "dash.conf", buf.String(), nil
-}
-
-func (a *dashAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return utxoHealthCheck(ctx, rpcURL, &a.utxoProtocolAdapter, "synced-exempt")
 }
 
 // ContainerArgs passes the config file path explicitly.
@@ -124,28 +101,10 @@ func (a *dashAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev
 	}
 }
 
-// Sidecars returns a bitcoin-prometheus-exporter sidecar (compatible with Dash).
-// Credentials are read from the same env vars used by the node itself.
-func (a *dashAdapter) Sidecars(_ chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
-	user, pass := a.rpcCredentials()
-	if user == "" {
-		return nil
-	}
-	return []corev1.Container{
-		{
-			Name:  "metrics-exporter",
-			Image: "jvstein/bitcoin-prometheus-exporter:v0.8.0",
-			Ports: []corev1.ContainerPort{
-				{Name: "metrics", ContainerPort: 9332, Protocol: corev1.ProtocolTCP},
-			},
-			Env: []corev1.EnvVar{
-				{Name: "BITCOIN_RPC_HOST", Value: "localhost"},
-				{Name: "BITCOIN_RPC_PORT", Value: strconv.Itoa(9998)},
-				{Name: "BITCOIN_RPC_USER", Value: user},
-				{Name: "BITCOIN_RPC_PASSWORD", Value: pass},
-			},
-		},
-	}
+// RPCSidecars returns a bitcoin-prometheus-exporter sidecar (compatible with
+// Dash) that reads the node RPC credentials from secretName.
+func (a *dashAdapter) RPCSidecars(_ chainsv1alpha2.ChainInstanceSpec, secretName string) []corev1.Container {
+	return []corev1.Container{utxoExporterSidecar(9998, secretName)}
 }
 
 func (a *dashAdapter) VersionPolicy() ChainVersionPolicy {

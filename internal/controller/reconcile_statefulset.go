@@ -215,7 +215,9 @@ func (r *ChainInstanceReconciler) podContainers(
 
 	containers := make([]corev1.Container, 0, 1+len(node.Spec.Sidecars))
 	containers = append(containers, main)
-	if sp, ok := adapter.(adapters.SidecarProvider); ok {
+	if rc, ok := adapter.(adapters.RPCCredentialed); ok {
+		containers = append(containers, rc.RPCSidecars(node.Spec, rpcSecretName(node))...)
+	} else if sp, ok := adapter.(adapters.SidecarProvider); ok {
 		containers = append(containers, sp.Sidecars(node.Spec)...)
 	}
 	containers = append(containers, node.Spec.Sidecars...)

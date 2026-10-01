@@ -17,9 +17,6 @@ limitations under the License.
 package adapters
 
 import (
-	"bytes"
-	"context"
-	"strconv"
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
@@ -50,8 +47,9 @@ func init() {
 			protocolAdapter: protocolAdapter{livenessPort: 8332},
 			rpcUserEnv:      "BTC_RPC_USER",
 			rpcPasswordEnv:  "BTC_RPC_PASSWORD",
-			defaultUser:     "rpc",
-			defaultPass:     "rpc",
+			configFile:      "bitcoin.conf",
+			configTpl:       btcConfigTpl,
+			stallPolicy:     "synced-exempt",
 			useRetry:        true,
 		},
 	})
@@ -72,15 +70,17 @@ server=1
 rpcallowip=0.0.0.0/0
 rpcbind=0.0.0.0
 rpcport=18332
-rpcuser={{ .RPCUser }}
-rpcpassword={{ .RPCPassword }}
+{{- if .RPCAuth }}
+rpcauth={{ .RPCAuth }}
+{{- end }}
 {{- else }}
 server=1
 rpcallowip=0.0.0.0/0
 rpcbind=0.0.0.0
 rpcport=8332
-rpcuser={{ .RPCUser }}
-rpcpassword={{ .RPCPassword }}
+{{- if .RPCAuth }}
+rpcauth={{ .RPCAuth }}
+{{- end }}
 testnet=0
 datadir=/data
 txindex=1
@@ -93,28 +93,6 @@ txindex=1
 
 func (a *bitcoinAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainBitcoin, client)
-}
-
-func (a *bitcoinAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	user, pass := a.rpcCredentials()
-	var buf bytes.Buffer
-	err := btcConfigTpl.Execute(&buf, struct {
-		IsTestnet   bool
-		RPCUser     string
-		RPCPassword string
-	}{
-		IsTestnet:   spec.Network == chainsv1alpha2.NetworkTestnet,
-		RPCUser:     user,
-		RPCPassword: pass,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	return "bitcoin.conf", buf.String(), nil
-}
-
-func (a *bitcoinAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return utxoHealthCheck(ctx, rpcURL, &a.utxoProtocolAdapter, "synced-exempt")
 }
 
 func (a *bitcoinAdapter) LivenessProbe(spec chainsv1alpha2.ChainInstanceSpec) *corev1.Probe {
@@ -146,32 +124,14 @@ func (a *bitcoinAdapter) ContainerPorts(spec chainsv1alpha2.ChainInstanceSpec) [
 	}
 }
 
-// Sidecars returns a bitcoin-prometheus-exporter sidecar for mainnet nodes.
-// Credentials are read from the same env vars used by the node itself.
-func (a *bitcoinAdapter) Sidecars(spec chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
-	user, pass := a.rpcCredentials()
-	if user == "" {
-		return nil
-	}
+// RPCSidecars returns a bitcoin-prometheus-exporter sidecar that reads the
+// node RPC credentials from secretName.
+func (a *bitcoinAdapter) RPCSidecars(spec chainsv1alpha2.ChainInstanceSpec, secretName string) []corev1.Container {
 	rpcPort := int32(8332)
 	if spec.Network == chainsv1alpha2.NetworkTestnet {
 		rpcPort = 18332
 	}
-	return []corev1.Container{
-		{
-			Name:  "metrics-exporter",
-			Image: "jvstein/bitcoin-prometheus-exporter:v0.8.0",
-			Ports: []corev1.ContainerPort{
-				{Name: "metrics", ContainerPort: 9332, Protocol: corev1.ProtocolTCP},
-			},
-			Env: []corev1.EnvVar{
-				{Name: "BITCOIN_RPC_HOST", Value: "localhost"},
-				{Name: "BITCOIN_RPC_PORT", Value: strconv.Itoa(int(rpcPort))},
-				{Name: "BITCOIN_RPC_USER", Value: user},
-				{Name: "BITCOIN_RPC_PASSWORD", Value: pass},
-			},
-		},
-	}
+	return []corev1.Container{utxoExporterSidecar(rpcPort, secretName)}
 }
 
 func (a *bitcoinAdapter) VersionPolicy() ChainVersionPolicy {
