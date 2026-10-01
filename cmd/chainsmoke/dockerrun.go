@@ -43,11 +43,12 @@ const (
 	smokeNamespace = "default"
 )
 
-// podHolderImage keeps the volumes of a multi-container pod mounted and owns
+// busyboxImage keeps the volumes of a multi-container pod mounted and owns
 // its network namespace, the role of the pause container in Kubernetes.
 // busybox rather than pause, because the holder also creates subPath
 // directories, and docker refuses a volume-subpath that does not exist yet.
-const podHolderImage = "busybox:1.36"
+// The identity checks run it too, for du and wget.
+const busyboxImage = "busybox:1.36"
 
 // podVolumesDir is where the holder mounts every pod volume.
 const podVolumesDir = "/volumes"
@@ -97,19 +98,19 @@ type containerRun struct {
 	probe     []string // exec probe to wait for before starting the next container
 }
 
-// images returns every image the plan runs, main image first.
+// images returns every image the plan runs, main image first. busybox is
+// always in it for the identity checks.
 func (p runPlan) images() []string {
 	refs := []string{p.image}
-	if p.pod == nil {
-		return refs
-	}
-	for _, c := range slices.Concat(p.pod.sidecars, p.pod.others) {
-		if !slices.Contains(refs, c.image) {
-			refs = append(refs, c.image)
+	if p.pod != nil {
+		for _, c := range slices.Concat(p.pod.sidecars, p.pod.others) {
+			if !slices.Contains(refs, c.image) {
+				refs = append(refs, c.image)
+			}
 		}
 	}
-	if !slices.Contains(refs, podHolderImage) {
-		refs = append(refs, podHolderImage)
+	if !slices.Contains(refs, busyboxImage) {
+		refs = append(refs, busyboxImage)
 	}
 	return refs
 }
@@ -292,7 +293,7 @@ func podSetup(in planInput, holder string, volumes, subdirs []string) [][]string
 	for _, v := range volumes {
 		run = append(run, "--mount", "type=volume,src="+v+",dst="+path.Join(podVolumesDir, v))
 	}
-	setup = append(setup, append(run, podHolderImage, "sleep", "2147483647"))
+	setup = append(setup, append(run, busyboxImage, "sleep", "2147483647"))
 	if len(subdirs) > 0 {
 		setup = append(setup, slices.Concat([]string{"exec", holder, "mkdir", "-p", "-m", "1777"}, subdirs))
 	}

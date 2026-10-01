@@ -303,7 +303,7 @@ func TestBuildRunPlanPod(t *testing.T) {
 		{"run", "-d", "--name", "smokefix-zk-pod", "--platform", "linux/amd64",
 			"--label", "chainsmoke=1", "--label", "chainsmoke.prefix=smokefix",
 			"--mount", "type=volume,src=smokefix-zk-data,dst=/volumes/smokefix-zk-data",
-			podHolderImage, "sleep", "2147483647"},
+			busyboxImage, "sleep", "2147483647"},
 		{"exec", "smokefix-zk-pod", "mkdir", "-p", "-m", "1777", "/volumes/smokefix-zk-data/postgres"},
 	}
 	if !slices.EqualFunc(p.setup, wantSetup, slices.Equal) {
@@ -316,7 +316,7 @@ func TestBuildRunPlanPod(t *testing.T) {
 	if got := plan.containers("smokefix-zk"); !slices.Equal(got, wantContainers) {
 		t.Errorf("containers = %q, want %q", got, wantContainers)
 	}
-	wantImages := []string{"example/node:v1", "postgres:16.15", "example/proxy:v1", "example/exporter:v1", podHolderImage}
+	wantImages := []string{"example/node:v1", "postgres:16.15", "example/proxy:v1", "example/exporter:v1", busyboxImage}
 	if got := plan.images(); !slices.Equal(got, wantImages) {
 		t.Errorf("images = %q, want %q", got, wantImages)
 	}
