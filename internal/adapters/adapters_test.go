@@ -759,6 +759,32 @@ func TestTRONImplementsContainerCommandProvider(t *testing.T) {
 	}
 }
 
+// TestBerachainNetworkFilesVerified pins the SHA-256 of every file the
+// berachain start script downloads from beacon-kit v1.4.1.
+func TestBerachainNetworkFilesVerified(t *testing.T) {
+	adapter, ok := adapters.Get(chainsv1alpha2.ChainBerachain)
+	if !ok {
+		t.Fatal("berachain adapter not registered")
+	}
+	ccp, ok := adapter.(adapters.ContainerCommandProvider)
+	if !ok {
+		t.Fatal("berachain adapter does not implement ContainerCommandProvider")
+	}
+	script := strings.Join(ccp.ContainerCommand(chainsv1alpha2.ChainInstanceSpec{}), " ")
+	if !strings.Contains(script, "sha256sum -c -") {
+		t.Error("berachain script does not verify downloads with sha256sum")
+	}
+	for file, sum := range map[string]string{
+		"genesis.json":           "d83b50211850d5a3abcbba7e85037468add496b7605aa23bdf72523cf979ec6c",
+		"config.toml":            "85b7b4031e4ed967691e7b09f96329e33280707a8c266abad3222991a6d11ed8",
+		"kzg-trusted-setup.json": "0229b43f4fac9b17374809520eb621b5ee1a7f74547e7d36918e7d4b122e178d",
+	} {
+		if !strings.Contains(script, "fetch "+file+" "+sum) {
+			t.Errorf("berachain script does not fetch %s with sha256 %s", file, sum)
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Cosmos: ContainerCommandProvider interface
 // ---------------------------------------------------------------------------

@@ -43,6 +43,15 @@ import (
 // beacon-kit release of the default image.
 const berachainNetworkFiles = "https://raw.githubusercontent.com/berachain/beacon-kit/v1.4.1/testing/networks/80094"
 
+// SHA-256 of the files under berachainNetworkFiles (v1.4.1). Genesis and the
+// KZG setup are consensus-critical: a moved tag or a tampered download must
+// stop the node instead of starting it on a different chain.
+const (
+	berachainGenesisSHA256    = "d83b50211850d5a3abcbba7e85037468add496b7605aa23bdf72523cf979ec6c"
+	berachainConfigTOMLSHA256 = "85b7b4031e4ed967691e7b09f96329e33280707a8c266abad3222991a6d11ed8"
+	berachainKZGSetupSHA256   = "0229b43f4fac9b17374809520eb621b5ee1a7f74547e7d36918e7d4b122e178d"
+)
+
 type berachainAdapter struct {
 	protocolAdapter
 }
@@ -81,21 +90,35 @@ func (a *berachainAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []
 
 // ContainerCommand follows the upstream node setup: on first start it runs
 // beacond init and fetches the mainnet genesis.json, config.toml and KZG
-// trusted setup into /data/config. On every start the mounted app.toml
-// replaces the generated one; beacond cannot start without a complete
-// app.toml ("failed to unmarshal app config"). The Engine API JWT is taken
-// from /jwt.hex when mounted (spec.extraVolumes), otherwise one is generated
-// once at /data/config/jwt.hex for the EL to share.
+// trusted setup into /data/config. Downloads land as .part files and are
+// moved in place only when their SHA-256 matches; a mismatch removes the
+// .part and exits, so the next start retries. genesis.json and the KZG setup
+// are re-checked on every start and fetched again if they differ;
+// config.toml is fetched once, so later edits on the volume survive.
+// On every start the mounted app.toml replaces the generated one; beacond
+// cannot start without a complete app.toml ("failed to unmarshal app
+// config"). The Engine API JWT is taken from /jwt.hex when mounted
+// (spec.extraVolumes), otherwise one is generated once at
+// /data/config/jwt.hex for the EL to share.
 func (a *berachainAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
 	const script = `set -e
 NET=` + berachainNetworkFiles + `
-if [ ! -f /data/config/genesis.json ] || [ ! -f /data/config/kzg-trusted-setup.json ]; then
-  beacond init "${HOSTNAME:-chainplane}" --chain-id mainnet-beacon-80094 --beacon-kit.chain-spec mainnet --home /data >/dev/null 2>&1
-  for f in genesis.json config.toml kzg-trusted-setup.json; do
-    curl -fsSL -o "/data/config/$f" "$NET/$f"
-  done
-fi
-cp /config/app.toml /data/config/app.toml
+C=/data/config
+fetch() {
+  curl -fsSL -o "$C/$1.part" "$NET/$1"
+  if ! echo "$2  $C/$1.part" | sha256sum -c - >/dev/null 2>&1; then
+    rm -f "$C/$1.part"
+    echo "$1 from $NET does not match pinned sha256 $2" >&2
+    exit 1
+  fi
+  mv "$C/$1.part" "$C/$1"
+}
+pinned() { [ -f "$C/$1" ] && echo "$2  $C/$1" | sha256sum -c - >/dev/null 2>&1; }
+[ -f $C/node_key.json ] || beacond init "${HOSTNAME:-chainplane}" --chain-id mainnet-beacon-80094 --beacon-kit.chain-spec mainnet --home /data >/dev/null 2>&1
+pinned genesis.json ` + berachainGenesisSHA256 + ` || fetch genesis.json ` + berachainGenesisSHA256 + `
+pinned kzg-trusted-setup.json ` + berachainKZGSetupSHA256 + ` || fetch kzg-trusted-setup.json ` + berachainKZGSetupSHA256 + `
+[ -f $C/.config-toml-fetched ] || { fetch config.toml ` + berachainConfigTOMLSHA256 + ` && touch $C/.config-toml-fetched; }
+cp /config/app.toml $C/app.toml
 JWT=/jwt.hex
 if [ ! -f "$JWT" ]; then
   JWT=/data/config/jwt.hex
