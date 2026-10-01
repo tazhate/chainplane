@@ -36,11 +36,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	chainsv1alpha2 "github.com/tazhate/chainplane/api/v1alpha2"
@@ -51,10 +49,19 @@ import (
 // ConfigMap. It returns a short hex hash of the rendered content so the
 // StatefulSet pod template can include it as an annotation, causing a
 // rolling restart whenever the configuration changes.
-func (r *ChainInstanceReconciler) ensureConfigMap(ctx context.Context, node *chainsv1alpha2.ChainInstance, adapter adapters.ChainAdapter) (string, error) {
-	r.injectRPCSecretsIntoEnv(ctx, node)
-
-	filename, content, err := adapter.ConfigTemplate(node.Spec)
+//
+// creds are the node's RPC credentials from ensureRPCSecret; they are only
+// used by adapters implementing adapters.RPCCredentialed.
+func (r *ChainInstanceReconciler) ensureConfigMap(ctx context.Context, node *chainsv1alpha2.ChainInstance, adapter adapters.ChainAdapter, creds adapters.RPCCredentials) (string, error) {
+	var (
+		filename, content string
+		err               error
+	)
+	if rc, ok := adapter.(adapters.RPCCredentialed); ok {
+		filename, content, err = rc.ConfigTemplateWithCredentials(node.Spec, creds)
+	} else {
+		filename, content, err = adapter.ConfigTemplate(node.Spec)
+	}
 	if err != nil {
 		return "", fmt.Errorf("rendering config template for %s/%s: %w", node.Namespace, node.Name, err)
 	}
@@ -76,38 +83,4 @@ func (r *ChainInstanceReconciler) ensureConfigMap(ctx context.Context, node *cha
 
 	digest := sha256.Sum256([]byte(content))
 	return fmt.Sprintf("%x", digest[:4]), nil
-}
-
-// injectRPCSecretsIntoEnv loads Bitcoin-family RPC credentials from a
-// Kubernetes Secret into the operator process environment so that
-// ConfigTemplate can interpolate them when generating the node config file.
-func (r *ChainInstanceReconciler) injectRPCSecretsIntoEnv(ctx context.Context, node *chainsv1alpha2.ChainInstance) {
-	prefixByChain := map[chainsv1alpha2.Chain]string{
-		chainsv1alpha2.ChainBitcoin:  "BTC",
-		chainsv1alpha2.ChainDash:     "DASH",
-		chainsv1alpha2.ChainLitecoin: "LTC",
-	}
-
-	prefix, ok := prefixByChain[node.Spec.Chain]
-	if !ok {
-		return
-	}
-
-	reader := client.Reader(r.Client)
-	if r.APIReader != nil {
-		reader = r.APIReader
-	}
-
-	secret := &corev1.Secret{}
-	key := client.ObjectKey{Name: node.Name + "-rpc-credentials", Namespace: node.Namespace}
-	if err := reader.Get(ctx, key, secret); err != nil {
-		return
-	}
-
-	if v, exists := secret.Data["rpc-user"]; exists {
-		_ = os.Setenv(prefix+"_RPC_USER", string(v))
-	}
-	if v, exists := secret.Data["rpc-password"]; exists {
-		_ = os.Setenv(prefix+"_RPC_PASSWORD", string(v))
-	}
 }

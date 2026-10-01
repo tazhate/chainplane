@@ -42,7 +42,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - Mainnet: RPC 8332, P2P 8333
 - Testnet: RPC 18332, P2P 18333
 
-**Health check:** JSON-RPC `getblockchaininfo` (verificationprogress) + `getconnectioncount`. RPC auth is required -- credentials from `BTC_RPC_USER` / `BTC_RPC_PASSWORD` env vars (default: `rpc`/`rpc`).
+**Health check:** JSON-RPC `getblockchaininfo` (verificationprogress) + `getconnectioncount`. RPC auth uses per-node credentials from the `<name>-rpc-credentials` Secret (generated if missing); the config gets an `rpcauth=` line, not the password. See [configuration](configuration.md#bitcoin--litecoin--dash--dogecoin).
 
 **Configuration:**
 - `txindex=1` enabled by default
@@ -296,7 +296,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - RPC: 9998
 - P2P: 9999
 
-**Health check:** JSON-RPC `getblockchaininfo` (verificationprogress) + `getconnectioncount`. Auth via `DASH_RPC_USER` / `DASH_RPC_PASSWORD` env vars.
+**Health check:** JSON-RPC `getblockchaininfo` (verificationprogress) + `getconnectioncount`. Auth via the per-node `<name>-rpc-credentials` Secret, same as Bitcoin.
 
 **Configuration:**
 - `txindex=1`, `dbcache=1024`, `maxconnections=125`
@@ -320,7 +320,7 @@ This document describes every blockchain adapter supported by the operator, incl
 - RPC: 9332
 - P2P: 9333
 
-**Health check:** JSON-RPC `getblockchaininfo` with retry (verificationprogress) + `getconnectioncount`. Auth via `LTC_RPC_USER` / `LTC_RPC_PASSWORD` env vars. StallExempt during IBD when progress < 95%.
+**Health check:** JSON-RPC `getblockchaininfo` with retry (verificationprogress) + `getconnectioncount`. Auth via the per-node `<name>-rpc-credentials` Secret, same as Bitcoin. StallExempt during IBD when progress < 95%.
 
 **Configuration:**
 - `txindex=1`, `dbcache=4096`, `maxconnections=125`

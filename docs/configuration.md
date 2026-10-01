@@ -207,9 +207,12 @@ These are read-only fields set by the controller.
 - Geth v1.15+ changed DB format (PBSS) -- resync required when upgrading from v1.14.x.
 - Reth and Erigon have long startup times; liveness probe is configured with `initialDelaySeconds=300`.
 
-### Bitcoin / Litecoin / Dash
+### Bitcoin / Litecoin / Dash / Dogecoin
 
-- RPC authentication is required. Default credentials are injected via environment variables (`BTC_RPC_USER`/`BTC_RPC_PASSWORD` for Bitcoin, similar for others). Default: `rpc`/`rpc`.
+- RPC credentials live in a per-node Secret `<name>-rpc-credentials` with keys `rpc-user`, `rpc-password` and optional `rpc-auth-salt` (hex). If the Secret does not exist, the operator creates it with user `chainplane` and a random 32-byte password, owned by the ChainInstance and deleted with it.
+- To choose the credentials yourself, create the Secret before the ChainInstance. The operator reads it and never modifies it. The user must not contain `:`, `$`, whitespace or control characters.
+- The ConfigMap holds only an `rpcauth=<user>:<salt>$<hmac>` line (Bitcoin Core `share/rpcauth` format), never the password. The exporter sidecar and the node container read the Secret through `secretKeyRef` (`BTC_`, `LTC_`, `DASH_`, `DOGE_` prefixed `RPC_USER` / `RPC_PASSWORD` on the node container).
+- Editing the Secret changes the rendered config on the next reconcile (up to 30s), which rolls the pod.
 - `txindex=1` is enabled by default.
 - Block intervals are long (BTC: ~10 min, LTC: ~2.5 min, Dash: ~2.5 min), so synced nodes are StallExempt.
 

@@ -175,27 +175,32 @@ NetworkId = 12345
 `
 ```
 
-**Bitcoin-family UTXO chain (use `utxoAdapter`):**
+**Bitcoin-family UTXO chain (use `utxoProtocolAdapter`):**
 
 ```go
-type mychainAdapter struct{ utxoAdapter }
+type mychainAdapter struct{ utxoProtocolAdapter }
 
 func init() {
     Register(chainsv1alpha2.ChainMyChain, &mychainAdapter{
-        utxoAdapter: utxoAdapter{
-            baseAdapter:    baseAdapter{livenessPort: 8332},
-            rpcUserEnv:     "MYCHAIN_RPC_USER",
-            rpcPasswordEnv: "MYCHAIN_RPC_PASSWORD",
-            defaultUser:    "rpc",
-            defaultPass:    "rpc",
+        utxoProtocolAdapter: utxoProtocolAdapter{
+            protocolAdapter: protocolAdapter{livenessPort: 8332},
+            rpcUserEnv:      "MYCHAIN_RPC_USER",
+            rpcPasswordEnv:  "MYCHAIN_RPC_PASSWORD",
+            configFile:      "mychain.conf",
+            configTpl:       mychainConfigTpl, // must render {{ .RPCAuth }} as an rpcauth= line
+            stallPolicy:     "synced-exempt",
         },
     })
 }
 
-func (a *mychainAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-    return utxoHealthCheck(ctx, rpcURL, &a.utxoAdapter, "synced-exempt")
+func (a *mychainAdapter) RPCSidecars(_ chainsv1alpha2.ChainInstanceSpec, secretName string) []corev1.Container {
+    return []corev1.Container{utxoExporterSidecar(8332, secretName)}
 }
 ```
+
+The embedded base implements `ConfigTemplate`, `HealthCheck` and most of
+`RPCCredentialed`; the controller creates the `<name>-rpc-credentials` Secret
+and passes the credentials in explicitly.
 
 **Custom chain (implement `HealthCheck` directly):**
 

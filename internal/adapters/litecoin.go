@@ -17,9 +17,6 @@ limitations under the License.
 package adapters
 
 import (
-	"bytes"
-	"context"
-	"strconv"
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
@@ -54,8 +51,9 @@ func init() {
 			protocolAdapter: protocolAdapter{livenessPort: 9332},
 			rpcUserEnv:      "LTC_RPC_USER",
 			rpcPasswordEnv:  "LTC_RPC_PASSWORD",
-			defaultUser:     "rpc",
-			defaultPass:     "rpc",
+			configFile:      "litecoin.conf",
+			configTpl:       ltcConfigTpl,
+			stallPolicy:     "ibd-exempt",
 			useRetry:        true,
 		},
 	})
@@ -69,8 +67,9 @@ var ltcConfigTpl = template.Must(template.New("litecoin.conf").Parse(`server=1
 rpcallowip=0.0.0.0/0
 rpcbind=0.0.0.0
 rpcport=9332
-rpcuser={{ .RPCUser }}
-rpcpassword={{ .RPCPassword }}
+{{- if .RPCAuth }}
+rpcauth={{ .RPCAuth }}
+{{- end }}
 rpcworkqueue=128
 rpcthreads=8
 testnet={{ .Testnet }}
@@ -88,28 +87,6 @@ maxorphantx=10
 
 func (a *litecoinAdapter) DefaultImage(client string) string {
 	return DefaultImageFor(chainsv1alpha2.ChainLitecoin, client)
-}
-
-func (a *litecoinAdapter) ConfigTemplate(spec chainsv1alpha2.ChainInstanceSpec) (string, string, error) {
-	testnet, user, pass := utxoConfigValues(spec, &a.utxoProtocolAdapter)
-	var buf bytes.Buffer
-	err := ltcConfigTpl.Execute(&buf, struct {
-		Testnet     string
-		RPCUser     string
-		RPCPassword string
-	}{
-		Testnet:     testnet,
-		RPCUser:     user,
-		RPCPassword: pass,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	return "litecoin.conf", buf.String(), nil
-}
-
-func (a *litecoinAdapter) HealthCheck(ctx context.Context, rpcURL string) (SyncStatus, error) {
-	return utxoHealthCheck(ctx, rpcURL, &a.utxoProtocolAdapter, "ibd-exempt")
 }
 
 func (a *litecoinAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
@@ -135,28 +112,10 @@ func (a *litecoinAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []cor
 	}
 }
 
-// Sidecars returns a bitcoin-prometheus-exporter sidecar (compatible with Litecoin).
-// Credentials are read from the same env vars used by the node itself.
-func (a *litecoinAdapter) Sidecars(_ chainsv1alpha2.ChainInstanceSpec) []corev1.Container {
-	user, pass := a.rpcCredentials()
-	if user == "" {
-		return nil
-	}
-	return []corev1.Container{
-		{
-			Name:  "metrics-exporter",
-			Image: "jvstein/bitcoin-prometheus-exporter:v0.8.0",
-			Ports: []corev1.ContainerPort{
-				{Name: "metrics", ContainerPort: 9332, Protocol: corev1.ProtocolTCP},
-			},
-			Env: []corev1.EnvVar{
-				{Name: "BITCOIN_RPC_HOST", Value: "localhost"},
-				{Name: "BITCOIN_RPC_PORT", Value: strconv.Itoa(9332)},
-				{Name: "BITCOIN_RPC_USER", Value: user},
-				{Name: "BITCOIN_RPC_PASSWORD", Value: pass},
-			},
-		},
-	}
+// RPCSidecars returns a bitcoin-prometheus-exporter sidecar (compatible with
+// Litecoin) that reads the node RPC credentials from secretName.
+func (a *litecoinAdapter) RPCSidecars(_ chainsv1alpha2.ChainInstanceSpec, secretName string) []corev1.Container {
+	return []corev1.Container{utxoExporterSidecar(9332, secretName)}
 }
 
 func (a *litecoinAdapter) VersionPolicy() ChainVersionPolicy {

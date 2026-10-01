@@ -246,44 +246,39 @@ func containerEnv(node *chainsv1alpha2.ChainInstance) []corev1.EnvVar {
 	}
 	envs = append(envs, node.Spec.ExtraEnv...)
 
-	envs = appendRPCCredentials(envs, node)
+	envs = appendRPCCredentials(envs, node, adapter)
 	envs = appendJVMFlags(envs, node)
 
 	return envs
 }
 
 // appendRPCCredentials injects Secret-backed env vars for Bitcoin-family chains.
-func appendRPCCredentials(envs []corev1.EnvVar, node *chainsv1alpha2.ChainInstance) []corev1.EnvVar {
-	type credPair struct{ userKey, passKey string }
-	mapping := map[chainsv1alpha2.Chain]credPair{
-		chainsv1alpha2.ChainBitcoin:  {"BTC_RPC_USER", "BTC_RPC_PASSWORD"},
-		chainsv1alpha2.ChainDash:     {"DASH_RPC_USER", "DASH_RPC_PASSWORD"},
-		chainsv1alpha2.ChainLitecoin: {"LTC_RPC_USER", "LTC_RPC_PASSWORD"},
-	}
-	cp, ok := mapping[node.Spec.Chain]
+func appendRPCCredentials(envs []corev1.EnvVar, node *chainsv1alpha2.ChainInstance, adapter adapters.ChainAdapter) []corev1.EnvVar {
+	rc, ok := adapter.(adapters.RPCCredentialed)
 	if !ok {
 		return envs
 	}
+	userEnv, passwordEnv := rc.RPCEnvNames()
 
-	secretName := node.Name + "-rpc-credentials"
+	secretName := rpcSecretName(node)
 	optional := true
 	return append(envs,
 		corev1.EnvVar{
-			Name: cp.userKey,
+			Name: userEnv,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-					Key:                  "rpc-user",
+					Key:                  adapters.RPCSecretUserKey,
 					Optional:             &optional,
 				},
 			},
 		},
 		corev1.EnvVar{
-			Name: cp.passKey,
+			Name: passwordEnv,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-					Key:                  "rpc-password",
+					Key:                  adapters.RPCSecretPasswordKey,
 					Optional:             &optional,
 				},
 			},
