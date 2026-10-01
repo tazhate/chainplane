@@ -74,8 +74,11 @@ func (a *plasmaAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []cor
 	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
 }
 
-func (a *plasmaAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+// ContainerCommand runs the consensus client. The image has no ENTRYPOINT
+// (CMD is /bin/plasma-cli node), so the geth-style --metrics args were
+// exec'd as a command; plasma-cli has no such flags.
+func (a *plasmaAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	return []string{"/usr/bin/plasma-cli", "node"}
 }
 
 func (a *plasmaAdapter) DefaultResources() ResourceDefaults {

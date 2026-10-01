@@ -31,7 +31,19 @@ import (
 
 // Default image: ghcr.io/morph-l2/node (tag in versions_gen.go).
 
-const defaultMorphL1URL = "http://ethereum:8545"
+const (
+	defaultMorphL1URL       = "http://ethereum:8545"
+	defaultMorphL1BeaconURL = "http://ethereum-beacon:5052"
+)
+
+// morphNetworkFiles holds the mainnet CometBFT config.toml and genesis.json
+// of morphnode, pinned to a run-morph-node commit.
+const morphNetworkFiles = "https://raw.githubusercontent.com/morph-l2/run-morph-node/7ee4170ec4b18f80ebb4e4bfd227751219b1e53f/mainnet/node-data/config"
+
+const (
+	morphConfigTOMLSHA256 = "567059374d279386e9a7849151b9fd1829f3f75ea98382dfaf2b54b003426a00"
+	morphGenesisSHA256    = "f82415910772b9a8843fd90ff94c79d2f8e9c4983d6afffe2e1656d526f53b3e"
+)
 
 // --------------------------------------------------------------------------
 // Type
@@ -84,17 +96,53 @@ func (a *morphAdapter) VersionPolicy() ChainVersionPolicy {
 }
 
 func (a *morphAdapter) ContainerPorts(_ chainsv1alpha2.ChainInstanceSpec) []corev1.ContainerPort {
-	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 6060, Protocol: corev1.ProtocolTCP})
+	// morphnode serves CometBFT metrics on :26660 (prometheus = true in the
+	// fetched config.toml).
+	return append(evmPorts(30303), corev1.ContainerPort{Name: "metrics", ContainerPort: 26660, Protocol: corev1.ProtocolTCP})
 }
 
-func (a *morphAdapter) ContainerArgs(_ chainsv1alpha2.ChainInstanceSpec) []string {
-	return []string{"--metrics", "--metrics.addr", "0.0.0.0", "--metrics.port", "6060"}
+// ContainerCommand runs morphnode, the consensus client the default image
+// ships (it has no ENTRYPOINT, so the geth-style --metrics args were exec'd
+// as a command). On first start it fetches the mainnet CometBFT
+// config.toml and genesis.json from morph-l2/run-morph-node, moved in
+// place only when their SHA-256 matches. morphnode drives a co-deployed
+// morph-geth through the Engine API on 127.0.0.1:8545/8551 with the JWT at
+// /data/jwt-secret.txt (generated on first start when absent) and exits
+// without it, so this pod alone does not sync.
+func (a *morphAdapter) ContainerCommand(_ chainsv1alpha2.ChainInstanceSpec) []string {
+	const script = `set -e
+NET=` + morphNetworkFiles + `
+C=/data/config
+mkdir -p $C /data/data
+fetch() {
+  [ -f "$C/$1" ] && return 0
+  wget -qO "$C/$1.part" "$NET/$1"
+  if ! echo "$2  $C/$1.part" | sha256sum -c - >/dev/null 2>&1; then
+    rm -f "$C/$1.part"
+    echo "$1 from $NET does not match pinned sha256 $2" >&2
+    exit 1
+  fi
+  mv "$C/$1.part" "$C/$1"
+}
+fetch config.toml ` + morphConfigTOMLSHA256 + `
+fetch genesis.json ` + morphGenesisSHA256 + `
+exec morphnode --home /data --mainnet --l2.jwt-secret /data/jwt-secret.txt "$@"`
+	return []string{"sh", "-c", script, "--"}
 }
 
-// ContainerEnv injects the L1_RPC_URL environment variable required by Morph L2 nodes.
+// ContainerEnv points morphnode at L1 and at the morph-geth Engine API
+// (the run-morph-node defaults for a geth next to the node). Contract
+// addresses are the run-morph-node mainnet .env values; the beacon RPC is
+// required at start.
 func (a *morphAdapter) ContainerEnv(_ chainsv1alpha2.ChainInstanceSpec) []corev1.EnvVar {
 	return []corev1.EnvVar{
-		{Name: "L1_RPC_URL", Value: defaultMorphL1URL},
+		{Name: "MORPH_NODE_L2_ETH_RPC", Value: "http://127.0.0.1:8545"},
+		{Name: "MORPH_NODE_L2_ENGINE_RPC", Value: "http://127.0.0.1:8551"},
+		{Name: "MORPH_NODE_L1_ETH_RPC", Value: defaultMorphL1URL},
+		{Name: "MORPH_NODE_L1_ETH_BEACON_RPC", Value: defaultMorphL1BeaconURL},
+		{Name: "MORPH_NODE_L1_CHAIN_ID", Value: "1"},
+		{Name: "MORPH_NODE_ROLLUP_ADDRESS", Value: "0x759894ced0e6af42c26668076ffa84d02e3cef60"},
+		{Name: "MORPH_NODE_SYNC_DEPOSIT_CONTRACT_ADDRESS", Value: "0x3931ade842f5bb8763164bdd81e5361dce6cc1ef"},
 	}
 }
 

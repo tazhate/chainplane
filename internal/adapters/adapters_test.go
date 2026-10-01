@@ -782,6 +782,72 @@ func TestBerachainNetworkFilesVerified(t *testing.T) {
 	}
 }
 
+// TestEntrypointlessImagesNameTheirBinary covers images without an
+// ENTRYPOINT (or with a wrapper that execs its args): the adapter command
+// must start the node binary, otherwise the container args become the
+// command.
+func TestEntrypointlessImagesNameTheirBinary(t *testing.T) {
+	for chain, want := range map[chainsv1alpha2.Chain]string{
+		chainsv1alpha2.ChainFilecoin:    "lotus",
+		chainsv1alpha2.ChainThundercore: "exec /pala --configPath",
+		chainsv1alpha2.ChainMorph:       "exec morphnode --home /data --mainnet",
+		chainsv1alpha2.ChainPlasma:      "/usr/bin/plasma-cli node",
+		chainsv1alpha2.ChainKava:        "B=kava",
+		chainsv1alpha2.ChainDymension:   "B=dymd",
+		chainsv1alpha2.ChainEvmos:       "B=evmosd",
+		chainsv1alpha2.ChainAxelar:      "B=axelard",
+		chainsv1alpha2.ChainHaqq:        "B=haqqd",
+		chainsv1alpha2.ChainOsmosis:     "B=osmosisd",
+		chainsv1alpha2.ChainSei:         "B=seid",
+		chainsv1alpha2.ChainMezo:        "B=mezod",
+		chainsv1alpha2.ChainMoca:        "B=mocad",
+	} {
+		adapter, ok := adapters.Get(chain)
+		if !ok {
+			t.Fatalf("%s adapter not registered", chain)
+		}
+		ccp, ok := adapter.(adapters.ContainerCommandProvider)
+		if !ok {
+			t.Errorf("%s adapter does not implement ContainerCommandProvider", chain)
+			continue
+		}
+		spec := chainsv1alpha2.ChainInstanceSpec{Chain: chain}
+		if cmd := strings.Join(ccp.ContainerCommand(spec), " "); !strings.Contains(cmd, want) {
+			t.Errorf("%s command does not contain %q:\n%s", chain, want, cmd)
+		}
+		if ap, ok := adapter.(adapters.ContainerArgsProvider); ok {
+			for _, arg := range ap.ContainerArgs(spec) {
+				if strings.HasPrefix(arg, "--metrics") {
+					t.Errorf("%s passes geth-style flag %s", chain, arg)
+				}
+			}
+		}
+	}
+}
+
+// TestThundercoreNetworkFilesVerified pins the mainnet files the
+// thundercore start script fetches from thundercore/public-full.
+func TestThundercoreNetworkFilesVerified(t *testing.T) {
+	adapter := adapters.MustGet(chainsv1alpha2.ChainThundercore)
+	script := strings.Join(adapter.(adapters.ContainerCommandProvider).ContainerCommand(chainsv1alpha2.ChainInstanceSpec{}), " ")
+	if !strings.Contains(script, "sha256sum -c -") {
+		t.Error("thundercore script does not verify downloads with sha256sum")
+	}
+	for _, line := range []string{
+		"genesis.json e01b85fdbea948784da317650b72124c62a96f3474af7e11d17b6f20ceebc976",
+		"hardfork.yaml 8414d27246e60b94d1f7fa53fb2716f93881519f306af2dce91551525806f19b",
+		"thunder.yaml 0bacbdd6c23d9459f66713703ddd9488cd56fe8bb46062da88109f4c432766b6",
+	} {
+		if !strings.Contains(script, line) {
+			t.Errorf("thundercore script does not pin %q", line)
+		}
+	}
+	name, _, err := adapter.ConfigTemplate(chainsv1alpha2.ChainInstanceSpec{})
+	if err != nil || name != "override.yaml" {
+		t.Errorf("thundercore config template = %q, %v; want override.yaml", name, err)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Cosmos: ContainerCommandProvider interface
 // ---------------------------------------------------------------------------
