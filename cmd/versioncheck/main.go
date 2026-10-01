@@ -126,6 +126,7 @@ func checkVersions(
 	}
 
 	sem := make(chan struct{}, concurrency)
+	cache := &tagCache{}
 	var mu sync.Mutex
 	var results []versionResult
 	var wg sync.WaitGroup
@@ -146,16 +147,7 @@ func checkVersions(
 			res.CurrentRef = currentRef
 			res.CurrentTag = parseTag(currentRef)
 
-			client, err := registry.NewClient(it.policy.Registry)
-			if err != nil {
-				res.Err = err
-				mu.Lock()
-				results = append(results, res)
-				mu.Unlock()
-				return
-			}
-
-			tags, err := client.LatestTags(reqCtx, it.policy, 25)
+			tags, err := cache.latestTags(reqCtx, it.policy)
 			if err != nil {
 				res.Err = err
 				mu.Lock()
@@ -180,6 +172,43 @@ func checkVersions(
 		return cmp.Or(cmp.Compare(a.Chain, b.Chain), cmp.Compare(a.Client, b.Client))
 	})
 	return results
+}
+
+// tagCache fetches the tags of each registry repository and tag pattern once
+// per run. OP Stack chains share the op-reth and op-node repositories, whose
+// Artifact Registry tag lists are tens of MB each.
+type tagCache struct {
+	mu      sync.Mutex
+	entries map[adapters.ChainVersionPolicy]*tagFetch
+}
+
+type tagFetch struct {
+	once sync.Once
+	tags []registry.TagEntry
+	err  error
+}
+
+func (c *tagCache) latestTags(ctx context.Context, policy adapters.ChainVersionPolicy) ([]registry.TagEntry, error) {
+	c.mu.Lock()
+	if c.entries == nil {
+		c.entries = map[adapters.ChainVersionPolicy]*tagFetch{}
+	}
+	f, ok := c.entries[policy]
+	if !ok {
+		f = &tagFetch{}
+		c.entries[policy] = f
+	}
+	c.mu.Unlock()
+
+	f.once.Do(func() {
+		client, err := registry.NewClient(policy.Registry)
+		if err != nil {
+			f.err = err
+			return
+		}
+		f.tags, f.err = client.LatestTags(ctx, policy, 25)
+	})
+	return f.tags, f.err
 }
 
 // pick is the outcome of comparing registry tags with the pinned tag.
