@@ -32,7 +32,7 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-// NOTE: No official Dogecoin Docker image exists. Using community image ruimarinho/dogecoin.
+// NOTE: No official Dogecoin Docker image exists. Using community image fiftysix/dogecoin-core (tag in versions_gen.go).
 
 // --------------------------------------------------------------------------
 // Type

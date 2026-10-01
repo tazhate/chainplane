@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: hemilabs/heminetwork:v0.7.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 200Gi
     storageClass: fast-ssd

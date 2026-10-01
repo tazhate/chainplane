@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: axelarnet/axelar-core:v0.35.6
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 500Gi
     storageClass: fast-ssd

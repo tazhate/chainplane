@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: coredao/core-chain:v1.0.14
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 500Gi
     storageClass: fast-ssd

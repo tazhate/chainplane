@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: gravitychain/gravity-node:v0.1.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 200Gi
     storageClass: fast-ssd

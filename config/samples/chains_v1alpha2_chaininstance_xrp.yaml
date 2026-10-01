@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: xrpllabsofficial/xrpld:3.1.2
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 300Gi
     storageClass: fast-ssd

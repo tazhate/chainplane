@@ -29,7 +29,8 @@ import (
 // Constants
 // --------------------------------------------------------------------------
 
-// TODO: verify exact image path before production use; ghcr.io/morphprotocol/node is best current estimate.
+// Default image: ghcr.io/morph-l2/node (tag in versions_gen.go).
+
 const defaultMorphL1URL = "http://ethereum:8545"
 
 // --------------------------------------------------------------------------

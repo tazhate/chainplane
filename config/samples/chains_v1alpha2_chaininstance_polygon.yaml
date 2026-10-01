@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: 0xpolygon/bor:2.6.3
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 4Ti
     storageClass: fast-ssd

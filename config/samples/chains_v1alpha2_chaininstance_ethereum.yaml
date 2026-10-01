@@ -12,7 +12,7 @@ spec:
   # Supported clients: nethermind (default), geth, reth, erigon
   client: nethermind
   nodeGroup: heavy
-  # Default image: nethermind/nethermind:1.36.1
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 2Ti
     storageClass: fast-ssd

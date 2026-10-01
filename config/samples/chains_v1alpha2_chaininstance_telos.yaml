@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: telosnetwork/telos-evm-rpc:v2.0.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 300Gi
     storageClass: fast-ssd

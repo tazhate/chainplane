@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: osmolabs/osmosis:v27.0.1
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 1Ti
     storageClass: fast-ssd

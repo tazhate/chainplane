@@ -12,7 +12,7 @@ spec:
   # Erigon is well-suited for archive nodes
   client: erigon
   nodeGroup: archive
-  # Default image for erigon: erigontech/erigon:v2.61.3
+  # Default image for erigon: see internal/adapters/versions_gen.go
   storage:
     size: 4Ti
     storageClass: fast-ssd

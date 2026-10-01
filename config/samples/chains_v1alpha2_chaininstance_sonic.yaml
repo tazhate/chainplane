@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: fantomfoundation/sonic:v1.2.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 500Gi
     storageClass: fast-ssd

@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: rsksmart/rskj:ARROWHEAD-6.4.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 200Gi
     storageClass: fast-ssd

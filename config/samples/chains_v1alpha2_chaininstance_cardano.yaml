@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: ghcr.io/intersectmbo/cardano-node:10.6.2
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 200Gi
     storageClass: fast-ssd

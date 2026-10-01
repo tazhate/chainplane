@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: archive
-  # Default image: hyperledger/besu:24.12.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 1000Gi
     storageClass: fast-nvme

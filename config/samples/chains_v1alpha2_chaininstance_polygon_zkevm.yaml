@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: 0xpolygon/cdk-validium-node:0.7.0
+  # Default image: see internal/adapters/versions_gen.go
   # Polygon zkEVM is an L2 chain requiring an L1 Ethereum RPC endpoint.
   # L1_RPC_URL is injected automatically (default: ethereum-mainnet-01 service).
   storage:

@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: dymensionxyz/dymd:v3.1.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 300Gi
     storageClass: fast-ssd

@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: heavy
-  # Default image: offchainlabs/nitro-node:v3.2.1
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 2Ti
     storageClass: fast-ssd

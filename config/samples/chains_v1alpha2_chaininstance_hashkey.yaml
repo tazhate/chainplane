@@ -10,7 +10,7 @@ spec:
   network: mainnet
   nodeType: rpc
   nodeGroup: medium
-  # Default image: hashkeychain/hashkey-geth:v1.0.0
+  # Default image: see internal/adapters/versions_gen.go
   storage:
     size: 200Gi
     storageClass: fast-ssd
