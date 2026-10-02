@@ -241,3 +241,21 @@ func TestIdentityTargetsFromSamples(t *testing.T) {
 		t.Errorf("chain id known but no evm-rpc/rpc/http port: %s", strings.Join(evmMissing, ", "))
 	}
 }
+
+func TestParseNetVersion(t *testing.T) {
+	tests := []struct {
+		body    string
+		want    uint64
+		wantErr bool
+	}{
+		{`{"jsonrpc":"2.0","id":1,"result":"88"}`, 88, false},
+		{`{"jsonrpc":"2.0","id":1,"result":"0x58"}`, 0, true},
+		{`not json`, 0, true},
+	}
+	for _, tt := range tests {
+		got, err := parseNetVersion(tt.body)
+		if (err != nil) != tt.wantErr || got != tt.want {
+			t.Errorf("parseNetVersion(%s) = %d, %v; want %d, err=%v", tt.body, got, err, tt.want, tt.wantErr)
+		}
+	}
+}
