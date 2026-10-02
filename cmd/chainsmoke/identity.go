@@ -139,21 +139,9 @@ func checkIdentity(ctx context.Context, t identityTarget) identityFindings {
 	}
 
 	if t.chainID != 0 {
-		body, err := rpcCall(ctx, t, t.evmRPC, `{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}`)
-		var got uint64
-		if err == nil {
-			got, err = parseChainID(body)
-		}
-		switch {
-		case err != nil:
-			f.warns = append(f.warns, "rpc not ready: "+firstLine(err.Error()))
-		case got == 0:
-			// Pre-EIP155 clients (victionchain before block 3) answer 0 until
-			// they pass their EIP155 block; net_version carries the network id.
-			f.checkNetVersion(ctx, t)
-		default:
-			f.add(chainIDFinding(got, t.chainID))
-		}
+		f.checkEVMChainID(t.chainID, func(method string) (string, error) {
+			return rpcCall(ctx, t, t.evmRPC, fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":%q,"params":[]}`, method))
+		})
 	}
 
 	if t.cometBFTNet != "" {
@@ -171,11 +159,32 @@ func checkIdentity(ctx context.Context, t identityTarget) identityFindings {
 	return f
 }
 
-// checkNetVersion compares net_version with the expected chain id when
-// eth_chainId reported 0. No usable answer is a warning, not a failure.
-func (f *identityFindings) checkNetVersion(ctx context.Context, t identityTarget) {
-	body, err := rpcCall(ctx, t, t.evmRPC, `{"jsonrpc":"2.0","id":1,"method":"net_version","params":[]}`)
+// jsonRPC sends one parameterless JSON-RPC call to the node and returns the
+// raw response body. It is a parameter so the chain-id logic is testable
+// without docker.
+type jsonRPC func(method string) (string, error)
+
+// checkEVMChainID compares the node's chain id with want. Pre-EIP155 clients
+// (victionchain before block 3) answer eth_chainId with 0 until they pass
+// their EIP155 block; then net_version, which carries the network id, is
+// compared instead. A node that cannot answer yet is a warning, not a
+// failure; a wrong id from either call is a failure.
+func (f *identityFindings) checkEVMChainID(want uint64, call jsonRPC) {
+	body, err := call("eth_chainId")
 	var got uint64
+	if err == nil {
+		got, err = parseChainID(body)
+	}
+	switch {
+	case err != nil:
+		f.warns = append(f.warns, "rpc not ready: "+firstLine(err.Error()))
+		return
+	case got != 0:
+		f.add(chainIDFinding(got, want))
+		return
+	}
+
+	body, err = call("net_version")
 	if err == nil {
 		got, err = parseNetVersion(body)
 	}
@@ -183,7 +192,7 @@ func (f *identityFindings) checkNetVersion(ctx context.Context, t identityTarget
 		f.warns = append(f.warns, "chain id not reported yet (eth_chainId=0)")
 		return
 	}
-	fail, fact := chainIDFinding(got, t.chainID)
+	fail, fact := chainIDFinding(got, want)
 	if fact != "" {
 		fact += " via net_version (eth_chainId=0 before EIP155)"
 	}
@@ -333,9 +342,15 @@ func parseChainID(body string) (uint64, error) {
 func parseNetVersion(body string) (uint64, error) {
 	var resp struct {
 		Result string `json:"result"`
+		Error  *struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	}
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
 		return 0, fmt.Errorf("net_version: not JSON-RPC: %s", truncate(strings.TrimSpace(body), 80))
+	}
+	if resp.Error != nil {
+		return 0, errors.New("net_version: " + resp.Error.Message)
 	}
 	n, err := strconv.ParseUint(resp.Result, 10, 64)
 	if err != nil {

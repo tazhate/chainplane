@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -257,5 +258,94 @@ func TestParseNetVersion(t *testing.T) {
 		if (err != nil) != tt.wantErr || got != tt.want {
 			t.Errorf("parseNetVersion(%s) = %d, %v; want %d, err=%v", tt.body, got, err, tt.want, tt.wantErr)
 		}
+	}
+}
+
+// fakeRPC answers JSON-RPC methods from a table; a missing method is a
+// transport error, like a node whose RPC port is not open yet.
+func fakeRPC(results map[string]string) jsonRPC {
+	return func(method string) (string, error) {
+		body, ok := results[method]
+		if !ok {
+			return "", errors.New("connection refused")
+		}
+		return body, nil
+	}
+}
+
+func rpcResult(result string) string {
+	return `{"jsonrpc":"2.0","id":1,"result":"` + result + `"}`
+}
+
+func TestCheckEVMChainID(t *testing.T) {
+	const rpcError = `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"method not found"}}`
+	tests := []struct {
+		name      string
+		want      uint64
+		rpc       map[string]string
+		wantFail  string
+		wantFact  string
+		wantWarns []string
+	}{
+		{
+			name: "match", want: 1,
+			rpc:      map[string]string{"eth_chainId": rpcResult("0x1")},
+			wantFact: "chain id 1",
+		},
+		{
+			name: "mismatch", want: 7777777,
+			rpc:      map[string]string{"eth_chainId": rpcResult("0x1")},
+			wantFail: "chain id 1, expected 7777777",
+		},
+		{
+			name: "rpc not open", want: 1,
+			rpc:       map[string]string{},
+			wantWarns: []string{"rpc not ready: connection refused"},
+		},
+		{
+			name: "rpc error response", want: 1,
+			rpc:       map[string]string{"eth_chainId": rpcError},
+			wantWarns: []string{"rpc not ready: eth_chainId: method not found"},
+		},
+		{
+			name: "pre-EIP155, net_version matches", want: 88,
+			rpc:      map[string]string{"eth_chainId": rpcResult("0x0"), "net_version": rpcResult("88")},
+			wantFact: "chain id 88 via net_version (eth_chainId=0 before EIP155)",
+		},
+		{
+			name: "pre-EIP155, net_version mismatch", want: 88,
+			rpc:      map[string]string{"eth_chainId": rpcResult("0x0"), "net_version": rpcResult("1")},
+			wantFail: "chain id 1, expected 88",
+		},
+		{
+			name: "pre-EIP155, net_version missing", want: 88,
+			rpc:       map[string]string{"eth_chainId": rpcResult("0x0")},
+			wantWarns: []string{"chain id not reported yet (eth_chainId=0)"},
+		},
+		{
+			name: "pre-EIP155, net_version zero", want: 88,
+			rpc:       map[string]string{"eth_chainId": rpcResult("0x0"), "net_version": rpcResult("0")},
+			wantWarns: []string{"chain id not reported yet (eth_chainId=0)"},
+		},
+		{
+			name: "pre-EIP155, net_version error", want: 88,
+			rpc:       map[string]string{"eth_chainId": rpcResult("0x0"), "net_version": rpcError},
+			wantWarns: []string{"chain id not reported yet (eth_chainId=0)"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var f identityFindings
+			f.checkEVMChainID(tt.want, fakeRPC(tt.rpc))
+			if got := strings.Join(f.fails, "; "); got != tt.wantFail {
+				t.Errorf("fails = %q, want %q", got, tt.wantFail)
+			}
+			if got := strings.Join(f.facts, "; "); got != tt.wantFact {
+				t.Errorf("facts = %q, want %q", got, tt.wantFact)
+			}
+			if !slices.Equal(f.warns, tt.wantWarns) {
+				t.Errorf("warns = %q, want %q", f.warns, tt.wantWarns)
+			}
+		})
 	}
 }
